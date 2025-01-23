@@ -1,0 +1,12 @@
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+**/dist
+**/public
+.husky
+
+**/src-tauri
+
+package.json
+pnpm-lock.yaml

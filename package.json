@@ -1,0 +1,40 @@
+{
+  "name": "expense-tracker",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "start": "rsbuild dev",
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "tauri": "tauri",
+    "fmt": "prettier . --write",
+    "lint": "eslint .",
+    "prepare": "husky"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-fs": "~2",
+    "@tauri-apps/plugin-http": "~2",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-sql": "~2",
+    "@tauri-apps/plugin-upload": "~2",
+    "solid-js": "^1.9.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@rsbuild/core": "^1.2.1",
+    "@rsbuild/plugin-babel": "^1.0.3",
+    "@rsbuild/plugin-solid": "^1.0.4",
+    "@tauri-apps/cli": "^2",
+    "eslint": "^9.18.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.21.0"
+  },
+  "packageManager": "pnpm@9.15.3+sha512.1f79bc245a66eb0b07c5d4d83131240774642caaa86ef7d0434ab47c0d16f66b04e21e0c086eb61e62c77efc4d7f7ec071afad3796af64892fae66509173893a"
+}
