@@ -14,7 +14,7 @@
       "identifier": "http:default",
       "allow": [{ "url": "https://*" }]
     },
-    "sql:default"
-    
+    "sql:default",
+    "sql:allow-execute"
   ]
 }

@@ -15,6 +15,7 @@ name = "expense_tracker_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
+dotenv = "0.15.0"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
@@ -26,6 +27,7 @@ tauri-plugin-fs = "2"
 tauri-plugin-upload = "2"
 tauri-plugin-http = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+dotenv = "0.15.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
