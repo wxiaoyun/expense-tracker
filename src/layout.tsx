@@ -5,7 +5,7 @@ export const AppLayout: ParentComponent = (props) => {
   return (
     <div class="h-[100dvh] w-full flex flex-col justify-between">
       {props.children}
-      <NavBar class="grow-0 w-full"/>
+      <NavBar class="grow-0 w-full" />
     </div>
   );
 };

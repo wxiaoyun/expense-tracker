@@ -44,7 +44,7 @@ const createTransaction = async (
   transaction: Omit<Transaction, "created_at" | "updated_at">,
 ) => {
   const now = new Date().getTime();
-  
+
   const result = await db.execute(
     "INSERT INTO transactions (amount, currency, transaction_date, category_id, description, recurring_transaction_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     [

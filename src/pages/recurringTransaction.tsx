@@ -1,3 +1,3 @@
 export const RecurringTransaction = () => {
-  return <>s</>
-}
+  return <>s</>;
+};

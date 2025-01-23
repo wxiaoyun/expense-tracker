@@ -1,3 +1,3 @@
-import { QueryClient } from '@tanstack/solid-query'
+import { QueryClient } from "@tanstack/solid-query";
 
-export const queryClient = new QueryClient()
+export const queryClient = new QueryClient();

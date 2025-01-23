@@ -9,7 +9,7 @@ import { RecurringTransaction, Settings, Summary } from "./pages";
 import { Transaction } from "./pages/transaction";
 import { queryClient } from "./query";
 
-console.log(db);  
+console.log(db);
 
 export const App = () => (
   <ErrorBoundary fallback={ErrorComponent}>
