@@ -12,7 +12,7 @@ export default [
       "dist",
       "build",
       "src-tauri",
-      "**/*.config.{ts,js}",
+      "**/*.config.{ts,js,cjs,mjs}",
     ],
   },
   { files: ["**/*.{js,mjs,cjs,ts}"] },
