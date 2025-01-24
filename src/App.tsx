@@ -3,13 +3,10 @@ import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
 import { ErrorComponent } from "./components/error";
-import { db } from "./db";
 import { AppLayout } from "./layout";
 import { RecurringTransaction, Settings, Summary } from "./pages";
 import { Transaction } from "./pages/transaction";
 import { queryClient } from "./query";
-
-console.log(db);
 
 export const App = () => (
   <ErrorBoundary fallback={ErrorComponent}>
@@ -18,6 +15,7 @@ export const App = () => (
       <QueryClientProvider client={queryClient}>
         <Router root={AppLayout}>
           <Route path="/" component={Transaction} />
+          <Route path="/transactions" component={Transaction} />
           <Route
             path="/recurring_transactions"
             component={RecurringTransaction}
