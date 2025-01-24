@@ -1,15 +1,18 @@
 # Architecture
 
 ## Frontend
+
 - Solidjs
 - TailwindCSS
 
 ### Overal Layout
+
 - Main Body
 - Footer + Navbar
   - 4 tabs: Transactions, Recurring Transactions, Stats, Settings
 
 ### Pages
+
 - Transactions
   - `/` and `/transactions` Overview of all transactions
     - Top bar
@@ -40,11 +43,11 @@
         - autocomplete for the recurring transaction
   - `/transactions/edit/:id` Edit a transaction
     - Form
-        - Date
-        - Amount
-        - Description
-        - Category
-        - Recurring transaction (not editable)
+      - Date
+      - Amount
+      - Description
+      - Category
+      - Recurring transaction (not editable)
 - Recurring Transactions
   - `/recurring_transactions` Overview of all recurring transactions
     - Top bar
@@ -85,13 +88,16 @@
   - `/settings` Overview of all settings
 
 ### State management
+
 - Tanstack Query
 - Signals
 
 ## Database
+
 - SQLite
 
 ### Table Schemas
+
 ```sql
 CREATE TABLE IF NOT EXISTS recurring_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

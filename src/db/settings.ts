@@ -8,7 +8,9 @@ const listSettings = async () => {
 };
 
 const getSetting = async <T = string>(key: string) => {
-  const result = await db.select("SELECT * FROM settings WHERE key = $1", [key]);
+  const result = await db.select("SELECT * FROM settings WHERE key = $1", [
+    key,
+  ]);
   return result as Setting<T>;
 };
 

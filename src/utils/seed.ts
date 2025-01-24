@@ -10,12 +10,18 @@ const categories = [
   "Rent",
   "Salary",
   "Investment",
-  "Healthcare"
+  "Healthcare",
 ];
 
 const descriptions = {
   Groceries: ["Walmart", "Trader Joe's", "Whole Foods", "Costco", "Safeway"],
-  Restaurants: ["McDonald's", "Chipotle", "Local Restaurant", "Coffee Shop", "Pizza"],
+  Restaurants: [
+    "McDonald's",
+    "Chipotle",
+    "Local Restaurant",
+    "Coffee Shop",
+    "Pizza",
+  ],
   Transportation: ["Gas", "Bus Fare", "Uber", "Car Maintenance", "Parking"],
   Entertainment: ["Movies", "Netflix", "Concert", "Video Games", "Books"],
   Shopping: ["Amazon", "Target", "Best Buy", "Clothing", "Electronics"],
@@ -23,17 +29,19 @@ const descriptions = {
   Rent: ["Monthly Rent", "Security Deposit"],
   Salary: ["Monthly Salary", "Bonus", "Overtime"],
   Investment: ["Stock Purchase", "Dividend", "Crypto", "ETF"],
-  Healthcare: ["Doctor Visit", "Pharmacy", "Insurance", "Dental"]
+  Healthcare: ["Doctor Visit", "Pharmacy", "Insurance", "Dental"],
 };
 
 const randomDate = (start: Date, end: Date) => {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  return new Date(
+    start.getTime() + Math.random() * (end.getTime() - start.getTime()),
+  );
 };
 
 const randomAmount = (category: string) => {
   // Income categories have positive amounts
   const isIncome = ["Salary", "Investment"].includes(category);
-  
+
   const ranges = {
     Groceries: [30, 200],
     Restaurants: [15, 100],
@@ -44,7 +52,7 @@ const randomAmount = (category: string) => {
     Rent: [800, 2500],
     Salary: [3000, 8000],
     Investment: [100, 1000],
-    Healthcare: [20, 500]
+    Healthcare: [20, 500],
   };
 
   const [min, max] = ranges[category as keyof typeof ranges];
@@ -61,7 +69,7 @@ export const generateTransactions = async (numTransactions: number) => {
     const category = categories[Math.floor(Math.random() * categories.length)];
     const descList = descriptions[category as keyof typeof descriptions];
     const description = descList[Math.floor(Math.random() * descList.length)];
-    
+
     await transactions.create({
       amount: randomAmount(category),
       transaction_date: randomDate(startDate, endDate).getTime(),
