@@ -29,7 +29,11 @@ export const getDateRange = (
   }
 };
 
-export const shiftDate = (date: Date, range: DateRange, shift: number): Date => {
+export const shiftDate = (
+  date: Date,
+  range: DateRange,
+  shift: number,
+): Date => {
   const newDate = new Date(date);
   switch (range) {
     case "daily":

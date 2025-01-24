@@ -1,4 +1,4 @@
-import { createTransactionQuery } from "@/query/transactions";
+import { createTransactionListQuery } from "@/query/transactions";
 import { DateRange, getDateRange } from "@/utils/date";
 import { useSearchParams } from "@solidjs/router";
 import Fuse from "fuse.js";
@@ -18,9 +18,13 @@ export const useDateRange = () => {
     });
   }
 
-  const currentDate = () => new Date(Number(searchParams.date));
-  const currentRange = () => (searchParams.range || "daily") as DateRange;
-  const dateRange = () => getDateRange(currentDate(), currentRange());
+  const currentDate = createMemo(() => new Date(Number(searchParams.date)));
+  const currentRange = createMemo(
+    () => (searchParams.range || "daily") as DateRange,
+  );
+  const dateRange = createMemo(() =>
+    getDateRange(currentDate(), currentRange()),
+  );
   const setDate = (date: Date) =>
     setSearchParams({ date: date.getTime().toString() });
   const setRange = (range: DateRange) => setSearchParams({ range });
@@ -40,25 +44,22 @@ export const useSearchTransactionParams = () => {
   }>();
 
   const currentQuery = () => searchParams.query || "";
-  const setQuery = (query: string) => {
-    // console.log("setting", query);
-    setSearchParams({ query });
-  };
+  const setQuery = (query: string) => setSearchParams({ query });
 
   return [currentQuery, setQuery] as const;
 };
 
-export const useTransaction = () => {
+export const useTransactions = () => {
   const { dateRange } = useDateRange();
   const [currentQuery] = useSearchTransactionParams();
-  const query = createTransactionQuery(dateRange);
+  const query = createTransactionListQuery(dateRange);
 
   const searched = createMemo(() => {
     const transactions = query.data ?? [];
     const f = new Fuse(transactions, {
       keys: ["category", "description"],
       threshold: 0.3,
-     });
+    });
     const res = f.search(currentQuery());
 
     if (!currentQuery()) {

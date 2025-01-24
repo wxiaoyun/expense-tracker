@@ -7,15 +7,18 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
+
 import { Transaction } from "@/db/transactions";
 import {
   useDateRange,
   useSearchTransactionParams,
-  useTransaction,
+  useTransactions,
 } from "@/signals/params";
 import { DateRange, shiftDate } from "@/utils/date";
+import { useNavigate } from "@solidjs/router";
 import { debounce } from "lodash";
 import { FaSolidPlus } from "solid-icons/fa";
+import { HiSolidPencil } from "solid-icons/hi";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
 import { createMemo, createSignal, For, Show } from "solid-js";
@@ -51,7 +54,7 @@ const Header = () => {
 
   return (
     <div class="relative p-1 flex justify-between items-center">
-      <a href="/transaction/new">
+      <a href="/transactions/new">
         <FaSolidPlus
           class="cursor-pointer hover:opacity-65 transition-opacity"
           size={20}
@@ -134,9 +137,9 @@ export const TimeShift = () => {
 };
 
 export const IntervalSummary = () => {
-  const query = useTransaction();
+  const query = useTransactions();
 
-  const summary = () => {
+  const summary = createMemo(() => {
     if (!query().data) return { income: 0, expense: 0, balance: 0 };
 
     return query().data!.reduce(
@@ -147,7 +150,7 @@ export const IntervalSummary = () => {
       }),
       { income: 0, expense: 0, balance: 0 },
     );
-  };
+  });
 
   return (
     <section class="p-1 flex justify-around text-sm">
@@ -170,7 +173,7 @@ export const IntervalSummary = () => {
 };
 
 export const TransactionList = () => {
-  const query = useTransaction();
+  const query = useTransactions();
   return (
     <section class="flex-1 overflow-auto">
       <Show when={query().isLoading}>
@@ -193,24 +196,33 @@ export const TransactionList = () => {
 };
 
 const TransactionItem = (props: { transaction: Transaction }) => {
+  const navigate = useNavigate();
   return (
-    <div class="p-1 border-b">
-      <div class="flex justify-between items-center">
-        <span>
-          {new Date(props.transaction.transaction_date).toLocaleDateString()}
-        </span>
-        <span
-          class={
-            props.transaction.amount >= 0 ? "text-green-600" : "text-red-600"
-          }
-        >
-          ${props.transaction.amount.toFixed(2)}
-        </span>
+    <div class="p-1 border-b flex justify-between gap-2 items-center">
+      <div class="grow">
+        <div class="flex justify-between items-center">
+          <span>
+            {new Date(props.transaction.transaction_date).toLocaleDateString()}
+          </span>
+          <span
+            class={
+              props.transaction.amount >= 0 ? "text-green-600" : "text-red-600"
+            }
+          >
+            ${props.transaction.amount.toFixed(2)}
+          </span>
+        </div>
+        <div class="flex justify-between items-center text-sm text-gray-600">
+          <span>{props.transaction.description || "No description"}</span>
+          <span>{props.transaction.category}</span>
+        </div>
       </div>
-      <div class="flex justify-between items-center text-sm text-gray-600">
-        <span>{props.transaction.description || "No description"}</span>
-        <span>{props.transaction.category}</span>
-      </div>
+
+      <HiSolidPencil
+        class="text-muted-foreground cursor-pointer hover:opacity-65 transition-opacity"
+        size={20}
+        onClick={() => navigate(`/transactions/edit/${props.transaction.id}`)}
+      />
     </div>
   );
 };

@@ -12,11 +12,15 @@ export type Transaction = {
 };
 
 const getTransaction = async (id: number) => {
-  const result = await db.select("SELECT * FROM transactions WHERE id = $1", [
+  const result: Transaction[] = await db.select("SELECT * FROM transactions WHERE id = $1", [
     id,
   ]);
 
-  return result as Option<Transaction>;
+  if (result.length === 0) {
+    return null;
+  }
+
+  return result[0] as Transaction;
 };
 
 const listTransactions = async (query?: { start?: Date; end?: Date }) => {
@@ -88,9 +92,15 @@ const updateTransaction = async (
   } as Transaction;
 };
 
+const listCategories = async () => {
+  const result: Pick<Transaction, "category">[] = await db.select("SELECT DISTINCT category FROM transactions");
+  return result;
+};
+
 export default {
   get: getTransaction,
   list: listTransactions,
   create: createTransaction,
   update: updateTransaction,
+  categories: listCategories,
 };

@@ -32,16 +32,17 @@
           - Transaction category
           - Transaction recurring transaction badge
   - `/transactions/new` Create a new transaction
-    - Form
-      - Tab 1: new transaction
-        - Date
-        - Amount
-        - Description
-        - Category
-        - Recurring transaction
-      - Tab 2: new recurring transaction
-        - autocomplete for the recurring transaction
+    - Top bar
+      - Button to return to the previous page
+    - Form: new transaction
+      - Date
+      - Amount
+      - Description
+      - Category
+      - Recurring transaction
   - `/transactions/edit/:id` Edit a transaction
+    - Top bar
+      - Button to return to the previous page. Need alert to ask to confirm exit
     - Form
       - Date
       - Amount
