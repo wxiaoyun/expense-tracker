@@ -74,7 +74,9 @@ export const EditTransactionPage = () => {
   });
 
   const [amount, setAmount] = createSignal(0);
-  const [date, setDate] = createSignal(new CalendarDate(new Date().getFullYear(), 0, 0));
+  const [date, setDate] = createSignal(
+    new CalendarDate(new Date().getFullYear(), 0, 0),
+  );
   const [description, setDescription] = createSignal("");
   const [category, setCategory] = createSignal("");
   const [newCategory, setNewCategory] = createSignal("");

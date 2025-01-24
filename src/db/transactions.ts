@@ -12,9 +12,10 @@ export type Transaction = {
 };
 
 const getTransaction = async (id: number) => {
-  const result: Transaction[] = await db.select("SELECT * FROM transactions WHERE id = $1", [
-    id,
-  ]);
+  const result: Transaction[] = await db.select(
+    "SELECT * FROM transactions WHERE id = $1",
+    [id],
+  );
 
   if (result.length === 0) {
     return null;
@@ -93,7 +94,9 @@ const updateTransaction = async (
 };
 
 const listCategories = async () => {
-  const result: Pick<Transaction, "category">[] = await db.select("SELECT DISTINCT category FROM transactions");
+  const result: Pick<Transaction, "category">[] = await db.select(
+    "SELECT DISTINCT category FROM transactions",
+  );
   return result;
 };
 

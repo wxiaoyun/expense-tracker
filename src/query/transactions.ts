@@ -26,9 +26,9 @@ export const createTransactionQuery = (id: () => number) => {
 
 export const createTransactionCategoriesQuery = () => {
   return createQuery(
-    () => ({ 
-      queryKey: ["transaction-categories"], 
-      queryFn: async () => transactions.categories() 
+    () => ({
+      queryKey: ["transaction-categories"],
+      queryFn: async () => transactions.categories(),
     }),
     () => queryClient,
   );

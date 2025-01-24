@@ -4,7 +4,9 @@ import { createMemo } from "solid-js";
 export const useTransactionParams = (prefix = "") => {
   const [searchParams] = useSearchParams();
 
-  const amount = createMemo(() => (searchParams[`${prefix}amount`] as string) || "");
+  const amount = createMemo(
+    () => (searchParams[`${prefix}amount`] as string) || "",
+  );
   const date = createMemo(() => {
     const date = searchParams[`${prefix}date`] as string;
     if (!date) {
@@ -12,11 +14,11 @@ export const useTransactionParams = (prefix = "") => {
     }
     return new Date(date);
   });
-  const description = createMemo(() =>
-    (searchParams[`${prefix}description`] as string) || "",
+  const description = createMemo(
+    () => (searchParams[`${prefix}description`] as string) || "",
   );
-  const category = createMemo(() =>
-    (searchParams[`${prefix}category`] as string) || "",
+  const category = createMemo(
+    () => (searchParams[`${prefix}category`] as string) || "",
   );
 
   return {
