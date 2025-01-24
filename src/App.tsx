@@ -5,7 +5,7 @@ import { ErrorBoundary } from "solid-js";
 import { ErrorComponent } from "./components/error";
 import { AppLayout } from "./layout";
 import { RecurringTransaction, Settings, Summary } from "./pages";
-import { Transaction } from "./pages/transaction";
+import { TransactionPage } from "./pages/transaction";
 import { queryClient } from "./query";
 
 export const App = () => (
@@ -14,8 +14,8 @@ export const App = () => (
     <ColorModeProvider>
       <QueryClientProvider client={queryClient}>
         <Router root={AppLayout}>
-          <Route path="/" component={Transaction} />
-          <Route path="/transactions" component={Transaction} />
+          <Route path="/" component={TransactionPage} />
+          <Route path="/transactions" component={TransactionPage} />
           <Route
             path="/recurring_transactions"
             component={RecurringTransaction}
