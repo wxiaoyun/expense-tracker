@@ -5,7 +5,7 @@ type GroupProps = ParentProps<{
   title: string;
 }>;
 
-export const Group = (props: GroupProps) => {
+export const SettingGroup = (props: GroupProps) => {
   return (
     <div class="flex flex-col gap-4 rounded-md border border-accent p-2">
       <div class="flex flex-col gap-2">

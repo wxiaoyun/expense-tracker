@@ -5,11 +5,11 @@ import {
 } from "@/constants/url";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { FiExternalLink } from "solid-icons/fi";
-import { Group } from "../components/group";
+import { SettingGroup } from "../components/group";
 
 export const MiscGroup = () => {
   return (
-    <Group title="Miscellaneous">
+    <SettingGroup title="Miscellaneous">
       <div class="flex flex-col gap-3 text-sm">
         <div class="w-full flex items-center justify-between">
           <label>Submit bug report</label>
@@ -35,6 +35,6 @@ export const MiscGroup = () => {
           />
         </div>
       </div>
-    </Group>
+    </SettingGroup>
   );
 };

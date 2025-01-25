@@ -1,4 +1,9 @@
-import { transactions } from "@/db";
+import { recurringTransactions, transactions } from "@/db";
+import {
+  RecurrenceType,
+  RecurringTransaction,
+} from "@/db/recurring_transactions";
+import { Transaction } from "@/db/transactions";
 
 const categories = [
   "Groceries",
@@ -32,10 +37,28 @@ const descriptions = {
   Healthcare: ["Doctor Visit", "Pharmacy", "Insurance", "Dental"],
 };
 
+const randomInteger = (min: number = 0, max: number = 100) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
 const randomDate = (start: Date, end: Date) => {
   return new Date(
     start.getTime() + Math.random() * (end.getTime() - start.getTime()),
   );
+};
+
+/**
+ * Generate a random interval between weekly, monthly, and yearly
+ * Time is in milliseconds
+ * @returns
+ */
+const randomInterval = () => {
+  const intervals = [
+    7 * 24 * 60 * 60 * 1000,
+    30 * 24 * 60 * 60 * 1000,
+    365 * 24 * 60 * 60 * 1000,
+  ];
+  return intervals[Math.floor(Math.random() * intervals.length)];
 };
 
 const randomAmount = (category: string) => {
@@ -65,16 +88,80 @@ export const generateTransactions = async (numTransactions: number) => {
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - 3); // Last 3 months of data
 
+  const recurringTransactionIds = (await recurringTransactions.list()).map(
+    (t) => t.id,
+  );
+
+  const transactionList: BeforeCreate<Transaction>[] = [];
   for (let i = 0; i < numTransactions; i++) {
     const category = categories[Math.floor(Math.random() * categories.length)];
     const descList = descriptions[category as keyof typeof descriptions];
     const description = descList[Math.floor(Math.random() * descList.length)];
+    const recurringTransactionId =
+      recurringTransactionIds[
+        Math.floor(Math.random() * recurringTransactionIds.length)
+      ];
 
-    await transactions.create({
+    transactionList.push({
       amount: randomAmount(category),
       transaction_date: randomDate(startDate, endDate).getTime(),
       category,
       description,
+      recurring_transaction_id: recurringTransactionId,
     });
   }
+
+  await transactions.batchCreate(transactionList);
+};
+
+const recurrenceTypes = ["cron", "regular"];
+
+const randomRecurrenceType = () => {
+  return recurrenceTypes[
+    Math.floor(Math.random() * recurrenceTypes.length)
+  ] as RecurrenceType;
+};
+
+const randomRecurrenceValue = (recurrenceType: RecurrenceType) => {
+  if (recurrenceType === "cron") {
+    const cron = [
+      0,
+      0,
+      0,
+      randomInteger(1, 31),
+      randomInteger(1, 12),
+      randomInteger(0, 6),
+    ];
+    return cron.join(" ");
+  }
+
+  return String(randomInterval());
+};
+
+export const generateRecurringTransactions = async (
+  numTransactions: number,
+) => {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - 3);
+
+  const recurringTransactionList: BeforeCreate<RecurringTransaction>[] = [];
+  for (let i = 0; i < numTransactions; i++) {
+    const category = categories[Math.floor(Math.random() * categories.length)];
+    const descList = descriptions[category as keyof typeof descriptions];
+    const description = descList[Math.floor(Math.random() * descList.length)];
+    const recurrenceType = randomRecurrenceType();
+    const recurrenceValue = randomRecurrenceValue(recurrenceType);
+
+    recurringTransactionList.push({
+      amount: randomAmount(category),
+      category,
+      description,
+      start_date: randomDate(startDate, endDate).getTime(),
+      recurrence_type: recurrenceType,
+      recurrence_value: recurrenceValue,
+    });
+  }
+
+  await recurringTransactions.batchCreate(recurringTransactionList);
 };

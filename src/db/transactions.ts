@@ -53,7 +53,7 @@ const listTransactions = async (query?: { start?: Date; end?: Date }) => {
 };
 
 const createTransaction = async (
-  transaction: Omit<Transaction, "id" | "created_at" | "updated_at">,
+  transaction: BeforeCreate<Transaction>,
 ): Promise<Option<Transaction>> => {
   const now = new Date().getTime();
 
@@ -92,7 +92,7 @@ const createTransaction = async (
 };
 
 const updateTransaction = async (
-  transaction: Transaction,
+  transaction: BeforeUpdate<Transaction>,
 ): Promise<Option<Transaction>> => {
   const now = new Date().getTime();
 
@@ -154,6 +154,41 @@ const clearTransactions = async () => {
   return result.rowsAffected > 0;
 };
 
+const batchCreateTransactions = async (
+  transactions: BeforeCreate<Transaction>[],
+) => {
+  if (transactions.length === 0) {
+    console.warn("[DB][batchCreateTransactions] no transactions to create");
+    return false;
+  }
+
+  const placeholders = transactions
+    .map((_, index) => {
+      const offset = index * 7;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+    })
+    .join(", ");
+
+  const now = new Date().getTime();
+  const values = transactions.flatMap((transaction) => [
+    transaction.amount,
+    transaction.transaction_date,
+    transaction.category,
+    transaction.description,
+    transaction.recurring_transaction_id,
+    now,
+    now,
+  ]);
+
+  const result = await db.execute(
+    `INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, created_at, updated_at) 
+     VALUES ${placeholders} RETURNING id`,
+    values,
+  );
+
+  return result.rowsAffected === transactions.length;
+};
+
 export default {
   get: getTransaction,
   list: listTransactions,
@@ -162,4 +197,5 @@ export default {
   delete: deleteTransaction,
   categories: listCategories,
   clear: clearTransactions,
+  batchCreate: batchCreateTransactions,
 };

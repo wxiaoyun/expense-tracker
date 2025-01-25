@@ -16,21 +16,20 @@ import { settings } from "@/db";
 import { queryClient } from "@/query";
 import { SETTINGS_QUERY_KEY } from "@/query/settings";
 import { useCurrency, useTheme } from "@/signals/setting";
-import { getSystemTheme, onSystemThemeChange } from "@/utils/theme";
 import { ConfigColorMode, useColorMode } from "@kobalte/core";
 import { FaSolidTrash } from "solid-icons/fa";
-import { createEffect, onCleanup, onMount } from "solid-js";
-import { Group } from "../components/group";
+import { createEffect } from "solid-js";
+import { SettingGroup } from "../components/group";
 
-export const SettingsGroup = () => {
+export const ConfigGroup = () => {
   return (
-    <Group title="Settings">
+    <SettingGroup title="Settings">
       <div class="flex flex-col gap-4">
         <CurrencySetting />
         <ThemeSetting />
         <ClearSettings />
       </div>
-    </Group>
+    </SettingGroup>
   );
 };
 
@@ -61,47 +60,11 @@ const ThemeSetting = () => {
   const { setColorMode } = useColorMode();
   const [theme, setTheme] = useTheme();
 
-  let unsubscribe: () => void;
-
-  onMount(() => {
-    unsubscribe = onSystemThemeChange((themeChange) => {
-      if (theme().data !== "system") {
-        console.info(
-          "[UI][onSystemThemeChange] theme is not 'system', update ignored",
-        );
-        return;
-      }
-
-      console.info(
-        "[UI][onSystemThemeChange] theme is 'system', updating theme to '%s'",
-        themeChange,
-      );
-      setColorMode(themeChange);
-    });
-  });
-
-  onCleanup(() => {
-    if (unsubscribe) unsubscribe();
-  });
-
   createEffect(() => {
     const newTheme = theme().data;
     if (!newTheme) return;
 
-    if (newTheme === "system") {
-      const systemTheme = getSystemTheme();
-      console.info(
-        "[UI][createEffect] theme is 'system', updating theme to '%s'",
-        systemTheme,
-      );
-      setColorMode(systemTheme);
-      return;
-    }
-
-    console.info(
-      "[UI][createEffect] theme is user-defined, updating theme to '%s'",
-      newTheme,
-    );
+    console.info("[UI][createEffect] updating theme to '%s'", newTheme);
     setColorMode(newTheme as ConfigColorMode);
   });
 

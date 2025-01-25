@@ -9,7 +9,7 @@ export const NavBar: Component<ComponentProps<"nav">> = (props) => {
   return (
     <nav {...props}>
       <Separator />
-      <div class="p-3 flex justify-around">
+      <div class="p-2 flex justify-around">
         <a
           class="cursor-pointer hover:opacity-65 transition-opacity flex flex-col items-center"
           href="/"

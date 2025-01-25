@@ -16,11 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-import {
-  CURRENCY_SYMBOLS,
-  DEFAULT_CURRENCY,
-  DEFAULT_CURRENCY_SYMBOL,
-} from "@/constants/settings";
+import { DEFAULT_CURRENCY } from "@/constants/settings";
 import transactions, { Transaction } from "@/db/transactions";
 import { cn } from "@/libs/cn";
 import { queryClient } from "@/query";
@@ -31,11 +27,11 @@ import {
   useTransactions,
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
+import { formatCurrency } from "@/utils/currency";
 import { DateRange, shiftDate } from "@/utils/date";
 import { useNavigate } from "@solidjs/router";
 import { debounce } from "lodash";
-import { FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
-import { HiSolidPencil } from "solid-icons/hi";
+import { FaSolidPen, FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
 import { createMemo, createSignal, For, Show } from "solid-js";
@@ -219,10 +215,10 @@ export const TransactionList = () => {
           <TableHeader>
             <TableRow>
               <TableHead class="w-[100px]">Date</TableHead>
-              <TableHead class="w-[120px]">Category</TableHead>
+              <TableHead class="w-fit">Category</TableHead>
               <TableHead class="w-full">Description</TableHead>
               <TableHead class="w-fit whitespace-nowrap">Amount</TableHead>
-              <TableHead class="w-[80px]">Actions</TableHead>
+              <TableHead class="w-fit">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -241,14 +237,10 @@ const TransactionItem = (props: { transaction: Transaction }) => {
   const [currency] = useCurrency();
 
   const isIncome = () => props.transaction.amount > 0;
-  const formattedAmount = () => {
-    const amount = Math.abs(props.transaction.amount);
-    const sign = isIncome() ? "+" : "-";
-    const currencyResolved = currency().data ?? DEFAULT_CURRENCY;
-    const currencySymbol =
-      CURRENCY_SYMBOLS[currencyResolved] ?? DEFAULT_CURRENCY_SYMBOL;
-    return `${sign}${currencySymbol}${amount.toFixed(2)}`;
-  };
+  const formattedAmount = () =>
+    formatCurrency(props.transaction.amount, {
+      currency: currency().data ?? DEFAULT_CURRENCY,
+    });
 
   const handleDelete = async () => {
     await transactions.delete(props.transaction.id);
@@ -272,8 +264,8 @@ const TransactionItem = (props: { transaction: Transaction }) => {
       </TableCell>
       <TableCell>
         <div class="flex gap-2">
-          <HiSolidPencil
-            class="text-muted-foreground cursor-pointer hover:opacity-65 transition-opacity"
+          <FaSolidPen
+            class="text-blue-500 hover:text-blue-600 cursor-pointer transition-colors"
             size={20}
             onClick={() =>
               navigate(`/transactions/edit/${props.transaction.id}`)
@@ -285,7 +277,7 @@ const TransactionItem = (props: { transaction: Transaction }) => {
             onConfirm={handleDelete}
           >
             <FaSolidTrash
-              class="text-red-500 hover:text-red-600 cursor-pointer hover:opacity-65 transition-opacity"
+              class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
               size={20}
             />
           </ConfirmButton>

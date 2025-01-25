@@ -1,7 +1,7 @@
 import { DataGroup } from "./groups/data";
 import { DevGroup } from "./groups/dev";
 import { MiscGroup } from "./groups/misc";
-import { SettingsGroup } from "./groups/settings";
+import { ConfigGroup } from "./groups/config";
 
 export const SettingPage = () => {
   return (
@@ -10,7 +10,7 @@ export const SettingPage = () => {
       <div class="flex flex-col gap-6">
         <DevGroup />
         <DataGroup />
-        <SettingsGroup />
+        <ConfigGroup />
         <MiscGroup />
       </div>
     </main>

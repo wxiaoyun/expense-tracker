@@ -6,15 +6,16 @@ pub fn migrations() -> Vec<Migration> {
         description: "create_base_table",
         sql: r#"
           CREATE TABLE IF NOT EXISTS recurring_transactions (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              amount REAL NOT NULL,
-              description TEXT,
-              category TEXT NOT NULL,
-              start_date INTEGER NOT NULL,
-              end_date INTEGER,
-              interval INTEGER NOT NULL,
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amount REAL NOT NULL,
+            description TEXT,
+            category TEXT NOT NULL,
+            start_date INTEGER NOT NULL,
+            last_charged INTEGER,
+            recurrence_type TEXT NOT NULL,
+            recurrence_value TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
           );
 
           CREATE TABLE IF NOT EXISTS transactions (
@@ -25,8 +26,7 @@ pub fn migrations() -> Vec<Migration> {
               category TEXT NOT NULL,
               recurring_transaction_id INTEGER,
               created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL,
-              FOREIGN KEY (recurring_transaction_id) REFERENCES recurring_transactions(id)
+              updated_at INTEGER NOT NULL
           );
 
           CREATE TABLE IF NOT EXISTS settings (

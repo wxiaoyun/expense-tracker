@@ -1,21 +1,22 @@
 import { ConfirmButton } from "@/components/confirmButton";
 import { toastError, toastSuccess } from "@/components/toast";
-import { transactions } from "@/db";
+import { recurringTransactions, transactions } from "@/db";
 import { queryClient } from "@/query";
+import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
 import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
 import { exportDatabase, importDatabase } from "@/utils/fs";
 import { FaSolidDownload, FaSolidTrash, FaSolidUpload } from "solid-icons/fa";
-import { Group } from "../components/group";
+import { SettingGroup } from "../components/group";
 
 export const DataGroup = () => {
   return (
-    <Group title="Data">
+    <SettingGroup title="Data">
       <div class="flex flex-col gap-4">
         <ExportData />
         <ImportData />
         <ClearTransactionsData />
       </div>
-    </Group>
+    </SettingGroup>
   );
 };
 
@@ -51,7 +52,11 @@ export const ImportData = () => {
 export const ClearTransactionsData = () => {
   const clearTransactionsData = async () => {
     await transactions.clear();
+    await recurringTransactions.clear();
     queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+    queryClient.invalidateQueries({
+      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
+    });
   };
 
   return (
