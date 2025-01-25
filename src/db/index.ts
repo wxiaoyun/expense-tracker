@@ -1,10 +1,16 @@
+import { DATABASE_FILENAME } from "@/constants";
 import Database from "@tauri-apps/plugin-sql";
 
-const databaseName = process.env.SQLITE_DATABASE_NAME ?? "expense_tracker";
-const databasePath = `sqlite:${databaseName}.db`;
+const dbUri = `sqlite:${DATABASE_FILENAME}`;
 
-export const db = await Database.load(databasePath);
+export let db = await Database.load(dbUri);
+
+export const reloadDb = async () => {
+  db = await Database.load(dbUri);
+  console.info("[DB][reloadDb] Database reloaded");
+};
 
 export { default as recurringTransactions } from "./recurring_transactions";
 export { default as settings } from "./settings";
 export { default as transactions } from "./transactions";
+

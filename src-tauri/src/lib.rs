@@ -7,12 +7,15 @@ pub fn run() {
     let database_name = env!("SQLITE_DATABASE_NAME");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::new()
-                .add_migrations(&format!("sqlite:{}.db", database_name), db::migration::migrations())
+                .add_migrations(
+                    &format!("sqlite:{}.db", database_name),
+                    db::migration::migrations(),
+                )
                 .build(),
         )
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let _ = app
                 .get_webview_window("main")

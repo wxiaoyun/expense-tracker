@@ -32,9 +32,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "sql": {
-      "preload": ["sqlite:expense_tracker.db"]
-    }
-  }
+  "plugins": {}
 }

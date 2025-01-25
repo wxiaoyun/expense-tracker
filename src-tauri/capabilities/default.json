@@ -10,11 +10,10 @@
     "opener:default",
     "fs:default",
     "upload:default",
-    {
-      "identifier": "http:default",
-      "allow": [{ "url": "https://*" }]
-    },
     "sql:default",
-    "sql:allow-execute"
+    "sql:allow-execute",
+    "dialog:default",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive"
   ]
 }

@@ -1,15 +1,14 @@
+import { ErrorComponent } from "@/components/error";
 import { ToastList, ToastRegion } from "@/components/ui/toast";
+import { EditTransactionPage, NewTransactionPage, RecurringTransactionPage, TransactionPage } from "@/pages";
+import { queryClient } from "@/query";
 import { ColorModeProvider, ColorModeScript } from "@kobalte/core";
 import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
-import { ErrorComponent } from "./components/error";
+import { WorkInProgress } from "./components/workInProgress";
 import { AppLayout } from "./layout";
-import { RecurringTransaction, Settings, Summary } from "./pages";
-import { TransactionPage } from "./pages/transaction";
-import { EditTransactionPage } from "./pages/transaction/edit";
-import { NewTransactionPage } from "./pages/transaction/new";
-import { queryClient } from "./query";
+import { SettingPage } from "./pages/setting";
 
 export const App = () => (
   <ErrorBoundary fallback={ErrorComponent}>
@@ -26,16 +25,18 @@ export const App = () => (
             <Route path="/" component={TransactionPage} />
             <Route path="/new" component={NewTransactionPage} />
             <Route path="/edit/:id" component={EditTransactionPage} />
+
+            <Route path="/recurring">
+              <Route
+                path="/"
+                component={RecurringTransactionPage}
+              />
+            </Route>
           </Route>
 
-          <Route
-            path="/recurring_transactions"
-            component={RecurringTransaction}
-          />
+          <Route path="/summary" component={WorkInProgress} />
 
-          <Route path="/summary" component={Summary} />
-
-          <Route path="/settings" component={Settings} />
+          <Route path="/settings" component={SettingPage} />
         </Router>
       </QueryClientProvider>
     </ColorModeProvider>

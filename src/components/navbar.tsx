@@ -20,7 +20,7 @@ export const NavBar: Component<ComponentProps<"nav">> = (props) => {
         </a>
         <a
           class="cursor-pointer hover:opacity-65 transition-opacity flex flex-col items-center"
-          href="recurring_transactions"
+          href="/transactions/recurring"
           aria-label="Recurring Transactions"
         >
           <FaSolidArrowRotateRight size={32} />
@@ -28,7 +28,7 @@ export const NavBar: Component<ComponentProps<"nav">> = (props) => {
         </a>
         <a
           class="cursor-pointer hover:opacity-65 transition-opacity flex flex-col items-center"
-          href="summary"
+          href="/summary"
           aria-label="Summary"
         >
           <IoStatsChart size={32} />
@@ -36,7 +36,7 @@ export const NavBar: Component<ComponentProps<"nav">> = (props) => {
         </a>
         <a
           class="cursor-pointer hover:opacity-65 transition-opacity flex flex-col items-center"
-          href="settings"
+          href="/settings"
           aria-label="Settings"
         >
           <RiSystemSettings3Fill size={32} />

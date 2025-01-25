@@ -4,7 +4,11 @@ import { pluginSolid } from "@rsbuild/plugin-solid";
 import dotenv from "dotenv";
 import { resolve } from "path";
 
-dotenv.config();
+const node_env = process.env.NODE_ENV;
+
+if (node_env === "development") {
+  dotenv.config();
+}
 
 export default defineConfig({
   resolve: {
@@ -15,7 +19,12 @@ export default defineConfig({
   tools: {
     rspack: (config, { rspack }) => {
       config.plugins?.push(
-        new rspack.EnvironmentPlugin("SQLITE_DATABASE_NAME"),
+        new rspack.EnvironmentPlugin([
+          "SQLITE_DATABASE_NAME",
+          "BUY_ME_A_COFFEE_URL",
+          "GITHUB_URL",
+          "GITHUB_ISSUE_URL",
+        ]),
       );
       return config;
     },

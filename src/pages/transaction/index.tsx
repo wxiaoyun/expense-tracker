@@ -7,13 +7,18 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-
+import {
+  CURRENCY_SYMBOLS,
+  DEFAULT_CURRENCY,
+  DEFAULT_CURRENCY_SYMBOL,
+} from "@/constants/settings";
 import { Transaction } from "@/db/transactions";
 import {
   useDateRange,
   useSearchTransactionParams,
   useTransactions,
 } from "@/signals/params";
+import { useCurrency } from "@/signals/setting";
 import { DateRange, shiftDate } from "@/utils/date";
 import { useNavigate } from "@solidjs/router";
 import { debounce } from "lodash";
@@ -22,6 +27,10 @@ import { HiSolidPencil } from "solid-icons/hi";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
 import { createMemo, createSignal, For, Show } from "solid-js";
+
+export * from "./edit";
+export * from "./new";
+export * from "./recurring";
 
 export const TransactionPage = () => {
   return (
@@ -197,6 +206,18 @@ export const TransactionList = () => {
 
 const TransactionItem = (props: { transaction: Transaction }) => {
   const navigate = useNavigate();
+  const [currency] = useCurrency();
+
+  const isIncome = () => props.transaction.amount > 0;
+  const formattedAmount = () => {
+    const amount = Math.abs(props.transaction.amount);
+    const sign = isIncome() ? "+" : "-";
+    const currencyResolved = currency().data ?? DEFAULT_CURRENCY;
+    const currencySymbol =
+      CURRENCY_SYMBOLS[currencyResolved] ?? DEFAULT_CURRENCY_SYMBOL;
+    return `${sign}${currencySymbol}${amount.toFixed(2)}`;
+  };
+
   return (
     <div class="p-1 border-b flex justify-between gap-2 items-center">
       <div class="grow">
@@ -204,12 +225,8 @@ const TransactionItem = (props: { transaction: Transaction }) => {
           <span>
             {new Date(props.transaction.transaction_date).toLocaleDateString()}
           </span>
-          <span
-            class={
-              props.transaction.amount >= 0 ? "text-green-600" : "text-red-600"
-            }
-          >
-            ${props.transaction.amount.toFixed(2)}
+          <span class={isIncome() ? "text-green-600" : "text-red-600"}>
+            {formattedAmount()}
           </span>
         </div>
         <div class="flex justify-between items-center text-sm text-gray-600">

@@ -18,20 +18,37 @@ const getTransaction = async (id: number) => {
   );
 
   if (result.length === 0) {
+    console.warn(
+      "[DB][getTransaction] no result found for id %s, returning null",
+      id,
+    );
     return null;
   }
 
+  console.log(
+    "[DB][getTransaction] result found for id %s, returning %o",
+    id,
+    result[0],
+  );
   return result[0] as Transaction;
 };
 
 const listTransactions = async (query?: { start?: Date; end?: Date }) => {
   const { start, end } = query ?? {};
+  const startDate = start?.getTime() ?? 0;
+  const endDate = end?.getTime() ?? new Date().getTime();
 
   const result = await db.select(
     "SELECT * FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
-    [start?.getTime() ?? 0, end?.getTime() ?? new Date().getTime()],
+    [startDate, endDate],
   );
 
+  console.log(
+    "[DB][listTransactions] result found for start %s and end %s, returning %o",
+    startDate,
+    endDate,
+    result,
+  );
   return result as Transaction[];
 };
 
@@ -54,9 +71,18 @@ const createTransaction = async (
   );
 
   if (!result.lastInsertId || result.rowsAffected !== 1) {
+    console.warn(
+      "[DB][createTransaction] no result found for transaction %s, returning null",
+      transaction,
+    );
     return null;
   }
 
+  console.log(
+    "[DB][createTransaction] result found for transaction %s, returning %o",
+    transaction,
+    result.lastInsertId,
+  );
   return {
     ...transaction,
     id: result.lastInsertId,
@@ -84,9 +110,18 @@ const updateTransaction = async (
   );
 
   if (result.rowsAffected !== 1) {
+    console.warn(
+      "[DB][updateTransaction] no result found for transaction %s, returning null",
+      transaction,
+    );
     return null;
   }
 
+  console.log(
+    "[DB][updateTransaction] result found for transaction %s, returning %o",
+    transaction,
+    result.lastInsertId,
+  );
   return {
     ...transaction,
     updated_at: now,
@@ -96,6 +131,11 @@ const updateTransaction = async (
 const listCategories = async () => {
   const result: Pick<Transaction, "category">[] = await db.select(
     "SELECT DISTINCT category FROM transactions",
+  );
+
+  console.log(
+    "[DB][listCategories] result found for categories, returning %o",
+    result,
   );
   return result;
 };

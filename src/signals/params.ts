@@ -10,17 +10,14 @@ export const useDateRange = () => {
     range: DateRange;
   }>();
 
-  if (!searchParams.date) {
-    const now = new Date();
-    setSearchParams({
-      date: now.getTime().toString(),
-      range: searchParams.range || "daily",
-    });
-  }
-
-  const currentDate = createMemo(() => new Date(Number(searchParams.date)));
+  const currentDate = createMemo(() => {
+    if (!searchParams.date) {
+      return new Date();
+    }
+    return new Date(Number(searchParams.date));
+  });
   const currentRange = createMemo(
-    () => (searchParams.range || "daily") as DateRange,
+    () => (searchParams.range || "weekly") as DateRange,
   );
   const dateRange = createMemo(() =>
     getDateRange(currentDate(), currentRange()),
