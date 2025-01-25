@@ -9,7 +9,7 @@ import {
   CURRENCY_OPTIONS,
   DEFAULT_CURRENCY,
   DEFAULT_THEME,
-  THEME_OPTIONS
+  THEME_OPTIONS,
 } from "@/constants/settings";
 import { useCurrency, useTheme } from "@/signals/setting";
 import { getSystemTheme, onSystemThemeChange } from "@/utils/theme";

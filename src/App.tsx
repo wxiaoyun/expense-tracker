@@ -1,6 +1,11 @@
 import { ErrorComponent } from "@/components/error";
 import { ToastList, ToastRegion } from "@/components/ui/toast";
-import { EditTransactionPage, NewTransactionPage, RecurringTransactionPage, TransactionPage } from "@/pages";
+import {
+  EditTransactionPage,
+  NewTransactionPage,
+  RecurringTransactionPage,
+  TransactionPage,
+} from "@/pages";
 import { queryClient } from "@/query";
 import { ColorModeProvider, ColorModeScript } from "@kobalte/core";
 import { Route, Router } from "@solidjs/router";
@@ -27,10 +32,7 @@ export const App = () => (
             <Route path="/edit/:id" component={EditTransactionPage} />
 
             <Route path="/recurring">
-              <Route
-                path="/"
-                component={RecurringTransactionPage}
-              />
+              <Route path="/" component={RecurringTransactionPage} />
             </Route>
           </Route>
 

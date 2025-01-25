@@ -13,4 +13,3 @@ export const reloadDb = async () => {
 export { default as recurringTransactions } from "./recurring_transactions";
 export { default as settings } from "./settings";
 export { default as transactions } from "./transactions";
-

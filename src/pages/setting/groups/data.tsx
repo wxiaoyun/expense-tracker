@@ -150,7 +150,7 @@ const ImportData = () => {
           </ToastContent>
           <ToastProgress />
         </Toast>
-      )); 
+      ));
     } catch (error) {
       console.error("[UI][ImportData] Failed to import data", error);
       toaster.show((props) => (
