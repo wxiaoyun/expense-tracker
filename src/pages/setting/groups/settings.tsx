@@ -1,3 +1,4 @@
+import { ConfirmButton } from "@/components/confirmButton";
 import {
   Select,
   SelectContent,
@@ -11,9 +12,13 @@ import {
   DEFAULT_THEME,
   THEME_OPTIONS,
 } from "@/constants/settings";
+import { settings } from "@/db";
+import { queryClient } from "@/query";
+import { SETTINGS_QUERY_KEY } from "@/query/settings";
 import { useCurrency, useTheme } from "@/signals/setting";
 import { getSystemTheme, onSystemThemeChange } from "@/utils/theme";
 import { ConfigColorMode, useColorMode } from "@kobalte/core";
+import { FaSolidTrash } from "solid-icons/fa";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { Group } from "../components/group";
 
@@ -23,6 +28,7 @@ export const SettingsGroup = () => {
       <div class="flex flex-col gap-4">
         <CurrencySetting />
         <ThemeSetting />
+        <ClearSettings />
       </div>
     </Group>
   );
@@ -115,6 +121,27 @@ const ThemeSetting = () => {
         </SelectTrigger>
         <SelectContent />
       </Select>
+    </div>
+  );
+};
+
+const ClearSettings = () => {
+  const clearSettings = async () => {
+    await settings.clear();
+    queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY] });
+  };
+
+  return (
+    <div class="flex justify-between items-center text-sm">
+      <label>Clear Settings</label>
+
+      <ConfirmButton
+        title="Are you sure?"
+        description="This action will reset all settings to default."
+        onConfirm={clearSettings}
+      >
+        <FaSolidTrash class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer" />
+      </ConfirmButton>
     </div>
   );
 };

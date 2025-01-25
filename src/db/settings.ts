@@ -60,8 +60,15 @@ const setSetting = async <T = string>(key: string, value: T) => {
   return result.rowsAffected === 1;
 };
 
+const clearSettings = async () => {
+  const result = await db.execute("DELETE FROM settings");
+  console.info("[DB][clearSettings] result %o", result);
+  return result.rowsAffected > 0;
+};
+
 export default {
   list: listSettings,
   get: getSetting,
   set: setSetting,
+  clear: clearSettings,
 };

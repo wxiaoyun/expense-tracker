@@ -1,13 +1,5 @@
-import {
-  AlertDialog,
-  AlertDialogClose,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmButton } from "@/components/confirmButton";
+import { toastError, toastSuccess } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -37,23 +29,18 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-import {
-  Toast,
-  ToastContent,
-  ToastDescription,
-  ToastProgress,
-  ToastTitle,
-} from "@/components/ui/toast";
 import transactions from "@/db/transactions";
 import { queryClient } from "@/query/query";
-import { createTransactionCategoriesQuery } from "@/query/transactions";
+import {
+  createTransactionCategoriesQuery,
+  TRANSACTIONS_QUERY_KEY,
+} from "@/query/transactions";
 import { useTransactionParams } from "@/signals/transaction-form";
 import { CalendarDate } from "@internationalized/date";
-import { toaster } from "@kobalte/core";
 import { useNavigate } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
-import { Index, createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, Index } from "solid-js";
 import { Portal } from "solid-js/web";
 
 export const otherCategory = "Other";
@@ -71,25 +58,15 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <header class="flex items-center mb-4">
-      <AlertDialog>
-        <AlertDialogTrigger as={Button} variant="ghost">
-          <TbArrowLeft size={20} />
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your changes will be lost if you leave this page.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button variant="default" onClick={() => navigate(-1)}>
-              Leave
-            </Button>
-            <AlertDialogClose class="m-0">Stay</AlertDialogClose>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmButton
+        title="Are you sure?"
+        description="Your changes will be lost if you leave this page."
+        onConfirm={() => navigate(-1)}
+        actionText="Leave"
+        closeText="Stay"
+      >
+        <TbArrowLeft size={20} />
+      </ConfirmButton>
       <h1 class="text-lg font-semibold ml-2">New Transaction</h1>
     </header>
   );
@@ -125,31 +102,11 @@ const TransactionForm = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toaster.show((props) => (
-        <Toast {...props}>
-          <ToastContent>
-            <ToastTitle>Success</ToastTitle>
-            <ToastDescription>
-              Transaction created successfully
-            </ToastDescription>
-          </ToastContent>
-          <ToastProgress />
-        </Toast>
-      ));
+      queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+      toastSuccess("Transaction created successfully");
       navigate("/transactions");
     },
-    onError: (error) => {
-      toaster.show((props) => (
-        <Toast {...props} variant="destructive">
-          <ToastContent>
-            <ToastTitle>Error</ToastTitle>
-            <ToastDescription>{error.message}</ToastDescription>
-          </ToastContent>
-          <ToastProgress />
-        </Toast>
-      ));
-    },
+    onError: (error) => toastError(error.message),
   }));
 
   const handleSubmit = (e: Event) => {

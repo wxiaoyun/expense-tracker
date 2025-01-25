@@ -39,7 +39,7 @@ const listTransactions = async (query?: { start?: Date; end?: Date }) => {
   const endDate = end?.getTime() ?? new Date().getTime();
 
   const result = await db.select(
-    "SELECT * FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
+    "SELECT * FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ORDER BY transaction_date ASC",
     [startDate, endDate],
   );
 
@@ -128,6 +128,14 @@ const updateTransaction = async (
   } as Transaction;
 };
 
+const deleteTransaction = async (id: number) => {
+  const result = await db.execute("DELETE FROM transactions WHERE id = $1", [
+    id,
+  ]);
+  console.info("[DB][deleteTransaction] result %o", result);
+  return result.rowsAffected > 0;
+};
+
 const listCategories = async () => {
   const result: Pick<Transaction, "category">[] = await db.select(
     "SELECT DISTINCT category FROM transactions",
@@ -140,10 +148,18 @@ const listCategories = async () => {
   return result;
 };
 
+const clearTransactions = async () => {
+  const result = await db.execute("DELETE FROM transactions");
+  console.info("[DB][clearTransactions] result %o", result);
+  return result.rowsAffected > 0;
+};
+
 export default {
   get: getTransaction,
   list: listTransactions,
   create: createTransaction,
   update: updateTransaction,
+  delete: deleteTransaction,
   categories: listCategories,
+  clear: clearTransactions,
 };

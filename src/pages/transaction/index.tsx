@@ -1,3 +1,4 @@
+import { ConfirmButton } from "@/components/confirmButton";
 import {
   Select,
   SelectContent,
@@ -6,13 +7,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
 import {
   CURRENCY_SYMBOLS,
   DEFAULT_CURRENCY,
   DEFAULT_CURRENCY_SYMBOL,
 } from "@/constants/settings";
-import { Transaction } from "@/db/transactions";
+import transactions, { Transaction } from "@/db/transactions";
+import { cn } from "@/libs/cn";
+import { queryClient } from "@/query";
+import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
 import {
   useDateRange,
   useSearchTransactionParams,
@@ -22,7 +34,7 @@ import { useCurrency } from "@/signals/setting";
 import { DateRange, shiftDate } from "@/utils/date";
 import { useNavigate } from "@solidjs/router";
 import { debounce } from "lodash";
-import { FaSolidPlus } from "solid-icons/fa";
+import { FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
 import { HiSolidPencil } from "solid-icons/hi";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
@@ -91,6 +103,7 @@ export const TimeShift = () => {
   const {
     currentDate: date,
     currentRange: range,
+    dateRange,
     setDate,
     setRange,
   } = useDateRange();
@@ -103,44 +116,50 @@ export const TimeShift = () => {
   const rangeOptions: DateRange[] = ["daily", "weekly", "monthly", "yearly"];
 
   return (
-    <section class="relative p-1 flex justify-between items-center">
+    <section class="relative p-1 flex justify-between gap-6 items-center">
+      <div class="flex flex-col text-start">
+        <span class="text-xs">
+          From <b>{dateRange().start.toDateString()}</b>
+        </span>
+        <span class="text-xs">
+          To <b>{dateRange().end.toDateString()}</b>
+        </span>
+      </div>
+
       <TbChevronLeft
         class="cursor-pointer hover:opacity-65 transition-opacity"
-        size={20}
+        size={32}
         onClick={() => shift(-1)}
       />
 
-      <div class="flex flex-col items-center">
-        <Select
-          options={rangeOptions}
-          value={range()}
-          onChange={(value) => setRange(value as DateRange)}
-          itemComponent={(props) => (
-            <SelectItem item={props.item}>
-              {props.item.rawValue.charAt(0).toUpperCase() +
-                props.item.rawValue.slice(1)}
-            </SelectItem>
-          )}
-          class="mb-1"
-        >
-          <SelectTrigger class="w-32 h-8">
-            <SelectValue<DateRange>>
-              {(state) =>
-                state.selectedOption()?.charAt(0).toUpperCase() +
-                state.selectedOption()?.slice(1)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent />
-        </Select>
-        <h2 class="text-sm">{date().toDateString()}</h2>
-      </div>
-
       <TbChevronRight
         class="cursor-pointer hover:opacity-65 transition-opacity"
-        size={20}
+        size={32}
         onClick={() => shift(1)}
       />
+
+      <Select
+        options={rangeOptions}
+        value={range()}
+        onChange={(value) => setRange(value as DateRange)}
+        itemComponent={(props) => (
+          <SelectItem item={props.item}>
+            {props.item.rawValue.charAt(0).toUpperCase() +
+              props.item.rawValue.slice(1)}
+          </SelectItem>
+        )}
+        class="mb-1"
+      >
+        <SelectTrigger class="w-32 h-8">
+          <SelectValue<DateRange>>
+            {(state) =>
+              state.selectedOption()?.charAt(0).toUpperCase() +
+              state.selectedOption()?.slice(1)
+            }
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent />
+      </Select>
     </section>
   );
 };
@@ -196,9 +215,22 @@ export const TransactionList = () => {
       </Show>
 
       <Show when={query().data}>
-        <For each={query().data}>
-          {(t) => <TransactionItem transaction={t} />}
-        </For>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="w-[100px]">Date</TableHead>
+              <TableHead class="w-[120px]">Category</TableHead>
+              <TableHead class="w-full">Description</TableHead>
+              <TableHead class="w-fit whitespace-nowrap">Amount</TableHead>
+              <TableHead class="w-[80px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <For each={query().data}>
+              {(t) => <TransactionItem transaction={t} />}
+            </For>
+          </TableBody>
+        </Table>
       </Show>
     </section>
   );
@@ -218,28 +250,47 @@ const TransactionItem = (props: { transaction: Transaction }) => {
     return `${sign}${currencySymbol}${amount.toFixed(2)}`;
   };
 
-  return (
-    <div class="p-1 border-b flex justify-between gap-2 items-center">
-      <div class="grow">
-        <div class="flex justify-between items-center">
-          <span>
-            {new Date(props.transaction.transaction_date).toLocaleDateString()}
-          </span>
-          <span class={isIncome() ? "text-green-600" : "text-red-600"}>
-            {formattedAmount()}
-          </span>
-        </div>
-        <div class="flex justify-between items-center text-sm text-gray-600">
-          <span>{props.transaction.description || "No description"}</span>
-          <span>{props.transaction.category}</span>
-        </div>
-      </div>
+  const handleDelete = async () => {
+    await transactions.delete(props.transaction.id);
+    queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+  };
 
-      <HiSolidPencil
-        class="text-muted-foreground cursor-pointer hover:opacity-65 transition-opacity"
-        size={20}
-        onClick={() => navigate(`/transactions/edit/${props.transaction.id}`)}
-      />
-    </div>
+  return (
+    <TableRow class="text-xs">
+      <TableCell>
+        {new Date(props.transaction.transaction_date).toLocaleDateString()}
+      </TableCell>
+      <TableCell>{props.transaction.category}</TableCell>
+      <TableCell>{props.transaction.description || "-"}</TableCell>
+      <TableCell
+        class={cn(
+          "whitespace-nowrap",
+          isIncome() ? "text-green-600" : "text-red-600",
+        )}
+      >
+        {formattedAmount()}
+      </TableCell>
+      <TableCell>
+        <div class="flex gap-2">
+          <HiSolidPencil
+            class="text-muted-foreground cursor-pointer hover:opacity-65 transition-opacity"
+            size={20}
+            onClick={() =>
+              navigate(`/transactions/edit/${props.transaction.id}`)
+            }
+          />
+          <ConfirmButton
+            title="Are you sure?"
+            description="This action will delete the transaction."
+            onConfirm={handleDelete}
+          >
+            <FaSolidTrash
+              class="text-red-500 hover:text-red-600 cursor-pointer hover:opacity-65 transition-opacity"
+              size={20}
+            />
+          </ConfirmButton>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 };

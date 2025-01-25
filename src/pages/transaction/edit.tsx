@@ -1,13 +1,5 @@
-import {
-  AlertDialog,
-  AlertDialogClose,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmButton } from "@/components/confirmButton";
+import { toastError, toastSuccess } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -37,25 +29,18 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-import {
-  Toast,
-  ToastContent,
-  ToastDescription,
-  ToastProgress,
-  ToastTitle,
-} from "@/components/ui/toast";
 import transactions from "@/db/transactions";
 import { queryClient } from "@/query/query";
 import {
   createTransactionCategoriesQuery,
   createTransactionQuery,
+  TRANSACTIONS_QUERY_KEY,
 } from "@/query/transactions";
 import { CalendarDate } from "@internationalized/date";
-import { toaster } from "@kobalte/core";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
-import { Index, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { otherCategory } from "./new";
 
@@ -72,27 +57,15 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <header class="flex items-center mb-4">
-      <AlertDialog>
-        <AlertDialogTrigger as={Button} variant="ghost">
-          <TbArrowLeft size={20} />
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your changes will be lost if you leave this page.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button variant="default" onClick={() => navigate(-1)}>
-              Leave
-            </Button>
-            <AlertDialogClose class="m-0" as={Button}>
-              Stay
-            </AlertDialogClose>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmButton
+        title="Are you sure?"
+        description="Your changes will be lost if you leave this page."
+        onConfirm={() => navigate(-1)}
+        actionText="Leave"
+        closeText="Stay"
+      >
+        <TbArrowLeft size={20} />
+      </ConfirmButton>
       <h1 class="text-lg font-semibold ml-2">Edit Transaction</h1>
     </header>
   );
@@ -125,7 +98,7 @@ const EditTransactionForm = () => {
       return;
     }
 
-    setAmount(query.data.amount);
+    setAmount(Math.round(query.data.amount * 100) / 100);
     const date = new Date(query.data.transaction_date);
     setDate(
       new CalendarDate(date.getFullYear(), date.getMonth(), date.getDate()),
@@ -147,31 +120,11 @@ const EditTransactionForm = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toaster.show((props) => (
-        <Toast {...props}>
-          <ToastContent>
-            <ToastTitle>Success</ToastTitle>
-            <ToastDescription>
-              Transaction updated successfully
-            </ToastDescription>
-          </ToastContent>
-          <ToastProgress />
-        </Toast>
-      ));
+      queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+      toastSuccess("Transaction updated successfully");
       navigate("/transactions");
     },
-    onError: (error) => {
-      toaster.show((props) => (
-        <Toast {...props} variant="destructive">
-          <ToastContent>
-            <ToastTitle>Error</ToastTitle>
-            <ToastDescription>{error.message}</ToastDescription>
-          </ToastContent>
-          <ToastProgress />
-        </Toast>
-      ));
-    },
+    onError: (error) => toastError(error.message),
   }));
 
   const handleSubmit = (e: Event) => {

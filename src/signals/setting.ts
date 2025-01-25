@@ -1,4 +1,9 @@
-import { CURRENCY_SETTING_KEY, THEME_SETTING_KEY } from "@/constants/settings";
+import {
+  CURRENCY_SETTING_KEY,
+  DEFAULT_CURRENCY,
+  DEFAULT_THEME,
+  THEME_SETTING_KEY,
+} from "@/constants/settings";
 import { settings } from "@/db";
 import { createSettingQuery } from "@/query/settings";
 import { createMemo } from "solid-js";
@@ -34,9 +39,9 @@ export const useSetting = <T = string>(
 };
 
 export const useCurrency = () => {
-  return useSetting(() => CURRENCY_SETTING_KEY);
+  return useSetting(() => CURRENCY_SETTING_KEY, DEFAULT_CURRENCY);
 };
 
 export const useTheme = () => {
-  return useSetting(() => THEME_SETTING_KEY);
+  return useSetting(() => THEME_SETTING_KEY, DEFAULT_THEME);
 };
