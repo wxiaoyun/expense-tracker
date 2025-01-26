@@ -1,4 +1,3 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   THEME_OPTIONS,
 } from "@/constants/settings";
 import { settings } from "@/db";
+import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
 import { SETTINGS_QUERY_KEY } from "@/query/settings";
 import { useCurrency, useTheme } from "@/signals/setting";
@@ -37,7 +37,7 @@ const CurrencySetting = () => {
   const [currency, setCurrency] = useCurrency();
 
   return (
-    <div class="flex justify-between items-center text-sm">
+    <div class="flex justify-between items-center">
       <label>Currency</label>
       <Select
         value={currency().data ?? DEFAULT_CURRENCY}
@@ -69,7 +69,7 @@ const ThemeSetting = () => {
   });
 
   return (
-    <div class="flex justify-between items-center text-sm">
+    <div class="flex justify-between items-center">
       <label>Theme</label>
       <Select
         value={theme().data ?? DEFAULT_THEME}
@@ -89,22 +89,27 @@ const ThemeSetting = () => {
 };
 
 const ClearSettings = () => {
-  const clearSettings = async () => {
-    await settings.clear();
-    queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY] });
-  };
+  const handleClearSettings = confirmationCallback(
+    "This action will reset all settings to default.",
+    {
+      title: "Clear Settings",
+      okLabel: "Clear",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        await settings.clear();
+        queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY] });
+      },
+    },
+  );
 
   return (
-    <div class="flex justify-between items-center text-sm">
+    <div class="flex justify-between items-center">
       <label>Clear Settings</label>
 
-      <ConfirmButton
-        title="Are you sure?"
-        description="This action will reset all settings to default."
-        onConfirm={clearSettings}
-      >
-        <FaSolidTrash class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer" />
-      </ConfirmButton>
+      <FaSolidTrash
+        class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+        onClick={handleClearSettings}
+      />
     </div>
   );
 };

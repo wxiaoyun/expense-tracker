@@ -5,12 +5,31 @@ import dotenv from "dotenv";
 import { resolve } from "path";
 
 const node_env = process.env.NODE_ENV;
+const host = process.env.TAURI_DEV_HOST;
+
+console.log({
+  host,
+  node_env,
+});
 
 if (node_env === "development") {
   dotenv.config();
 }
 
 export default defineConfig({
+  server: {
+    host,
+    strictPort: true,
+  },
+  dev: {
+    client: host
+      ? {
+          protocol: "ws",
+          host,
+          port: 3000,
+        }
+      : undefined,
+  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

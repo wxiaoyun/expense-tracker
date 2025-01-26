@@ -30,7 +30,7 @@ export const ComboboxInput = <T extends ValidComponent = "input">(
   return (
     <ComboboxPrimitive.Input
       class={cn(
-        "h-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        "h-full bg-transparent placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
         local.class,
       )}
       {...rest}

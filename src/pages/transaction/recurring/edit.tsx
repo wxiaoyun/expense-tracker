@@ -1,4 +1,3 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import { toastError, toastSuccess } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,27 +28,19 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   TextField,
   TextFieldErrorMessage,
   TextFieldLabel,
   TextFieldRoot,
 } from "@/components/ui/textfield";
 import { recurringTransactions } from "@/db";
-import { RecurrenceType, recurrenceTypes } from "@/db/recurring_transactions";
+import { validateOccurrence } from "@/libs/date";
 import { queryClient } from "@/query";
 import {
   createRecurringTransactionQuery,
   RECURRING_TRANSACTIONS_QUERY_KEY,
 } from "@/query/recurring-transactions";
 import { createTransactionCategoriesQuery } from "@/query/transactions";
-import { validateOccurrence } from "@/utils/date";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
@@ -71,15 +62,11 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <header class="flex items-center mb-4">
-      <ConfirmButton
-        title="Are you sure?"
-        description="Your changes will be lost if you leave this page."
-        onConfirm={() => navigate(-1)}
-        actionText="Leave"
-        closeText="Stay"
-      >
-        <TbArrowLeft size={20} />
-      </ConfirmButton>
+      <TbArrowLeft
+        class="cursor-pointer hover:opacity-65 transition-opacity"
+        size={20}
+        onClick={() => navigate(-1)}
+      />
       <h1 class="text-lg font-semibold ml-2">Edit Recurring Transaction</h1>
     </header>
   );
@@ -106,11 +93,9 @@ const EditForm = () => {
   const [category, setCategory] = createSignal("");
   const [newCategory, setNewCategory] = createSignal("");
   const [description, setDescription] = createSignal("");
-  const [recurrenceType, setRecurrenceType] =
-    createSignal<RecurrenceType>("regular");
   const [recurrenceValue, setRecurrenceValue] = createSignal("");
   const isRecurrenceValueValid = createMemo(() =>
-    validateOccurrence(recurrenceType(), recurrenceValue()),
+    validateOccurrence(recurrenceValue()),
   );
 
   createEffect(() => {
@@ -125,7 +110,6 @@ const EditForm = () => {
     setStartDate(new CalendarDate(startDateYear, startDateMonth, startDateDay));
     setCategory(transaction.category);
     setDescription(transaction.description ?? "");
-    setRecurrenceType(transaction.recurrence_type);
     setRecurrenceValue(transaction.recurrence_value);
   });
 
@@ -138,7 +122,6 @@ const EditForm = () => {
         start_date: new Date(startDate().toString()).getTime(),
         category: newCategory() || category(),
         description: description(),
-        recurrence_type: recurrenceType(),
         recurrence_value: recurrenceValue(),
       });
     },
@@ -175,7 +158,7 @@ const EditForm = () => {
         </TextFieldRoot>
 
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium">Start Date</label>
+          <label class="font-medium">Start Date</label>
           <DatePicker
             value={[startDate()]}
             onValueChange={(change) =>
@@ -334,7 +317,7 @@ const EditForm = () => {
         </TextFieldRoot>
 
         <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium">Category</label>
+          <label class="font-medium">Category</label>
           <Combobox
             value={category()}
             onChange={(value) => {
@@ -366,27 +349,6 @@ const EditForm = () => {
             }}
           />
         </TextFieldRoot>
-
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium">Recurrence Type</label>
-
-          <Select
-            options={recurrenceTypes}
-            value={recurrenceType()}
-            onChange={(value) => value && setRecurrenceType(value)}
-            placeholder="Select a fruit…"
-            itemComponent={(props) => (
-              <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
-            )}
-          >
-            <SelectTrigger>
-              <SelectValue<RecurrenceType>>
-                {(state) => state.selectedOption()}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent />
-          </Select>
-        </div>
 
         <TextFieldRoot
           validationState={isRecurrenceValueValid().ok ? "valid" : "invalid"}

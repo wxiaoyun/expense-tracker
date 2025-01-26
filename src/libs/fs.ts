@@ -5,6 +5,8 @@ import * as path from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { create, readFile } from "@tauri-apps/plugin-fs";
 
+// https://tauri.app/plugin/file-system/
+
 export const importDatabase = async (
   onSuccess: (msg: string) => void,
   onError: (errMsg: string) => void,

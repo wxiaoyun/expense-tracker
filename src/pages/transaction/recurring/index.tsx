@@ -1,16 +1,16 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import { Separator } from "@/components/ui/separator";
 import { recurringTransactions } from "@/db";
 import { RecurringTransaction } from "@/db/recurring_transactions";
 import { cn } from "@/libs/cn";
+import { formatCurrency } from "@/libs/currency";
+import { getNextRecurrenceDate, occurrenceToText } from "@/libs/date";
+import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query/query";
 import {
   createIncurredRecurringTransactionListQuery,
   createRecurringTransactionListQuery,
   RECURRING_TRANSACTIONS_QUERY_KEY,
 } from "@/query/recurring-transactions";
-import { formatCurrency } from "@/utils/currency";
-import { getNextRecurrenceDate, occurrenceToText } from "@/utils/date";
 import { useNavigate } from "@solidjs/router";
 import {
   FaSolidPen,
@@ -92,12 +92,20 @@ const RecurringTransactionCard = (props: {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  const handleDelete = (transaction: RecurringTransaction) => {
-    recurringTransactions.delete(transaction.id);
-    queryClient.invalidateQueries({
-      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-    });
-  };
+  const handleDelete = confirmationCallback(
+    "This action will delete the recurring transaction.",
+    {
+      title: "Are you sure?",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        await recurringTransactions.delete(props.transaction.id);
+        queryClient.invalidateQueries({
+          queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
+        });
+      },
+    },
+  );
 
   return (
     <div class="border rounded-lg p-4 space-y-4">
@@ -118,16 +126,11 @@ const RecurringTransactionCard = (props: {
             }
           />
 
-          <ConfirmButton
-            title="Delete recurring transaction"
-            description="Are you sure you want to delete this recurring transaction?"
-            onConfirm={() => handleDelete(props.transaction)}
-          >
-            <FaSolidTrash
-              class="text-red-500 hover:text-red-600 transition-colors"
-              size={20}
-            />
-          </ConfirmButton>
+          <FaSolidTrash
+            class="text-red-500 hover:text-red-600 transition-colors"
+            size={20}
+            onClick={handleDelete}
+          />
         </div>
       </div>
 
@@ -157,11 +160,7 @@ const RecurringTransactionCard = (props: {
           </Show>
           <p>Next charge: {nextChargeDate().toLocaleDateString()}</p>
           <p>
-            Recurrence:{" "}
-            {occurrenceToText(
-              props.transaction.recurrence_type,
-              props.transaction.recurrence_value,
-            )}
+            Recurrence: {occurrenceToText(props.transaction.recurrence_value)}
           </p>
         </div>
       </div>

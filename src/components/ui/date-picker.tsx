@@ -262,7 +262,7 @@ export const DatePickerInput = (props: DatePickerInputProps) => {
   return (
     <DatePickerPrimitive.Input
       class={cn(
-        "w-full h-9 border border-border bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[1.5px] focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 transition-shadow",
+        "w-full h-9 border border-border bg-background px-3 py-1 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[1.5px] focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 transition-shadow",
         local.class,
       )}
       {...rest}

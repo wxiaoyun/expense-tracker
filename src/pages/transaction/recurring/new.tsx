@@ -1,4 +1,3 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import { toastError, toastSuccess } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,29 +28,16 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   TextField,
   TextFieldErrorMessage,
   TextFieldLabel,
   TextFieldRoot,
 } from "@/components/ui/textfield";
-import { IntervalToText } from "@/constants/date";
 import { recurringTransactions } from "@/db";
-import {
-  recurrenceRegularValues,
-  RecurrenceType,
-  recurrenceTypes,
-} from "@/db/recurring_transactions";
+import { validateOccurrence } from "@/libs/date";
 import { queryClient } from "@/query";
 import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
 import { createTransactionCategoriesQuery } from "@/query/transactions";
-import { validateOccurrence } from "@/utils/date";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
@@ -73,15 +59,11 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <header class="flex items-center mb-4">
-      <ConfirmButton
-        title="Are you sure?"
-        description="Your changes will be lost if you leave this page."
-        onConfirm={() => navigate(-1)}
-        actionText="Leave"
-        closeText="Stay"
-      >
-        <TbArrowLeft size={20} />
-      </ConfirmButton>
+      <TbArrowLeft
+        class="cursor-pointer hover:opacity-65 transition-opacity"
+        size={20}
+        onClick={() => navigate(-1)}
+      />
       <h1 class="text-lg font-semibold ml-2">New Recurring Transaction</h1>
     </header>
   );
@@ -106,11 +88,9 @@ const NewForm = () => {
   const [category, setCategory] = createSignal("");
   const [newCategory, setNewCategory] = createSignal("");
   const [description, setDescription] = createSignal("");
-  const [recurrenceType, setRecurrenceType] =
-    createSignal<RecurrenceType>("regular");
   const [recurrenceValue, setRecurrenceValue] = createSignal("");
   const isRecurrenceValueValid = createMemo(() =>
-    validateOccurrence(recurrenceType(), recurrenceValue()),
+    validateOccurrence(recurrenceValue()),
   );
 
   const mutation = createMutation(() => ({
@@ -120,7 +100,6 @@ const NewForm = () => {
         start_date: new Date(startDate().toString()).getTime(),
         category: newCategory() || category(),
         description: description(),
-        recurrence_type: recurrenceType(),
         recurrence_value: recurrenceValue(),
       });
     },
@@ -156,7 +135,7 @@ const NewForm = () => {
       </TextFieldRoot>
 
       <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium">Start Date</label>
+        <label class="font-medium">Start Date</label>
         <DatePicker
           value={[startDate()]}
           onValueChange={(change) =>
@@ -313,7 +292,7 @@ const NewForm = () => {
       </TextFieldRoot>
 
       <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium">Category</label>
+        <label class="font-medium">Category</label>
         <Combobox
           value={category()}
           onChange={(value) => {
@@ -346,69 +325,22 @@ const NewForm = () => {
         />
       </TextFieldRoot>
 
-      <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium">Recurrence Type</label>
-
-        <Select
-          options={recurrenceTypes}
-          value={recurrenceType()}
-          onChange={(value) => value && setRecurrenceType(value)}
-          placeholder="Select a recurrence type"
-          itemComponent={(props) => (
-            <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
-          )}
-        >
-          <SelectTrigger>
-            <SelectValue<RecurrenceType>>
-              {(state) => state.selectedOption()}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent />
-        </Select>
-      </div>
-
-      <Show when={recurrenceType() === "cron"}>
-        <TextFieldRoot
-          validationState={isRecurrenceValueValid().ok ? "valid" : "invalid"}
-        >
-          <TextFieldLabel>Recurrence Value</TextFieldLabel>
-          <TextField
-            placeholder="Recurrence Value"
-            value={recurrenceValue()}
-            onChange={(e) => setRecurrenceValue(e.currentTarget.value)}
-            required
-          />
-          <Show when={!isRecurrenceValueValid().ok}>
-            <TextFieldErrorMessage>
-              {isRecurrenceValueValid().err}
-            </TextFieldErrorMessage>
-          </Show>
-        </TextFieldRoot>
-      </Show>
-
-      <Show when={recurrenceType() === "regular"}>
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium">Recurrence Value</label>
-          <Select
-            options={recurrenceRegularValues}
-            value={recurrenceValue()}
-            onChange={(value) => value && setRecurrenceValue(String(value))}
-            placeholder="Select a recurrence value"
-            itemComponent={(props) => (
-              <SelectItem item={props.item}>
-                {IntervalToText[Number(props.item.rawValue)]}
-              </SelectItem>
-            )}
-          >
-            <SelectTrigger>
-              <SelectValue<number>>
-                {(state) => IntervalToText[Number(state.selectedOption())]}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent />
-          </Select>
-        </div>
-      </Show>
+      <TextFieldRoot
+        validationState={isRecurrenceValueValid().ok ? "valid" : "invalid"}
+      >
+        <TextFieldLabel>Recurrence Value</TextFieldLabel>
+        <TextField
+          placeholder="Recurrence Value"
+          value={recurrenceValue()}
+          onChange={(e) => setRecurrenceValue(e.currentTarget.value)}
+          required
+        />
+        <Show when={!isRecurrenceValueValid().ok}>
+          <TextFieldErrorMessage>
+            {isRecurrenceValueValid().err}
+          </TextFieldErrorMessage>
+        </Show>
+      </TextFieldRoot>
 
       <Button
         type="submit"

@@ -10,7 +10,7 @@ import { SettingGroup } from "../components/group";
 export const MiscGroup = () => {
   return (
     <SettingGroup title="Miscellaneous">
-      <div class="flex flex-col gap-3 text-sm">
+      <div class="flex flex-col gap-3 ">
         <div class="w-full flex items-center justify-between">
           <label>Submit bug report</label>
           <FiExternalLink

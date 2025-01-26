@@ -32,7 +32,7 @@ const SeedTransactions = lazy(async () => {
     };
 
     return (
-      <div class="flex justify-between items-center text-sm">
+      <div class="flex justify-between items-center">
         <label>Seed transactions</label>
         <div class="flex items-center gap-2">
           <input
@@ -65,7 +65,7 @@ const SeedRecurringTransactions = lazy(async () => {
     };
 
     return (
-      <div class="flex justify-between items-center text-sm">
+      <div class="flex justify-between items-center">
         <label>Seed recurring transactions</label>
         <div class="flex items-center gap-2">
           <input

@@ -1,8 +1,5 @@
 import { recurringTransactions, transactions } from "@/db";
-import {
-  RecurrenceType,
-  RecurringTransaction,
-} from "@/db/recurring_transactions";
+import { RecurringTransaction } from "@/db/recurring_transactions";
 import { Transaction } from "@/db/transactions";
 
 const categories = [
@@ -45,20 +42,6 @@ const randomDate = (start: Date, end: Date) => {
   return new Date(
     start.getTime() + Math.random() * (end.getTime() - start.getTime()),
   );
-};
-
-/**
- * Generate a random interval between weekly, monthly, and yearly
- * Time is in milliseconds
- * @returns
- */
-const randomInterval = () => {
-  const intervals = [
-    7 * 24 * 60 * 60 * 1000,
-    30 * 24 * 60 * 60 * 1000,
-    365 * 24 * 60 * 60 * 1000,
-  ];
-  return intervals[Math.floor(Math.random() * intervals.length)];
 };
 
 const randomAmount = (category: string) => {
@@ -114,28 +97,16 @@ export const generateTransactions = async (numTransactions: number) => {
   await transactions.batchCreate(transactionList);
 };
 
-const recurrenceTypes = ["cron", "regular"];
-
-const randomRecurrenceType = () => {
-  return recurrenceTypes[
-    Math.floor(Math.random() * recurrenceTypes.length)
-  ] as RecurrenceType;
-};
-
-const randomRecurrenceValue = (recurrenceType: RecurrenceType) => {
-  if (recurrenceType === "cron") {
-    const cron = [
-      0,
-      0,
-      0,
-      randomInteger(1, 31),
-      randomInteger(1, 12),
-      randomInteger(0, 6),
-    ];
-    return cron.join(" ");
-  }
-
-  return String(randomInterval());
+const randomRecurrenceValue = () => {
+  const cron = [
+    0,
+    0,
+    0,
+    randomInteger(1, 31),
+    randomInteger(1, 12),
+    randomInteger(0, 6),
+  ];
+  return cron.join(" ");
 };
 
 export const generateRecurringTransactions = async (
@@ -150,15 +121,13 @@ export const generateRecurringTransactions = async (
     const category = categories[Math.floor(Math.random() * categories.length)];
     const descList = descriptions[category as keyof typeof descriptions];
     const description = descList[Math.floor(Math.random() * descList.length)];
-    const recurrenceType = randomRecurrenceType();
-    const recurrenceValue = randomRecurrenceValue(recurrenceType);
+    const recurrenceValue = randomRecurrenceValue();
 
     recurringTransactionList.push({
       amount: randomAmount(category),
       category,
       description,
       start_date: randomDate(startDate, endDate).getTime(),
-      recurrence_type: recurrenceType,
       recurrence_value: recurrenceValue,
     });
   }

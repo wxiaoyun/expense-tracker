@@ -1,4 +1,3 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import {
   Select,
   SelectContent,
@@ -19,6 +18,9 @@ import { TextField, TextFieldRoot } from "@/components/ui/textfield";
 import { DEFAULT_CURRENCY } from "@/constants/settings";
 import transactions, { Transaction } from "@/db/transactions";
 import { cn } from "@/libs/cn";
+import { formatCurrency } from "@/libs/currency";
+import { DateRange, shiftDate } from "@/libs/date";
+import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
 import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
 import {
@@ -27,8 +29,6 @@ import {
   useTransactions,
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
-import { formatCurrency } from "@/utils/currency";
-import { DateRange, shiftDate } from "@/utils/date";
 import { useNavigate } from "@solidjs/router";
 import { debounce } from "lodash";
 import { FaSolidPen, FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
@@ -177,7 +177,7 @@ export const IntervalSummary = () => {
   });
 
   return (
-    <section class="p-1 flex justify-around text-sm">
+    <section class="p-1 flex justify-around">
       <div class="flex flex-col items-center">
         <h3>Income</h3>
         <p class="text-green-500">${summary().income.toFixed(2)}</p>
@@ -242,10 +242,18 @@ const TransactionItem = (props: { transaction: Transaction }) => {
       currency: currency().data ?? DEFAULT_CURRENCY,
     });
 
-  const handleDelete = async () => {
-    await transactions.delete(props.transaction.id);
-    queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
-  };
+  const handleDelete = confirmationCallback(
+    "This action will delete the transaction.",
+    {
+      title: "Are you sure?",
+      okLabel: "Delete",
+      cancelLabel: "Cancel",
+      onConfirm: async () => {
+        await transactions.delete(props.transaction.id);
+        queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+      },
+    },
+  );
 
   return (
     <TableRow class="text-xs">
@@ -271,16 +279,11 @@ const TransactionItem = (props: { transaction: Transaction }) => {
               navigate(`/transactions/edit/${props.transaction.id}`)
             }
           />
-          <ConfirmButton
-            title="Are you sure?"
-            description="This action will delete the transaction."
-            onConfirm={handleDelete}
-          >
-            <FaSolidTrash
-              class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
-              size={20}
-            />
-          </ConfirmButton>
+          <FaSolidTrash
+            class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
+            size={20}
+            onClick={handleDelete}
+          />
         </div>
       </TableCell>
     </TableRow>

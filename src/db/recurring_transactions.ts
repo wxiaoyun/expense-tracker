@@ -1,15 +1,5 @@
-import { DAY, MONTH, YEAR } from "@/constants/date";
 import { db, transactions } from ".";
 import { Transaction } from "./transactions";
-
-export type RecurrenceType = "cron" | "regular";
-
-export const recurrenceTypes = ["cron", "regular"] as RecurrenceType[];
-export const recurrenceRegularValues = [
-  YEAR,
-  MONTH,
-  DAY,
-];
 
 export type RecurringTransaction = {
   id: number;
@@ -18,7 +8,6 @@ export type RecurringTransaction = {
   description?: string;
   start_date: number;
   last_charged?: number;
-  recurrence_type: RecurrenceType;
   recurrence_value: string;
   created_at: number;
   updated_at: number;
@@ -60,12 +49,11 @@ const createRecurringTransaction = async (
   const now = new Date().getTime();
 
   const result = await db.execute(
-    "INSERT INTO recurring_transactions (amount, category, start_date, recurrence_type, recurrence_value, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    "INSERT INTO recurring_transactions (amount, category, start_date, recurrence_value, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
     [
       transaction.amount,
       transaction.category,
       transaction.start_date,
-      transaction.recurrence_type,
       transaction.recurrence_value,
       now,
       now,
@@ -94,13 +82,12 @@ const updateRecurringTransaction = async (
 ) => {
   const now = new Date().getTime();
   const result = await db.execute(
-    "UPDATE recurring_transactions SET amount = $1, category = $2, start_date = $3, last_charged = $4, recurrence_type = $5, recurrence_value = $6, updated_at = $7 WHERE id = $8",
+    "UPDATE recurring_transactions SET amount = $1, category = $2, start_date = $3, last_charged = $4, recurrence_value = $5, updated_at = $6 WHERE id = $7",
     [
       transaction.amount,
       transaction.category,
       transaction.start_date,
       transaction.last_charged,
-      transaction.recurrence_type,
       transaction.recurrence_value,
       now,
       transaction.id,
@@ -183,8 +170,8 @@ const batchCreateRecurringTransactions = async (
 
   const placeholders = transactions
     .map((_, index) => {
-      const offset = index * 8;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
+      const offset = index * 7;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
     })
     .join(", ");
 
@@ -195,14 +182,13 @@ const batchCreateRecurringTransactions = async (
     transaction.category,
     transaction.description,
     transaction.start_date,
-    transaction.recurrence_type,
     transaction.recurrence_value,
     now,
     now,
   ]);
 
   const result = await db.execute(
-    `INSERT INTO recurring_transactions (amount, category, description, start_date, recurrence_type, recurrence_value, created_at, updated_at) 
+    `INSERT INTO recurring_transactions (amount, category, description, start_date, recurrence_value, created_at, updated_at) 
      VALUES ${placeholders} RETURNING id`,
     values,
   );

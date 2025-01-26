@@ -1,4 +1,3 @@
-import { ConfirmButton } from "@/components/confirmButton";
 import { toastError, toastSuccess } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +27,11 @@ import {
   DatePickerViewControl,
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
-import { TextField, TextFieldRoot } from "@/components/ui/textfield";
+import {
+  TextField,
+  TextFieldLabel,
+  TextFieldRoot,
+} from "@/components/ui/textfield";
 import transactions from "@/db/transactions";
 import { queryClient } from "@/query/query";
 import {
@@ -47,7 +50,7 @@ export const otherCategory = "Other";
 
 export const NewTransactionPage = () => {
   return (
-    <main class="flex flex-col p-2">
+    <main class="flex flex-col p-2 overflow-y-auto">
       <Header />
       <TransactionForm />
     </main>
@@ -58,15 +61,11 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <header class="flex items-center mb-4">
-      <ConfirmButton
-        title="Are you sure?"
-        description="Your changes will be lost if you leave this page."
-        onConfirm={() => navigate(-1)}
-        actionText="Leave"
-        closeText="Stay"
-      >
-        <TbArrowLeft size={20} />
-      </ConfirmButton>
+      <TbArrowLeft
+        class="cursor-pointer hover:opacity-65 transition-opacity"
+        size={20}
+        onClick={() => navigate(-1)}
+      />
       <h1 class="text-lg font-semibold ml-2">New Transaction</h1>
     </header>
   );
@@ -126,6 +125,7 @@ const TransactionForm = () => {
   return (
     <form onSubmit={handleSubmit} class="flex flex-col gap-4">
       <TextFieldRoot>
+        <TextFieldLabel>Amount</TextFieldLabel>
         <TextField
           type="number"
           step="0.01"
@@ -136,148 +136,154 @@ const TransactionForm = () => {
         />
       </TextFieldRoot>
 
-      <DatePicker
-        value={[date()]}
-        onValueChange={(change) => setDate(change.value[0] as CalendarDate)}
-        locale="en"
-        positioning={{
-          placement: "bottom-start",
-        }}
-      >
-        <DatePickerControl class="w-full">
-          <DatePickerInput placeholder="Pick a date" />
-          <DatePickerTrigger />
-        </DatePickerControl>
+      <div class="flex flex-col gap-1">
+        <label class="font-medium">Date</label>
+        <DatePicker
+          value={[date()]}
+          onValueChange={(change) => setDate(change.value[0] as CalendarDate)}
+          locale="en"
+          positioning={{
+            placement: "bottom-start",
+          }}
+        >
+          <DatePickerControl class="w-full">
+            <DatePickerInput placeholder="Pick a date" />
+            <DatePickerTrigger />
+          </DatePickerControl>
 
-        <Portal>
-          <DatePickerPositioner>
-            <DatePickerContent>
-              <DatePickerView view="day">
-                <DatePickerContext>
-                  {(context) => {
-                    return (
+          <Portal>
+            <DatePickerPositioner>
+              <DatePickerContent>
+                <DatePickerView view="day">
+                  <DatePickerContext>
+                    {(context) => {
+                      return (
+                        <>
+                          <DatePickerViewControl>
+                            <DatePickerViewTrigger>
+                              <DatePickerRangeText />
+                            </DatePickerViewTrigger>
+                          </DatePickerViewControl>
+                          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <DatePickerTable>
+                              <DatePickerTableHead>
+                                <DatePickerTableRow>
+                                  <Index each={context().weekDays}>
+                                    {(weekDay) => (
+                                      <DatePickerTableHeader>
+                                        {weekDay().short}
+                                      </DatePickerTableHeader>
+                                    )}
+                                  </Index>
+                                </DatePickerTableRow>
+                              </DatePickerTableHead>
+                              <DatePickerTableBody>
+                                <Index each={context().weeks}>
+                                  {(week) => (
+                                    <DatePickerTableRow>
+                                      <Index each={week()}>
+                                        {(day) => (
+                                          <DatePickerTableCell value={day()}>
+                                            <DatePickerTableCellTrigger>
+                                              {day().day}
+                                            </DatePickerTableCellTrigger>
+                                          </DatePickerTableCell>
+                                        )}
+                                      </Index>
+                                    </DatePickerTableRow>
+                                  )}
+                                </Index>
+                              </DatePickerTableBody>
+                            </DatePickerTable>
+                          </div>
+                        </>
+                      );
+                    }}
+                  </DatePickerContext>
+                </DatePickerView>
+                <DatePickerView view="month">
+                  <DatePickerContext>
+                    {(context) => (
                       <>
                         <DatePickerViewControl>
                           <DatePickerViewTrigger>
                             <DatePickerRangeText />
                           </DatePickerViewTrigger>
                         </DatePickerViewControl>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <DatePickerTable>
-                            <DatePickerTableHead>
-                              <DatePickerTableRow>
-                                <Index each={context().weekDays}>
-                                  {(weekDay) => (
-                                    <DatePickerTableHeader>
-                                      {weekDay().short}
-                                    </DatePickerTableHeader>
-                                  )}
-                                </Index>
-                              </DatePickerTableRow>
-                            </DatePickerTableHead>
-                            <DatePickerTableBody>
-                              <Index each={context().weeks}>
-                                {(week) => (
-                                  <DatePickerTableRow>
-                                    <Index each={week()}>
-                                      {(day) => (
-                                        <DatePickerTableCell value={day()}>
-                                          <DatePickerTableCellTrigger>
-                                            {day().day}
-                                          </DatePickerTableCellTrigger>
-                                        </DatePickerTableCell>
-                                      )}
-                                    </Index>
-                                  </DatePickerTableRow>
-                                )}
-                              </Index>
-                            </DatePickerTableBody>
-                          </DatePickerTable>
-                        </div>
+                        <DatePickerTable>
+                          <DatePickerTableBody>
+                            <Index
+                              each={context().getMonthsGrid({
+                                columns: 4,
+                                format: "short",
+                              })}
+                            >
+                              {(months) => (
+                                <DatePickerTableRow>
+                                  <Index each={months()}>
+                                    {(month) => (
+                                      <DatePickerTableCell
+                                        value={month().value}
+                                      >
+                                        <DatePickerTableCellTrigger>
+                                          {month().label}
+                                        </DatePickerTableCellTrigger>
+                                      </DatePickerTableCell>
+                                    )}
+                                  </Index>
+                                </DatePickerTableRow>
+                              )}
+                            </Index>
+                          </DatePickerTableBody>
+                        </DatePickerTable>
                       </>
-                    );
-                  }}
-                </DatePickerContext>
-              </DatePickerView>
-              <DatePickerView view="month">
-                <DatePickerContext>
-                  {(context) => (
-                    <>
-                      <DatePickerViewControl>
-                        <DatePickerViewTrigger>
-                          <DatePickerRangeText />
-                        </DatePickerViewTrigger>
-                      </DatePickerViewControl>
-                      <DatePickerTable>
-                        <DatePickerTableBody>
-                          <Index
-                            each={context().getMonthsGrid({
-                              columns: 4,
-                              format: "short",
-                            })}
-                          >
-                            {(months) => (
-                              <DatePickerTableRow>
-                                <Index each={months()}>
-                                  {(month) => (
-                                    <DatePickerTableCell value={month().value}>
-                                      <DatePickerTableCellTrigger>
-                                        {month().label}
-                                      </DatePickerTableCellTrigger>
-                                    </DatePickerTableCell>
-                                  )}
-                                </Index>
-                              </DatePickerTableRow>
-                            )}
-                          </Index>
-                        </DatePickerTableBody>
-                      </DatePickerTable>
-                    </>
-                  )}
-                </DatePickerContext>
-              </DatePickerView>
-              <DatePickerView view="year">
-                <DatePickerContext>
-                  {(context) => (
-                    <>
-                      <DatePickerViewControl>
-                        <DatePickerViewTrigger>
-                          <DatePickerRangeText />
-                        </DatePickerViewTrigger>
-                      </DatePickerViewControl>
-                      <DatePickerTable>
-                        <DatePickerTableBody>
-                          <Index
-                            each={context().getYearsGrid({
-                              columns: 4,
-                            })}
-                          >
-                            {(years) => (
-                              <DatePickerTableRow>
-                                <Index each={years()}>
-                                  {(year) => (
-                                    <DatePickerTableCell value={year().value}>
-                                      <DatePickerTableCellTrigger>
-                                        {year().label}
-                                      </DatePickerTableCellTrigger>
-                                    </DatePickerTableCell>
-                                  )}
-                                </Index>
-                              </DatePickerTableRow>
-                            )}
-                          </Index>
-                        </DatePickerTableBody>
-                      </DatePickerTable>
-                    </>
-                  )}
-                </DatePickerContext>
-              </DatePickerView>
-            </DatePickerContent>
-          </DatePickerPositioner>
-        </Portal>
-      </DatePicker>
+                    )}
+                  </DatePickerContext>
+                </DatePickerView>
+                <DatePickerView view="year">
+                  <DatePickerContext>
+                    {(context) => (
+                      <>
+                        <DatePickerViewControl>
+                          <DatePickerViewTrigger>
+                            <DatePickerRangeText />
+                          </DatePickerViewTrigger>
+                        </DatePickerViewControl>
+                        <DatePickerTable>
+                          <DatePickerTableBody>
+                            <Index
+                              each={context().getYearsGrid({
+                                columns: 4,
+                              })}
+                            >
+                              {(years) => (
+                                <DatePickerTableRow>
+                                  <Index each={years()}>
+                                    {(year) => (
+                                      <DatePickerTableCell value={year().value}>
+                                        <DatePickerTableCellTrigger>
+                                          {year().label}
+                                        </DatePickerTableCellTrigger>
+                                      </DatePickerTableCell>
+                                    )}
+                                  </Index>
+                                </DatePickerTableRow>
+                              )}
+                            </Index>
+                          </DatePickerTableBody>
+                        </DatePickerTable>
+                      </>
+                    )}
+                  </DatePickerContext>
+                </DatePickerView>
+              </DatePickerContent>
+            </DatePickerPositioner>
+          </Portal>
+        </DatePicker>
+      </div>
 
       <TextFieldRoot>
+        <TextFieldLabel>Description</TextFieldLabel>
         <TextField
           placeholder="Description"
           value={description()}
@@ -285,27 +291,31 @@ const TransactionForm = () => {
         />
       </TextFieldRoot>
 
-      <Combobox
-        value={category()}
-        onChange={(value) => {
-          if (value) setCategory(value);
-          setNewCategory("");
-        }}
-        options={categories()}
-        placeholder="Select or enter category"
-        itemComponent={(props) => (
-          <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
-        )}
-        disallowEmptySelection={false}
-        required
-      >
-        <ComboboxTrigger>
-          <ComboboxInput />
-        </ComboboxTrigger>
-        <ComboboxContent class="overflow-y-auto max-h-[200px]" />
-      </Combobox>
+      <div class="flex flex-col gap-1">
+        <label class="font-medium">Category</label>
+        <Combobox
+          value={category()}
+          onChange={(value) => {
+            if (value) setCategory(value);
+            setNewCategory("");
+          }}
+          options={categories()}
+          placeholder="Select or enter category"
+          itemComponent={(props) => (
+            <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
+          )}
+          disallowEmptySelection={false}
+          required
+        >
+          <ComboboxTrigger>
+            <ComboboxInput />
+          </ComboboxTrigger>
+          <ComboboxContent class="overflow-y-auto max-h-[200px]" />
+        </Combobox>
+      </div>
 
       <TextFieldRoot>
+        <TextFieldLabel>New category</TextFieldLabel>
         <TextField
           placeholder="New category"
           value={newCategory()}
