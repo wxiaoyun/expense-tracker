@@ -86,7 +86,11 @@ const RecurringTransactionCard = (props: {
     return transactions.reduce((acc, curr) => acc + curr.amount, 0);
   });
 
-  const nextChargeDate = () => getNextRecurrenceDate(props.transaction);
+  const nextChargeDate = () =>
+    getNextRecurrenceDate(
+      new Date(props.transaction.last_charged ?? props.transaction.start_date),
+      props.transaction.recurrence_value,
+    );
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();

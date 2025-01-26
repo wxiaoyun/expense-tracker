@@ -1,4 +1,3 @@
-import { RecurringTransaction } from "@/db/recurring_transactions";
 import { parseExpression } from "cron-parser";
 
 export type DateRange = "daily" | "weekly" | "monthly" | "yearly";
@@ -55,14 +54,12 @@ export const shiftDate = (
   return newDate;
 };
 
-export const getNextRecurrenceDate = (transaction: RecurringTransaction) => {
-  const lastCharged = transaction.last_charged
-    ? new Date(Number(transaction.last_charged))
-    : new Date(Number(transaction.start_date));
-  const recurrenceValue = transaction.recurrence_value;
-
+export const getNextRecurrenceDate = (
+  lastCharged: Date,
+  recurrenceValue: string,
+) => {
   const expression = parseExpression(recurrenceValue, {
-    currentDate: new Date(lastCharged),
+    currentDate: lastCharged,
   });
   const nextDate = expression.next().toDate();
   return nextDate;

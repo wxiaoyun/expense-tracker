@@ -6,5 +6,3 @@ A cross-platform mobile expense tracker built with Tauri. It is offline-first an
 
 - [ ] Incur recurring transactions on app launch
 - [ ] Cloud sync
-
-- [ ] Fix import data only images on iOS

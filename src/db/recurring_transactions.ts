@@ -1,3 +1,4 @@
+import { parseExpression } from "cron-parser";
 import { db, transactions } from ".";
 import { Transaction } from "./transactions";
 
@@ -81,16 +82,20 @@ const updateRecurringTransaction = async (
   transaction: BeforeUpdate<RecurringTransaction>,
 ) => {
   const now = new Date().getTime();
+  const updatedTransaction = {
+    ...transaction,
+    updated_at: now,
+  } as RecurringTransaction;
   const result = await db.execute(
     "UPDATE recurring_transactions SET amount = $1, category = $2, start_date = $3, last_charged = $4, recurrence_value = $5, updated_at = $6 WHERE id = $7",
     [
-      transaction.amount,
-      transaction.category,
-      transaction.start_date,
-      transaction.last_charged,
-      transaction.recurrence_value,
-      now,
-      transaction.id,
+      updatedTransaction.amount,
+      updatedTransaction.category,
+      updatedTransaction.start_date,
+      updatedTransaction.last_charged,
+      updatedTransaction.recurrence_value,
+      updatedTransaction.updated_at,
+      updatedTransaction.id,
     ],
   );
 
@@ -100,7 +105,7 @@ const updateRecurringTransaction = async (
   }
 
   console.info("[DB][updateRecurringTransaction] result %o", result);
-  return transaction;
+  return updatedTransaction;
 };
 
 const deleteRecurringTransaction = async (id: number) => {
@@ -114,38 +119,77 @@ const deleteRecurringTransaction = async (id: number) => {
 };
 
 const incurRecurringTransaction = async (id: number) => {
-  const recurringTransaction = await getRecurringTransaction(id);
+  const now = new Date();
+  const rt = await getRecurringTransaction(id);
 
-  if (!recurringTransaction) {
+  if (!rt) {
     console.warn("[DB][incurRecurringTransaction] no recurring transaction");
     return null;
   }
 
-  const now = new Date().getTime();
+  const lastCharged = new Date(rt.last_charged ?? rt.start_date);
+  const incurDates: Date[] = [];
 
-  const transaction = await transactions.create({
-    amount: recurringTransaction.amount,
-    category: recurringTransaction.category,
-    description: recurringTransaction.description,
-    transaction_date: now,
-    recurring_transaction_id: recurringTransaction.id,
+  const cronExp = parseExpression(rt.recurrence_value, {
+    currentDate: lastCharged,
   });
 
-  console.info(
-    "[DB][incurRecurringTransaction] incurred transaction %o",
-    transaction,
+  for (
+    let nextDate = cronExp.next().toDate();
+    nextDate <= now;
+    nextDate = cronExp.next().toDate()
+  ) {
+    incurDates.push(nextDate);
+  }
+
+  if (incurDates.length === 0) {
+    console.info(
+      `[DB][incurRecurringTransaction] no transactions to create for recurring transaction ${id}`,
+    );
+    return 0;
+  }
+
+  const toCreate = incurDates.map(
+    (date) =>
+      ({
+        amount: rt.amount,
+        category: rt.category,
+        description: rt.description,
+        transaction_date: date.getTime(),
+        recurring_transaction_id: rt.id,
+      }) as BeforeCreate<Transaction>,
   );
 
-  await updateRecurringTransaction({
-    ...recurringTransaction,
-    last_charged: now,
+  const res = await transactions.batchCreate(toCreate);
+  if (!res) {
+    console.error(
+      `[DB][incurRecurringTransaction] failed to create transactions for recurring transaction ${id}`,
+    );
+    return null;
+  }
+
+  const incurred = toCreate.length;
+
+  console.info(
+    "[DB][incurRecurringTransaction] total incurred %d, updated recurring transaction %o",
+    incurred,
+    rt,
+  );
+
+  const lastDate = incurDates[incurDates.length - 1];
+  const updated = await updateRecurringTransaction({
+    ...rt,
+    last_charged: lastDate.getTime(),
   });
 
-  console.info(
-    "[DB][incurRecurringTransaction] updated recurring transaction %o",
-    recurringTransaction,
-  );
-  return transaction;
+  if (!updated) {
+    console.error(
+      `[DB][incurRecurringTransaction] failed to update recurring transaction ${id}`,
+    );
+    return null;
+  }
+
+  return incurred;
 };
 
 const listTransactionsByRecurringTransactionId = async (id: number) => {

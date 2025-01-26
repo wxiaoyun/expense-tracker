@@ -13,23 +13,30 @@ import { queryClient } from "@/query";
 import { ColorModeProvider, ColorModeScript } from "@kobalte/core";
 import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
-import { ErrorBoundary } from "solid-js";
+import { ErrorBoundary, onMount } from "solid-js";
 import { WorkInProgress } from "./components/workInProgress";
 import { AppLayout } from "./layout";
+import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
 
-export const App = () => (
-  <ErrorBoundary fallback={ErrorComponent}>
-    <ToastRegion>
-      <ToastList />
-    </ToastRegion>
-    <ColorModeScript />
-    <ColorModeProvider>
-      <QueryClientProvider client={queryClient}>
-        <Routes />
-      </QueryClientProvider>
-    </ColorModeProvider>
-  </ErrorBoundary>
-);
+export const App = () => {
+  onMount(async () => {
+    await incurDueRecurringTransactions();
+  });
+
+  return (
+    <ErrorBoundary fallback={ErrorComponent}>
+      <ToastRegion>
+        <ToastList />
+      </ToastRegion>
+      <ColorModeScript />
+      <ColorModeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Routes />
+        </QueryClientProvider>
+      </ColorModeProvider>
+    </ErrorBoundary>
+  );
+};
 
 const Routes = () => {
   return (
