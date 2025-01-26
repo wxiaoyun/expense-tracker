@@ -68,6 +68,7 @@ export const getNextRecurrenceDate = (transaction: RecurringTransaction) => {
   return nextDate;
 };
 
+// TODO: Make this more readable
 export const occurrenceToText = (recurrenceValue: string) => {
   return `CronExp<${recurrenceValue}>`;
 };

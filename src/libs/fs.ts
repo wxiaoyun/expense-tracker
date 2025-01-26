@@ -12,13 +12,19 @@ export const importDatabase = async (
   onError: (errMsg: string) => void,
 ) => {
   try {
+    const downloadDir = await path.downloadDir();
+
     const file = await open({
+      title: "Import Data",
       multiple: false,
       directory: false,
+      defaultPath: downloadDir,
       filters: [
         {
           name: "SQLite Database",
-          extensions: ["db"],
+          // Bug: https://github.com/tauri-apps/tauri/issues/5922
+          // Workaround to have two extensions
+          extensions: ["text/csv", "db", "sqlite3", "sqlite"],
         },
       ],
     });

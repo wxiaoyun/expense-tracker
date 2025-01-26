@@ -113,7 +113,9 @@ const RecurringTransactionCard = (props: {
         <div>
           <h2 class="text-md font-semibold">{props.transaction.category}</h2>
           <Show when={props.transaction.description}>
-            <p class="text-sm text-gray-600">{props.transaction.description}</p>
+            <p class="text-sm text-muted-foreground">
+              {props.transaction.description}
+            </p>
           </Show>
         </div>
 
@@ -136,33 +138,43 @@ const RecurringTransactionCard = (props: {
 
       <Separator />
 
-      <div class="flex justify-between items-start">
-        <div>
-          <span class="flex items-center gap-2 text-sm">
-            <p>Amount</p>
-            <p class={cn(isIncome() ? "text-green-600" : "text-red-600")}>
-              {formatCurrency(props.transaction.amount)}
-            </p>
-          </span>
-
-          <span class="flex items-center gap-2 text-sm">
-            <p>Total Incurred</p>
-            <p class={cn(isIncome() ? "text-green-600" : "text-red-600")}>
-              {formatCurrency(totalIncurred())}
-            </p>
-          </span>
-        </div>
-
-        <div class="text-right text-xs opacity-80">
-          <p>Started: {formatDate(props.transaction.start_date)}</p>
-          <Show when={props.transaction.last_charged}>
-            <p>Last charged: {formatDate(props.transaction.last_charged!)}</p>
-          </Show>
-          <p>Next charge: {nextChargeDate().toLocaleDateString()}</p>
-          <p>
-            Recurrence: {occurrenceToText(props.transaction.recurrence_value)}
+      <div>
+        <span class="flex items-center gap-2">
+          <p class="text-xs text-muted-foreground">Amount</p>
+          <p
+            class={cn(
+              "text-xs font-semibold",
+              isIncome() ? "text-green-600" : "text-red-600",
+            )}
+          >
+            {formatCurrency(props.transaction.amount)}
           </p>
-        </div>
+        </span>
+
+        <span class="flex items-center gap-2">
+          <p class="text-xs text-muted-foreground">Total Incurred</p>
+          <p
+            class={cn(
+              "text-xs font-semibold",
+              isIncome() ? "text-green-600" : "text-red-600",
+            )}
+          >
+            {formatCurrency(totalIncurred())}
+          </p>
+        </span>
+      </div>
+
+      <Separator />
+
+      <div class="text-left text-xs text-muted-foreground">
+        <p>Started: {formatDate(props.transaction.start_date)}</p>
+        <Show when={props.transaction.last_charged}>
+          <p>Last charged: {formatDate(props.transaction.last_charged!)}</p>
+        </Show>
+        <p>Next charge: {nextChargeDate().toLocaleDateString()}</p>
+        <p>
+          Recurrence: {occurrenceToText(props.transaction.recurrence_value)}
+        </p>
       </div>
     </div>
   );
