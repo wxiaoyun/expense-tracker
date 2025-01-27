@@ -1,8 +1,8 @@
 use std::env;
 
 fn main() {
-    let node_env = env::var("NODE_ENV").unwrap_or("development".to_string());
-    if node_env == "development" {
+    let node_env = env::var("TAURI_ENV").unwrap_or("local".to_string());
+    if node_env == "local" {
         dotenv::from_filename("../.env").ok();
     }
 
@@ -10,6 +10,7 @@ fn main() {
         println!("cargo:rustc-env=SQLITE_DATABASE_NAME={}", database_name);
     } else {
         println!("cargo:warning=SQLITE_DATABASE_NAME is not set in the .env file.");
+        println!("cargo:warning=Please export SQLITE_DATABASE_NAME in environment variable.");
     }
 
     println!("cargo:rerun-if-changed=../.env");

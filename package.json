@@ -8,6 +8,10 @@
     "dev": "rsbuild dev",
     "build": "rsbuild build",
     "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:dev:ios": "pnpm tauri ios dev",
+    "tauri:build:ios:local": "export TAURI_ENV=local && pnpm tauri ios build",
+    "tauri:build:ios:release": "export TAURI_ENV=production && pnpm tauri ios build",
     "fmt": "prettier . --write",
     "lint": "eslint .",
     "prepare": "husky"
