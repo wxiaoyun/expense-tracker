@@ -92,7 +92,7 @@ const ClearSettings = () => {
   const handleClearSettings = confirmationCallback(
     "This action will reset all settings to default.",
     {
-      title: "Clear Settings",
+      title: "Are you sure?",
       okLabel: "Clear",
       cancelLabel: "Cancel",
       onConfirm: async () => {

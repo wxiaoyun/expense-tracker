@@ -23,6 +23,9 @@ importers:
       '@tanstack/solid-query':
         specifier: ^5.64.2
         version: 5.64.2(solid-js@1.9.4)
+      '@tanstack/solid-virtual':
+        specifier: ^3.11.3
+        version: 3.11.3(solid-js@1.9.4)
       '@tauri-apps/api':
         specifier: ^2
         version: 2.2.0
@@ -580,6 +583,14 @@ packages:
     resolution: {integrity: sha512-SxYRxU4hU4fBNBrFujxpohVdAcjeivCY0hZh+YkdBsyZ7NphJq6VulS4TKGt8LsGyOtMSullvsCvIlOza0n/iQ==}
     peerDependencies:
       solid-js: ^1.6.0
+
+  '@tanstack/solid-virtual@3.11.3':
+    resolution: {integrity: sha512-jjsdpk7pnT7AneBY/E2JhpuzgqIFfdE3j8PuRLuFbKy5oRKz6QJ9rn9lL81pM6tum8KWUBThDxEJE2SREihVkw==}
+    peerDependencies:
+      solid-js: ^1.3.0
+
+  '@tanstack/virtual-core@3.11.3':
+    resolution: {integrity: sha512-v2mrNSnMwnPJtcVqNvV0c5roGCBqeogN8jDtgtuHCphdwBasOZ17x8UV8qpHUh+u0MLfX43c0uUHKje0s+Zb0w==}
 
   '@tauri-apps/api@2.2.0':
     resolution: {integrity: sha512-R8epOeZl1eJEl603aUMIGb4RXlhPjpgxbGVEaqY+0G5JG9vzV/clNlzTeqc+NLYXVqXcn8mb4c5b9pJIUDEyAg==}
@@ -2392,6 +2403,13 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.64.2
       solid-js: 1.9.4
+
+  '@tanstack/solid-virtual@3.11.3(solid-js@1.9.4)':
+    dependencies:
+      '@tanstack/virtual-core': 3.11.3
+      solid-js: 1.9.4
+
+  '@tanstack/virtual-core@3.11.3': {}
 
   '@tauri-apps/api@2.2.0': {}
 

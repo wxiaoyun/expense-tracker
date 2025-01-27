@@ -1,3 +1,4 @@
+import { Loader } from "@/components/loader";
 import {
   Select,
   SelectContent,
@@ -30,11 +31,20 @@ import {
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useNavigate } from "@solidjs/router";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 import { debounce } from "lodash";
 import { FaSolidPen, FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import {
+  Component,
+  ComponentProps,
+  createMemo,
+  createSignal,
+  For,
+  Show,
+  splitProps,
+} from "solid-js";
 
 export * from "./edit";
 export * from "./new";
@@ -42,12 +52,12 @@ export * from "./recurring";
 
 export const TransactionPage = () => {
   return (
-    <main class="flex flex-col p-2 overflow-hidden">
+    <main class="flex flex-col p-2 overflow-auto">
       <Header />
       <Separator />
       <IntervalSummary />
       <Separator />
-      <TransactionList />
+      <TransactionListWrapper />
     </main>
   );
 };
@@ -160,7 +170,7 @@ const Header = () => {
   );
 };
 
-export const IntervalSummary = () => {
+const IntervalSummary = () => {
   const query = useTransactions();
 
   const summary = createMemo(() => {
@@ -196,12 +206,13 @@ export const IntervalSummary = () => {
   );
 };
 
-export const TransactionList = () => {
+const TransactionListWrapper = () => {
   const query = useTransactions();
+
   return (
-    <section class="flex-1 overflow-auto">
+    <>
       <Show when={query().isLoading}>
-        <div class="p-4 text-center">Loading...</div>
+        <Loader />
       </Show>
 
       <Show when={query().isError}>
@@ -211,28 +222,66 @@ export const TransactionList = () => {
       </Show>
 
       <Show when={query().data}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-[100px]">Date</TableHead>
-              <TableHead class="w-fit">Category</TableHead>
-              <TableHead class="w-full">Description</TableHead>
-              <TableHead class="w-fit whitespace-nowrap">Amount</TableHead>
-              <TableHead class="w-fit">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <For each={query().data}>
-              {(t) => <TransactionItem transaction={t} />}
-            </For>
-          </TableBody>
-        </Table>
+        <TransactionTable transactions={query().data!} />
       </Show>
-    </section>
+    </>
   );
 };
 
-const TransactionItem = (props: { transaction: Transaction }) => {
+export const TransactionTable: Component<{
+  transactions: Transaction[];
+}> = (props) => {
+  let el!: HTMLTableElement;
+
+  const virtualizer = createVirtualizer({
+    get count() {
+      return props.transactions.length;
+    },
+    getScrollElement: () => el,
+    estimateSize: () => 36,
+    overscan: 20,
+  });
+
+  return (
+    <Table class="flex-1 overflow-auto" ref={el}>
+      <TableHeader class="block">
+        <TableRow class="table table-fixed">
+          <TableHead class="w-[100px]">Date</TableHead>
+          <TableHead class="w-fit">Category</TableHead>
+          <TableHead class="w-full">Description</TableHead>
+          <TableHead class="w-fit whitespace-nowrap">Amount</TableHead>
+          <TableHead class="w-fit">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody
+        class="relative block w-full"
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+        }}
+      >
+        <For each={virtualizer.getVirtualItems()}>
+          {(item) => (
+            <TransactionItem
+              transaction={props.transactions[item.index]}
+              class="absolute table table-fixed top-0 left-0 w-full"
+              style={{
+                height: `${item.size}px`,
+                transform: `translateY(${item.start}px)`,
+              }}
+            />
+          )}
+        </For>
+      </TableBody>
+    </Table>
+  );
+};
+
+const TransactionItem: Component<
+  ComponentProps<"tr"> & {
+    transaction: Transaction;
+  }
+> = (props) => {
+  const [local, rest] = splitProps(props, ["transaction", "class"]);
   const navigate = useNavigate();
   const [currency] = useCurrency();
 
@@ -256,7 +305,7 @@ const TransactionItem = (props: { transaction: Transaction }) => {
   );
 
   return (
-    <TableRow class="text-xs">
+    <TableRow {...rest} class={cn("text-xs", local.class)}>
       <TableCell>
         {new Date(props.transaction.transaction_date).toLocaleDateString()}
       </TableCell>
@@ -270,21 +319,17 @@ const TransactionItem = (props: { transaction: Transaction }) => {
       >
         {formattedAmount()}
       </TableCell>
-      <TableCell>
-        <div class="flex gap-2">
-          <FaSolidPen
-            class="text-blue-500 hover:text-blue-600 cursor-pointer transition-colors"
-            size={20}
-            onClick={() =>
-              navigate(`/transactions/edit/${props.transaction.id}`)
-            }
-          />
-          <FaSolidTrash
-            class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
-            size={20}
-            onClick={handleDelete}
-          />
-        </div>
+      <TableCell class="flex gap-2">
+        <FaSolidPen
+          class="text-blue-500 hover:text-blue-600 cursor-pointer transition-colors"
+          size={20}
+          onClick={() => navigate(`/transactions/edit/${props.transaction.id}`)}
+        />
+        <FaSolidTrash
+          class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
+          size={20}
+          onClick={handleDelete}
+        />
       </TableCell>
     </TableRow>
   );
