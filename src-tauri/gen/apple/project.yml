@@ -1,6 +1,6 @@
 name: expense-tracker
 options:
-  bundleIdPrefix: expense-tracker.wxiaoyun.com
+  bundleIdPrefix: com.wxiaoyun.expense.tracker
   deploymentTarget:
     iOS: 13.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: expense-tracker
-      PRODUCT_BUNDLE_IDENTIFIER: expense-tracker.wxiaoyun.com
+      PRODUCT_NAME: Expense Tracker
+      PRODUCT_BUNDLE_IDENTIFIER: com.wxiaoyun.expense.tracker
 targetTemplates:
   app:
     type: application

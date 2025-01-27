@@ -17,10 +17,15 @@ export const initializePaths = async () => {
     path.downloadDir(),
   ]);
 
-  if (appDataDirRes.status === "rejected" || downloadDirRes.status === "rejected") {
-    console.error("[FS][initializePaths] Failed to get app data dir or download dir");
+  if (
+    appDataDirRes.status === "rejected" ||
+    downloadDirRes.status === "rejected"
+  ) {
+    console.error(
+      "[FS][initializePaths] Failed to get app data dir or download dir",
+    );
     throw new Error("Failed to get app data dir or download dir");
-  } 
+  }
 
   appDataDir = appDataDirRes.value;
   downloadDir = downloadDirRes.value;
@@ -125,7 +130,7 @@ export const exportDatabase = async (
 };
 
 export const watchDb = async (cb: (event: WatchEvent) => void) => {
-  const unwatch = await watch( getDbPath(), cb, {
+  const unwatch = await watch(getDbPath(), cb, {
     recursive: false,
     delayMs: 1000,
   });

@@ -26,7 +26,7 @@
 		23D59ADCA2729D38CBCD2D87 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		287DFE395D6F73C542E8B5EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		2ADC51009915D503E962ECD2 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
-		2F2791CEACC2D0D15F78EEBB /* expense-tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "expense-tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F2791CEACC2D0D15F78EEBB /* Expense Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Expense Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		30E436FCB845C23BFA70701C /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		3936A20032855030AE27B835 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		4176CA04CF2F779B72EE3909 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -123,7 +123,7 @@
 		C470955F47C90A74050E7DB2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2F2791CEACC2D0D15F78EEBB /* expense-tracker.app */,
+				2F2791CEACC2D0D15F78EEBB /* Expense Tracker.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -180,7 +180,7 @@
 			);
 			name = "expense-tracker_iOS";
 			productName = "expense-tracker_iOS";
-			productReference = 2F2791CEACC2D0D15F78EEBB /* expense-tracker.app */;
+			productReference = 2F2791CEACC2D0D15F78EEBB /* Expense Tracker.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -304,8 +304,8 @@
 					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = expense-tracker.wxiaoyun.com;
-				PRODUCT_NAME = "expense-tracker";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wxiaoyun.expense.tracker;
+				PRODUCT_NAME = "Expense Tracker";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  arm64-sim";
@@ -420,8 +420,8 @@
 					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = expense-tracker.wxiaoyun.com;
-				PRODUCT_NAME = "expense-tracker";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wxiaoyun.expense.tracker;
+				PRODUCT_NAME = "Expense Tracker";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  arm64-sim";
