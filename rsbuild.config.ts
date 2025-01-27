@@ -1,20 +1,9 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginBabel } from "@rsbuild/plugin-babel";
 import { pluginSolid } from "@rsbuild/plugin-solid";
-import dotenv from "dotenv";
 import { resolve } from "path";
 
-const node_env = process.env.NODE_ENV;
 const host = process.env.TAURI_DEV_HOST;
-
-console.log({
-  host,
-  node_env,
-});
-
-if (node_env === "development") {
-  dotenv.config();
-}
 
 export default defineConfig({
   server: {
