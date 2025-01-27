@@ -3,22 +3,45 @@ import { db, reloadDb } from "@/db";
 import { validateDatabase } from "@/db/validate";
 import * as path from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { create, readFile } from "@tauri-apps/plugin-fs";
+import { create, readFile, watch, WatchEvent } from "@tauri-apps/plugin-fs";
 
 // https://tauri.app/plugin/file-system/
+
+let dbPath: string = "";
+let appDataDir: string = "";
+let downloadDir: string = "";
+
+export const initializePaths = async () => {
+  const [appDataDirRes, downloadDirRes] = await Promise.allSettled([
+    path.appDataDir(),
+    path.downloadDir(),
+  ]);
+
+  if (appDataDirRes.status === "rejected" || downloadDirRes.status === "rejected") {
+    console.error("[FS][initializePaths] Failed to get app data dir or download dir");
+    throw new Error("Failed to get app data dir or download dir");
+  } 
+
+  appDataDir = appDataDirRes.value;
+  downloadDir = downloadDirRes.value;
+
+  dbPath = await path.join(appDataDir, DATABASE_FILENAME);
+};
+
+export const getDbPath = () => dbPath;
+export const getAppDir = () => appDataDir;
+export const getDownloadDir = () => downloadDir;
 
 export const importDatabase = async (
   onSuccess: (msg: string) => void,
   onError: (errMsg: string) => void,
 ) => {
   try {
-    const downloadDir = await path.downloadDir();
-
     const file = await open({
       title: "Import Data",
       multiple: false,
       directory: false,
-      defaultPath: downloadDir,
+      defaultPath: getDownloadDir(),
       filters: [
         {
           name: "SQLite Database",
@@ -47,8 +70,7 @@ export const importDatabase = async (
     await db.close();
 
     const fileData = await readFile(file);
-    const appDataDir = await path.appDataDir();
-    const dbPath = await path.join(appDataDir, DATABASE_FILENAME);
+    const dbPath = getDbPath();
     const dbFile = await create(dbPath);
     await dbFile.write(fileData);
     await dbFile.close();
@@ -70,9 +92,8 @@ export const exportDatabase = async (
   onError: (errMsg: string) => void,
 ) => {
   try {
-    const downloadDir = await path.downloadDir();
     const suggestedDownloadPath = await path.join(
-      downloadDir,
+      getDownloadDir(),
       "backup_" + DATABASE_FILENAME,
     );
     const downloadPath = await save({
@@ -88,8 +109,7 @@ export const exportDatabase = async (
 
     console.info("[FS][exportDatabase] downloadPath: %s", downloadPath);
 
-    const appDataDir = await path.appDataDir();
-    const dbPath = await path.join(appDataDir, DATABASE_FILENAME);
+    const dbPath = getDbPath();
     const appData = await readFile(dbPath);
     const downloadFile = await create(downloadPath);
 
@@ -102,4 +122,14 @@ export const exportDatabase = async (
     console.error("[FS][exportDatabase] Failed to export data %o", error);
     onError("Something went wrong, failed to export data");
   }
+};
+
+export const watchDb = async (cb: (event: WatchEvent) => void) => {
+  const unwatch = await watch( getDbPath(), cb, {
+    recursive: false,
+    delayMs: 1000,
+  });
+
+  console.info("[FS][watchDb] Watching db at %s", dbPath);
+  return unwatch;
 };

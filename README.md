@@ -4,5 +4,5 @@ A cross-platform mobile expense tracker built with Tauri. It is offline-first an
 
 ### TODO
 
-- [ ] Incur recurring transactions on app launch
 - [ ] Cloud sync
+- [ ] Optimisation: Transaction List Virtualization

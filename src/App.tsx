@@ -13,15 +13,30 @@ import { queryClient } from "@/query";
 import { ColorModeProvider, ColorModeScript } from "@kobalte/core";
 import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
-import { ErrorBoundary, onMount } from "solid-js";
+import { ErrorBoundary } from "solid-js";
+import { AppLauncher } from "./components/launcher";
 import { WorkInProgress } from "./components/workInProgress";
 import { AppLayout } from "./layout";
+import { initializePaths } from "./libs/fs";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
 
 export const App = () => {
-  onMount(async () => {
-    await incurDueRecurringTransactions();
-  });
+  const init = async () => {
+    const res = await Promise.allSettled([
+      initializePaths(),
+      incurDueRecurringTransactions(),
+    ]);
+
+    if (res.every((r) => r.status === "fulfilled")) {
+      console.info("[APP] App initialized");
+      return;
+    }
+
+    console.error(
+      "[APP] Failed to initialize paths or incur due recurring transactions",
+    );
+    throw new Error("Failed to initialize app");
+  };
 
   return (
     <ErrorBoundary fallback={ErrorComponent}>
@@ -31,7 +46,9 @@ export const App = () => {
       <ColorModeScript />
       <ColorModeProvider>
         <QueryClientProvider client={queryClient}>
-          <Routes />
+          <AppLauncher init={init}>
+            <Routes />
+          </AppLauncher>
         </QueryClientProvider>
       </ColorModeProvider>
     </ErrorBoundary>

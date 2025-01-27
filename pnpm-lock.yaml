@@ -42,7 +42,7 @@ importers:
         specifier: ~2
         version: 2.2.0
       '@tauri-apps/plugin-upload':
-        specifier: ~2
+        specifier: ~2.2.1
         version: 2.2.1
       class-variance-authority:
         specifier: ^0.7.1
