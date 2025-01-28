@@ -74,7 +74,8 @@ const Header = () => {
         <div class="flex items-center gap-2">
           <TextFieldRoot>
             <TextField
-              placeholder="Search"
+              class="h-fit"
+              placeholder="Fuzzy search"
               value={localQuery()}
               onInput={handleChange}
             />
@@ -122,7 +123,7 @@ const Header = () => {
                 props.item.rawValue.slice(1)}
             </SelectItem>
           )}
-          class="mb-1"
+          class="mb-1 h-fit"
         >
           <SelectTrigger class="w-32 h-8">
             <SelectValue<DateRange>>

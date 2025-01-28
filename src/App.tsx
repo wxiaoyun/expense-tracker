@@ -40,11 +40,11 @@ const init = async () => {
 export const App = () => {
   return (
     <ErrorBoundary fallback={ErrorComponent}>
-      <ToastRegion>
-        <ToastList />
-      </ToastRegion>
       <ColorModeScript />
       <ColorModeProvider>
+        <ToastRegion>
+          <ToastList />
+        </ToastRegion>
         <QueryClientProvider client={queryClient}>
           <AppLauncher init={init}>
             <Routes />
