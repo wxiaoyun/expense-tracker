@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-import { DEFAULT_CURRENCY } from "@/constants/settings";
 import { formatCurrency } from "@/libs/currency";
 import { DateRange, shiftDate } from "@/libs/date";
 import { createTransactionSummarizeQuery } from "@/query/transactions";
@@ -149,7 +148,7 @@ const IntervalSummary = () => {
   const { dateRange } = useDateRange();
   const [currency] = useCurrency();
   const query = createTransactionSummarizeQuery(dateRange);
-  
+
   const summary = createMemo(() => {
     const summary = query.data ?? { income: 0, expense: 0, balance: 0 };
 
@@ -157,7 +156,7 @@ const IntervalSummary = () => {
       Object.entries(summary).map(([key, value]) => [
         key,
         formatCurrency(value, {
-          currency: currency().data ?? DEFAULT_CURRENCY,
+          currency: currency().data,
         }),
       ]),
     );
@@ -167,17 +166,17 @@ const IntervalSummary = () => {
     <section class="p-1 flex justify-around">
       <div class="flex flex-col items-center">
         <h3>Income</h3>
-        <p class="text-green-500">${summary().income}</p>
+        <p class="text-green-500">{summary().income}</p>
       </div>
 
       <div class="flex flex-col items-center">
         <h3>Expense</h3>
-        <p class="text-red-500">${summary().expense}</p>
+        <p class="text-red-500">{summary().expense}</p>
       </div>
 
       <div class="flex flex-col items-center">
         <h3>Balance</h3>
-        <p class="text-blue-500">${summary().balance}</p>
+        <p class="text-blue-500">{summary().balance}</p>
       </div>
     </section>
   );

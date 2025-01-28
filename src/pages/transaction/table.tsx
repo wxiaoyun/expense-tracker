@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DEFAULT_CURRENCY } from "@/constants/settings";
 import transactions, { Transaction } from "@/db/transactions";
 import { cn } from "@/libs/cn";
 import { formatCurrency } from "@/libs/currency";
@@ -49,7 +48,7 @@ const AmountCell = (props: CellContext<Transaction, unknown>) => {
   const isIncome = () => props.row.original.amount > 0;
   const formattedAmount = () =>
     formatCurrency(props.row.original.amount, {
-      currency: currency().data ?? DEFAULT_CURRENCY,
+      currency: currency().data,
     });
 
   return (

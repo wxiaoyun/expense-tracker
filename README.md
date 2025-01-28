@@ -5,4 +5,4 @@ A cross-platform mobile expense tracker built with Tauri. It is offline-first an
 ### TODO
 
 - [ ] Cloud sync
-- [ ] Use Tanstack Table to render transactions table
+- [ ] Summary breakdown
