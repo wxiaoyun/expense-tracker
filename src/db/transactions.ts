@@ -57,7 +57,7 @@ const listTransactions = async (query?: {
   );
 
   const countResult: { count: number }[] = await db.select(
-    "SELECT COUNT(*) FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
+    "SELECT COUNT(*) as count FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
     [startDate, endDate],
   );
 
@@ -105,6 +105,45 @@ const listTransactions = async (query?: {
     items: result as Transaction[],
     nextCursor: result.length === limit ? nextCursor : null,
   };
+};
+
+const summarizeTransactions = async (query?: { start?: Date; end?: Date }) => {
+  const { start, end } = query ?? {};
+  const startDate = start?.getTime() ?? 0;
+  const endDate = end?.getTime() ?? new Date().getTime();
+
+  console.info(
+    "[DB][summarizeTransactions] startDate %s, endDate %s",
+    startDate,
+    endDate,
+  );
+
+  const result: {
+    balance: number;
+    income: number;
+    expense: number;
+  }[] = await db.select(
+    "SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
+    [startDate, endDate],
+  );
+
+  if (result.length === 0) {
+    console.warn(
+      "[DB][summarizeTransactions] no result found for start %s and end %s, returning null",
+      startDate,
+      endDate,
+    );
+    return null;
+  }
+
+  console.info(
+    "[DB][summarizeTransactions] result found for start %s and end %s, returning %o",
+    startDate,
+    endDate,
+    result[0],
+  );
+
+  return result[0];
 };
 
 const createTransaction = async (
@@ -253,4 +292,5 @@ export default {
   categories: listCategories,
   clear: clearTransactions,
   batchCreate: batchCreateTransactions,
+  summarize: summarizeTransactions,
 };

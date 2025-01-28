@@ -68,3 +68,15 @@ export const createTransactionCategoriesQuery = () => {
     () => queryClient,
   );
 };
+
+export const createTransactionSummarizeQuery = (
+  params: () => { start: Date; end: Date },
+) => {
+  return createQuery(
+    () => ({
+      queryKey: [TRANSACTIONS_QUERY_KEY, "summarize", params()],
+      queryFn: async () => transactions.summarize(params()),
+    }),
+    () => queryClient,
+  );
+};

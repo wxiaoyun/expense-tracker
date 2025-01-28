@@ -7,12 +7,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
+import { DEFAULT_CURRENCY } from "@/constants/settings";
+import { formatCurrency } from "@/libs/currency";
 import { DateRange, shiftDate } from "@/libs/date";
-import {
-  useDateRange,
-  useSearchTransactionParams,
-  useTransactions,
-} from "@/signals/params";
+import { createTransactionSummarizeQuery } from "@/query/transactions";
+import { useDateRange, useSearchTransactionParams } from "@/signals/params";
+import { useCurrency } from "@/signals/setting";
 import { debounce } from "lodash";
 import { FaSolidPlus } from "solid-icons/fa";
 import { IoSearch } from "solid-icons/io";
@@ -146,17 +146,20 @@ const Header = () => {
 };
 
 const IntervalSummary = () => {
-  const query = useTransactions();
-
+  const { dateRange } = useDateRange();
+  const [currency] = useCurrency();
+  const query = createTransactionSummarizeQuery(dateRange);
+  
   const summary = createMemo(() => {
-    if (!query.data) return { income: 0, expense: 0, balance: 0 };
-    return query.data!.reduce(
-      (acc, tx) => ({
-        income: acc.income + (tx.amount > 0 ? tx.amount : 0),
-        expense: acc.expense + (tx.amount < 0 ? -tx.amount : 0),
-        balance: acc.balance + tx.amount,
-      }),
-      { income: 0, expense: 0, balance: 0 },
+    const summary = query.data ?? { income: 0, expense: 0, balance: 0 };
+
+    return Object.fromEntries(
+      Object.entries(summary).map(([key, value]) => [
+        key,
+        formatCurrency(value, {
+          currency: currency().data ?? DEFAULT_CURRENCY,
+        }),
+      ]),
     );
   });
 
@@ -164,17 +167,17 @@ const IntervalSummary = () => {
     <section class="p-1 flex justify-around">
       <div class="flex flex-col items-center">
         <h3>Income</h3>
-        <p class="text-green-500">${summary().income.toFixed(2)}</p>
+        <p class="text-green-500">${summary().income}</p>
       </div>
 
       <div class="flex flex-col items-center">
         <h3>Expense</h3>
-        <p class="text-red-500">${summary().expense.toFixed(2)}</p>
+        <p class="text-red-500">${summary().expense}</p>
       </div>
 
       <div class="flex flex-col items-center">
         <h3>Balance</h3>
-        <p class="text-blue-500">${summary().balance.toFixed(2)}</p>
+        <p class="text-blue-500">${summary().balance}</p>
       </div>
     </section>
   );
