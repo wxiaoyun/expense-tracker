@@ -33,23 +33,70 @@ const getTransaction = async (id: number) => {
   return result[0] as Transaction;
 };
 
-const listTransactions = async (query?: { start?: Date; end?: Date }) => {
-  const { start, end } = query ?? {};
-  const startDate = start?.getTime() ?? 0;
+const listTransactions = async (query?: { 
+  start?: Date; 
+  end?: Date; 
+  limit?: number;
+  cursor?: number;
+}) => {
+
+  const { start, end, limit = Number.MAX_SAFE_INTEGER, cursor = 0 } = query ?? {};
+  const startDate = Math.max(start?.getTime() ?? 0, cursor);
   const endDate = end?.getTime() ?? new Date().getTime();
 
-  const result = await db.select(
-    "SELECT * FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ORDER BY transaction_date ASC",
+
+  console.info("[DB][listTransactions] startDate %s, endDate %s, limit %s, cursor %s", startDate, endDate, limit, cursor);
+  
+  const countResult: { count: number }[] = await db.select(
+    "SELECT COUNT(*) FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
     [startDate, endDate],
   );
 
-  console.log(
-    "[DB][listTransactions] result found for start %s and end %s, returning %o",
+
+  if (countResult.length === 0) {
+    console.warn(
+      "[DB][listTransactions] no result found for start %s and end %s, returning null",
+      startDate,
+      endDate,
+    );
+    return {
+      total: 0,
+      items: [],
+      nextCursor: null,
+    };
+  }
+
+  console.info(
+    "[DB][listTransactions] total transactions count %d for start %s and end %s",
+    countResult[0].count,
     startDate,
     endDate,
+  );
+
+  const result: Transaction[] = await db.select(
+    `SELECT * FROM transactions 
+     WHERE transaction_date BETWEEN $1 AND $2 
+     ORDER BY transaction_date ASC 
+     LIMIT $3`,
+    [startDate, endDate, limit],
+  );
+
+  const lastTransaction = result[result.length - 1];
+  const nextCursor = lastTransaction ? lastTransaction.transaction_date : null;
+
+  console.log(
+    "[DB][listTransactions] result found for start %s, end %s and limit %s, returning %o",
+    startDate,
+    endDate,
+    limit,
     result,
   );
-  return result as Transaction[];
+
+  return {
+    total: countResult[0].count,
+    items: result as Transaction[],
+    nextCursor: result.length === limit ? nextCursor : null,
+  };
 };
 
 const createTransaction = async (

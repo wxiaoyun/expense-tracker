@@ -1,7 +1,9 @@
 import { DateRange, getDateRange } from "@/libs/date";
-import { createTransactionListQuery } from "@/query/transactions";
+import {
+  createInfiniteTransactionListQuery,
+  createTransactionListQuery,
+} from "@/query/transactions";
 import { useSearchParams } from "@solidjs/router";
-import Fuse from "fuse.js";
 import { createMemo } from "solid-js";
 
 export const useDateRange = () => {
@@ -48,26 +50,13 @@ export const useSearchTransactionParams = () => {
 
 export const useTransactions = () => {
   const { dateRange } = useDateRange();
-  const [currentQuery] = useSearchTransactionParams();
-  const query = createTransactionListQuery(dateRange);
+  return createTransactionListQuery(dateRange);
+};
 
-  const searched = createMemo(() => {
-    const transactions = query.data ?? [];
-    const f = new Fuse(transactions, {
-      keys: ["category", "description"],
-      threshold: 0.3,
-    });
-    const res = f.search(currentQuery());
-
-    if (!currentQuery()) {
-      return query;
-    }
-
-    return {
-      ...query,
-      data: res.map((r) => r.item),
-    };
-  });
-
-  return searched;
+export const useInfiniteTransactions = (
+  dependencies?: () => Record<string, unknown>,
+) => {
+  const { dateRange } = useDateRange();
+  const params = () => ({ ...dependencies?.(), ...dateRange() });
+  return createInfiniteTransactionListQuery(params);
 };

@@ -1,4 +1,3 @@
-import { Loader } from "@/components/loader";
 import {
   Select,
   SelectContent,
@@ -7,44 +6,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { TextField, TextFieldRoot } from "@/components/ui/textfield";
-import { DEFAULT_CURRENCY } from "@/constants/settings";
-import transactions, { Transaction } from "@/db/transactions";
-import { cn } from "@/libs/cn";
-import { formatCurrency } from "@/libs/currency";
 import { DateRange, shiftDate } from "@/libs/date";
-import { confirmationCallback } from "@/libs/dialog";
-import { queryClient } from "@/query";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
 import {
   useDateRange,
   useSearchTransactionParams,
   useTransactions,
 } from "@/signals/params";
-import { useCurrency } from "@/signals/setting";
-import { useNavigate } from "@solidjs/router";
-import { createVirtualizer } from "@tanstack/solid-virtual";
 import { debounce } from "lodash";
-import { FaSolidPen, FaSolidPlus, FaSolidTrash } from "solid-icons/fa";
+import { FaSolidPlus } from "solid-icons/fa";
 import { IoSearch } from "solid-icons/io";
 import { TbChevronLeft, TbChevronRight } from "solid-icons/tb";
-import {
-  Component,
-  ComponentProps,
-  createMemo,
-  createSignal,
-  For,
-  Show,
-  splitProps,
-} from "solid-js";
+import { createMemo, createSignal } from "solid-js";
+import { DOMElement } from "solid-js/jsx-runtime";
+import { TransactionTable } from "./table";
 
 export * from "./edit";
 export * from "./new";
@@ -57,7 +32,7 @@ export const TransactionPage = () => {
       <Separator />
       <IntervalSummary />
       <Separator />
-      <TransactionListWrapper />
+      <TransactionTable />
     </main>
   );
 };
@@ -73,16 +48,16 @@ const Header = () => {
   const [currentQuery, setQuery] = useSearchTransactionParams();
   const [localQuery, setLocalQuery] = createSignal(currentQuery());
 
-  const debouncedSetQuery = createMemo(() => debounce(setQuery, 400));
+  const debouncedSetQuery = debounce(setQuery, 300);
 
   const handleChange = (
-    e: Event & {
+    e: InputEvent & {
       currentTarget: HTMLInputElement;
-      target: HTMLInputElement;
+      target: DOMElement;
     },
   ) => {
-    setLocalQuery(e.target.value);
-    debouncedSetQuery()(e.target.value);
+    setLocalQuery(e.currentTarget.value);
+    debouncedSetQuery(e.currentTarget.value);
   };
 
   const shift = (amount: number) => {
@@ -102,7 +77,7 @@ const Header = () => {
             <TextField
               placeholder="Search"
               value={localQuery()}
-              onChange={handleChange}
+              onInput={handleChange}
             />
           </TextFieldRoot>
 
@@ -174,9 +149,8 @@ const IntervalSummary = () => {
   const query = useTransactions();
 
   const summary = createMemo(() => {
-    if (!query().data) return { income: 0, expense: 0, balance: 0 };
-
-    return query().data!.reduce(
+    if (!query.data) return { income: 0, expense: 0, balance: 0 };
+    return query.data!.reduce(
       (acc, tx) => ({
         income: acc.income + (tx.amount > 0 ? tx.amount : 0),
         expense: acc.expense + (tx.amount < 0 ? -tx.amount : 0),
@@ -203,134 +177,5 @@ const IntervalSummary = () => {
         <p class="text-blue-500">${summary().balance.toFixed(2)}</p>
       </div>
     </section>
-  );
-};
-
-const TransactionListWrapper = () => {
-  const query = useTransactions();
-
-  return (
-    <>
-      <Show when={query().isLoading}>
-        <Loader />
-      </Show>
-
-      <Show when={query().isError}>
-        <div class="p-4 text-center text-red-500">
-          Error loading transactions
-        </div>
-      </Show>
-
-      <Show when={query().data}>
-        <TransactionTable transactions={query().data!} />
-      </Show>
-    </>
-  );
-};
-
-export const TransactionTable: Component<{
-  transactions: Transaction[];
-}> = (props) => {
-  let el!: HTMLTableElement;
-
-  const virtualizer = createVirtualizer({
-    get count() {
-      return props.transactions.length;
-    },
-    getScrollElement: () => el,
-    estimateSize: () => 36,
-    overscan: 20,
-  });
-
-  return (
-    <Table class="flex-1 overflow-auto" ref={el}>
-      <TableHeader class="block">
-        <TableRow class="table table-fixed">
-          <TableHead class="w-[100px]">Date</TableHead>
-          <TableHead class="w-fit">Category</TableHead>
-          <TableHead class="w-full">Description</TableHead>
-          <TableHead class="w-fit whitespace-nowrap">Amount</TableHead>
-          <TableHead class="w-fit">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody
-        class="relative block w-full"
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-        }}
-      >
-        <For each={virtualizer.getVirtualItems()}>
-          {(item) => (
-            <TransactionItem
-              transaction={props.transactions[item.index]}
-              class="absolute table table-fixed top-0 left-0 w-full"
-              style={{
-                height: `${item.size}px`,
-                transform: `translateY(${item.start}px)`,
-              }}
-            />
-          )}
-        </For>
-      </TableBody>
-    </Table>
-  );
-};
-
-const TransactionItem: Component<
-  ComponentProps<"tr"> & {
-    transaction: Transaction;
-  }
-> = (props) => {
-  const [local, rest] = splitProps(props, ["transaction", "class"]);
-  const navigate = useNavigate();
-  const [currency] = useCurrency();
-
-  const isIncome = () => props.transaction.amount > 0;
-  const formattedAmount = () =>
-    formatCurrency(props.transaction.amount, {
-      currency: currency().data ?? DEFAULT_CURRENCY,
-    });
-
-  const handleDelete = confirmationCallback(
-    "This action will delete the transaction.",
-    {
-      title: "Are you sure?",
-      okLabel: "Delete",
-      cancelLabel: "Cancel",
-      onConfirm: async () => {
-        await transactions.delete(props.transaction.id);
-        queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
-      },
-    },
-  );
-
-  return (
-    <TableRow {...rest} class={cn("text-xs", local.class)}>
-      <TableCell>
-        {new Date(props.transaction.transaction_date).toLocaleDateString()}
-      </TableCell>
-      <TableCell>{props.transaction.category}</TableCell>
-      <TableCell>{props.transaction.description || "-"}</TableCell>
-      <TableCell
-        class={cn(
-          "whitespace-nowrap",
-          isIncome() ? "text-green-600" : "text-red-600",
-        )}
-      >
-        {formattedAmount()}
-      </TableCell>
-      <TableCell class="flex gap-2">
-        <FaSolidPen
-          class="text-blue-500 hover:text-blue-600 cursor-pointer transition-colors"
-          size={20}
-          onClick={() => navigate(`/transactions/edit/${props.transaction.id}`)}
-        />
-        <FaSolidTrash
-          class="text-red-500 hover:text-red-600 cursor-pointer transition-colors"
-          size={20}
-          onClick={handleDelete}
-        />
-      </TableCell>
-    </TableRow>
   );
 };

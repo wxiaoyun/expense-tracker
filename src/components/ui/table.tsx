@@ -5,12 +5,7 @@ export const Table = (props: ComponentProps<"table">) => {
   const [local, rest] = splitProps(props, ["class"]);
 
   return (
-    <div class="w-full overflow-auto">
-      <table
-        class={cn("w-full caption-bottom text-sm", local.class)}
-        {...rest}
-      />
-    </div>
+    <table class={cn("w-full caption-bottom text-sm", local.class)} {...rest} />
   );
 };
 

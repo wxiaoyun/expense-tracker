@@ -1,8 +1,9 @@
+import { isDev } from "@/constants";
 import { createSignal, lazy } from "solid-js";
 import { SettingGroup } from "../components/group";
 
 export const DevGroup = lazy(async () => {
-  if (process.env.NODE_ENV !== "development") {
+  if (!isDev) {
     return { default: () => null };
   }
 

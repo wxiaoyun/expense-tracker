@@ -12,6 +12,7 @@ export const createSettingQuery = (
     () => ({
       queryKey: [SETTINGS_QUERY_KEY, key()],
       queryFn: () => settings.get(key(), defaultValue),
+      staleTime: Infinity,
     }),
     () => queryClient,
   );

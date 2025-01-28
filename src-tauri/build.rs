@@ -1,8 +1,8 @@
 use std::env;
 
 fn main() {
-    let node_env = env::var("TAURI_ENV").unwrap_or("local".to_string());
-    if node_env == "local" {
+    let tauri_env = env::var("TAURI_ENV").unwrap_or("local".to_string());
+    if tauri_env == "local" {
         dotenv::from_filename("../.env").ok();
     }
 
