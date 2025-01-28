@@ -26,9 +26,6 @@ import {
   FilterMeta,
   flexRender,
   getCoreRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   Row,
@@ -41,7 +38,7 @@ import {
   FaSolidPen,
   FaSolidTrash,
 } from "solid-icons/fa";
-import { createMemo, createSignal, For, onMount } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onMount } from "solid-js";
 
 const AmountCell = (props: CellContext<Transaction, unknown>) => {
   const [currency] = useCurrency();
@@ -163,7 +160,7 @@ export const TransactionTable = () => {
       ? ["transaction_date", "DESC"]
       : [firstSorting.id, firstSorting.desc ? "DESC" : "ASC"];
     return {
-      limit: 100,
+      limit: 50,
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
     };
   });
@@ -196,9 +193,6 @@ export const TransactionTable = () => {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
   });
 
   const headerGroups = table.getHeaderGroups;
@@ -233,9 +227,7 @@ export const TransactionTable = () => {
     }
   };
 
-  let tbody!: HTMLTableSectionElement;
   onMount(() => {
-    virtualizer.measureElement(tbody);
     fetchMoreTransactionOnPageEnd(el);
   });
 
@@ -263,9 +255,9 @@ export const TransactionTable = () => {
                         }}
                         class={cn(
                           "flex items-center",
-                          header.column.getCanSort()
-                            ? "cursor-pointer select-none"
-                            : undefined,
+                          header.column.getCanSort() &&
+                            "cursor-pointer select-none",
+                          header.column.id === "description" && "min-w-[200px]",
                         )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -288,7 +280,6 @@ export const TransactionTable = () => {
           </For>
         </TableHeader>
         <TableBody
-          ref={tbody}
           class="relative block w-full"
           style={{
             height: `${virtualizer.getTotalSize()}px`,
@@ -296,18 +287,21 @@ export const TransactionTable = () => {
         >
           <For each={virtualizer.getVirtualItems()}>
             {(item) => {
-              let el!: HTMLTableRowElement;
+              let tr!: HTMLTableRowElement;
               const row = () => rowModel().rows[item.index];
 
-              onMount(() => {
-                virtualizer.measureElement(el);
+              createEffect(() => {
+                // Workaround: manually access item.start such that Solidjs tracks it as dependency and re-run the effect
+                //eslint-disable-next-line
+                item.start;
+                virtualizer.measureElement(tr);
               });
 
               return (
                 <TableRow
-                  class="flex w-full absolute top-0 left-0 h-fit"
+                  class="flex w-full absolute top-0 left-0"
                   data-index={item.index}
-                  ref={el}
+                  ref={tr}
                   style={{
                     transform: `translateY(${item.start}px)`,
                   }}
@@ -322,7 +316,10 @@ export const TransactionTable = () => {
                             : "auto",
                           flex: cell.column.getSize() ? "0 0 auto" : "1",
                         }}
-                        class="flex items-center"
+                        class={cn(
+                          "flex items-center",
+                          cell.column.id === "description" && "min-w-[200px]",
+                        )}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

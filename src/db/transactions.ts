@@ -115,7 +115,7 @@ const listTransactions = async (query?: {
     [startDate, endDate, limit, offset],
   );
 
-  const nextOffset = offset + limit;
+  const nextOffset = result.length === 0 ? null : offset + limit;
 
   console.info(
     "[DB][listTransactions] result found for start %s, end %s and limit %s, offset %s, orderBy %o, returning %o",
