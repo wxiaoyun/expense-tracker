@@ -26,7 +26,7 @@ export * from "./recurring";
 
 export const TransactionPage = () => {
   return (
-    <main class="flex flex-col p-2 overflow-auto">
+    <main class="flex flex-col p-2 overflow-auto flex-grow">
       <Header />
       <Separator />
       <IntervalSummary />

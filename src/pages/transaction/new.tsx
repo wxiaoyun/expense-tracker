@@ -50,7 +50,7 @@ export const otherCategory = "Other";
 
 export const NewTransactionPage = () => {
   return (
-    <main class="flex flex-col p-2 overflow-y-auto">
+    <main class="flex flex-col p-2 overflow-y-auto flex-grow">
       <Header />
       <TransactionForm />
     </main>

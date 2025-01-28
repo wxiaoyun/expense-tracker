@@ -25,7 +25,7 @@ export * from "./new";
 
 export const RecurringTransactionPage = () => {
   return (
-    <div class="flex flex-col p-2 gap-4 overflow-y-auto">
+    <div class="flex flex-col p-2 gap-4 overflow-y-auto flex-grow">
       <Header />
       <RecurringTransactionList />
     </div>

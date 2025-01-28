@@ -51,7 +51,7 @@ import { otherCategory } from "../new";
 
 export const EditRecurringTransactionPage = () => {
   return (
-    <main class="flex flex-col p-2 overflow-y-auto">
+    <main class="flex flex-col p-2 overflow-y-auto flex-grow">
       <Header />
       <EditForm />
     </main>

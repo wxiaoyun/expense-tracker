@@ -1,11 +1,11 @@
+import { ConfigGroup } from "./groups/config";
 import { DataGroup } from "./groups/data";
 import { DevGroup } from "./groups/dev";
 import { MiscGroup } from "./groups/misc";
-import { ConfigGroup } from "./groups/config";
 
 export const SettingPage = () => {
   return (
-    <main class="flex flex-col p-2 gap-4 overflow-y-auto">
+    <main class="flex flex-col p-2 gap-4 overflow-y-auto flex-grow">
       <Header />
       <div class="flex flex-col gap-6">
         <DevGroup />
