@@ -22,8 +22,12 @@ export const incurDueRecurringTransactions = async () => {
     );
 
     if (incurred.some((result) => result.status === "rejected")) {
+      console.error(
+        "[recurring-transactions] Failed to incur some recurring transactions %o",
+        incurred,
+      );
       throw new Error(
-        `[recurring-transactions] Failed to incur some recurring transactions`,
+        `[recurring-transactions] Failed to incur some recurring transactions %o`,
       );
     }
 
@@ -60,7 +64,7 @@ export const incurDueRecurringTransactions = async () => {
     return totalIncurred;
   } catch (error) {
     console.error(
-      "[recurring-transactions] Failed to process recurring transactions:",
+      "[recurring-transactions] Failed to process recurring transactions: %o",
       error,
     );
     toaster.show((props) => (

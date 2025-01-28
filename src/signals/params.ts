@@ -1,3 +1,4 @@
+import { transactions } from "@/db";
 import { DateRange, getDateRange } from "@/libs/date";
 import {
   createInfiniteTransactionListQuery,
@@ -54,7 +55,7 @@ export const useTransactions = () => {
 };
 
 export const useInfiniteTransactions = (
-  dependencies?: () => Record<string, unknown>,
+  dependencies?: () => Parameters<typeof transactions.list>[0],
 ) => {
   const { dateRange } = useDateRange();
   const params = () => ({ ...dependencies?.(), ...dateRange() });

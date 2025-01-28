@@ -11,6 +11,15 @@ export type Transaction = {
   updated_at: number;
 };
 
+const validOrderBy = new Set([
+  "transaction_date",
+  "amount",
+  "category",
+  "description",
+  "created_at",
+  "updated_at",
+]);
+
 const getTransaction = async (id: number) => {
   const result: Transaction[] = await db.select(
     "SELECT * FROM transactions WHERE id = $1",
@@ -37,23 +46,39 @@ const listTransactions = async (query?: {
   start?: Date;
   end?: Date;
   limit?: number;
-  cursor?: number;
+  offset?: number;
+  orderBy?: [keyof Transaction, "ASC" | "DESC"];
 }) => {
   const {
     start,
     end,
     limit = Number.MAX_SAFE_INTEGER,
-    cursor = 0,
+    offset = 0,
+    orderBy = ["transaction_date", "DESC"],
   } = query ?? {};
-  const startDate = Math.max(start?.getTime() ?? 0, cursor);
+
+  if (!validOrderBy.has(orderBy[0])) {
+    console.warn(
+      "[DB][listTransactions] invalid orderBy %o, returning null",
+      orderBy,
+    );
+    return {
+      items: [],
+      total: 0,
+      nextOffset: null,
+    };
+  }
+
+  const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
   console.info(
-    "[DB][listTransactions] startDate %s, endDate %s, limit %s, cursor %s",
+    "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o",
     startDate,
     endDate,
     limit,
-    cursor,
+    offset,
+    orderBy,
   );
 
   const countResult: { count: number }[] = await db.select(
@@ -68,42 +93,44 @@ const listTransactions = async (query?: {
       endDate,
     );
     return {
-      total: 0,
       items: [],
-      nextCursor: null,
+      total: 0,
+      nextOffset: null,
     };
   }
 
   console.info(
-    "[DB][listTransactions] total transactions count %d for start %s and end %s",
+    "[DB][listTransactions] total transactions count %d for start %s and end %s, orderBy %o",
     countResult[0].count,
     startDate,
     endDate,
+    orderBy,
   );
 
   const result: Transaction[] = await db.select(
     `SELECT * FROM transactions 
      WHERE transaction_date BETWEEN $1 AND $2 
-     ORDER BY transaction_date ASC 
-     LIMIT $3`,
-    [startDate, endDate, limit],
+     ORDER BY ${orderBy[0]} ${orderBy[1]} 
+     LIMIT $3 OFFSET $4`,
+    [startDate, endDate, limit, offset],
   );
 
-  const lastTransaction = result[result.length - 1];
-  const nextCursor = lastTransaction ? lastTransaction.transaction_date : null;
+  const nextOffset = offset + limit;
 
-  console.log(
-    "[DB][listTransactions] result found for start %s, end %s and limit %s, returning %o",
+  console.info(
+    "[DB][listTransactions] result found for start %s, end %s and limit %s, offset %s, orderBy %o, returning %o",
     startDate,
     endDate,
     limit,
+    offset,
+    orderBy,
     result,
   );
 
   return {
+    items: result,
     total: countResult[0].count,
-    items: result as Transaction[],
-    nextCursor: result.length === limit ? nextCursor : null,
+    nextOffset,
   };
 };
 

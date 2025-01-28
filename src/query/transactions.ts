@@ -8,6 +8,8 @@ import { queryClient } from "./query";
 
 export const TRANSACTIONS_QUERY_KEY = "transactions";
 export const CATEGORIES_QUERY_KEY = "categories";
+export const INFINITE_TRANSACTIONS_QUERY_KEY = "infinite";
+export const TRANSACTIONS_SUMMARIZE_QUERY_KEY = "summarize";
 
 export const createTransactionListQuery = (
   params: () => { start: Date; end: Date },
@@ -24,23 +26,23 @@ export const createTransactionListQuery = (
 };
 
 export const createInfiniteTransactionListQuery = (
-  params: () => { start: Date; end: Date; limit?: number } & Record<
-    string,
-    unknown
-  >,
+  params: () => Parameters<typeof transactions.list>[0],
 ) => {
   return createInfiniteQuery(
     () => ({
-      queryKey: [TRANSACTIONS_QUERY_KEY, "infinite", params()],
+      queryKey: [
+        TRANSACTIONS_QUERY_KEY,
+        INFINITE_TRANSACTIONS_QUERY_KEY,
+        params(),
+      ],
       queryFn: async ({ pageParam = 0 }) => {
         return transactions.list({
-          limit: 50,
           ...params(),
-          cursor: pageParam,
+          offset: pageParam,
         });
       },
       initialPageParam: 0,
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage) => lastPage.nextOffset,
       placeholderData: keepPreviousData,
     }),
     () => queryClient,
@@ -74,7 +76,11 @@ export const createTransactionSummarizeQuery = (
 ) => {
   return createQuery(
     () => ({
-      queryKey: [TRANSACTIONS_QUERY_KEY, "summarize", params()],
+      queryKey: [
+        TRANSACTIONS_QUERY_KEY,
+        TRANSACTIONS_SUMMARIZE_QUERY_KEY,
+        params(),
+      ],
       queryFn: async () => transactions.summarize(params()),
     }),
     () => queryClient,

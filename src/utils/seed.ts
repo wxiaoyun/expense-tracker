@@ -102,7 +102,7 @@ const randomRecurrenceValue = () => {
     0,
     0,
     0,
-    randomInteger(1, 31),
+    randomInteger(1, 28),
     randomInteger(1, 12),
     randomInteger(0, 6),
   ];

@@ -156,7 +156,17 @@ export const TransactionTable = () => {
   const [sorting, setSorting] = createSignal<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
 
-  const query = useInfiniteTransactions();
+  const query = useInfiniteTransactions(() => {
+    const srt = sorting();
+    const firstSorting = srt.length > 0 ? srt[0] : null;
+    const orderBy = !firstSorting
+      ? ["transaction_date", "DESC"]
+      : [firstSorting.id, firstSorting.desc ? "DESC" : "ASC"];
+    return {
+      limit: 100,
+      orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
+    };
+  });
   const allTransactions = createMemo(() => {
     return query.data?.pages.flatMap((page) => page.items) ?? [];
   });
