@@ -33,25 +33,33 @@ const getTransaction = async (id: number) => {
   return result[0] as Transaction;
 };
 
-const listTransactions = async (query?: { 
-  start?: Date; 
-  end?: Date; 
+const listTransactions = async (query?: {
+  start?: Date;
+  end?: Date;
   limit?: number;
   cursor?: number;
 }) => {
-
-  const { start, end, limit = Number.MAX_SAFE_INTEGER, cursor = 0 } = query ?? {};
+  const {
+    start,
+    end,
+    limit = Number.MAX_SAFE_INTEGER,
+    cursor = 0,
+  } = query ?? {};
   const startDate = Math.max(start?.getTime() ?? 0, cursor);
   const endDate = end?.getTime() ?? new Date().getTime();
 
+  console.info(
+    "[DB][listTransactions] startDate %s, endDate %s, limit %s, cursor %s",
+    startDate,
+    endDate,
+    limit,
+    cursor,
+  );
 
-  console.info("[DB][listTransactions] startDate %s, endDate %s, limit %s, cursor %s", startDate, endDate, limit, cursor);
-  
   const countResult: { count: number }[] = await db.select(
     "SELECT COUNT(*) FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
     [startDate, endDate],
   );
-
 
   if (countResult.length === 0) {
     console.warn(

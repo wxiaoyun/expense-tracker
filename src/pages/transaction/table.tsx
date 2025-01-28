@@ -220,11 +220,7 @@ export const TransactionTable = () => {
     const isFetching = query.isFetchingNextPage;
     const hasNextPage = query.hasNextPage;
 
-    if (
-      distanceToBottom < 500 && 
-      !isFetching && 
-      hasNextPage 
-    ) {
+    if (distanceToBottom < 500 && !isFetching && hasNextPage) {
       query.fetchNextPage();
     }
   };
