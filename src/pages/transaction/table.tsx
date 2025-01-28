@@ -41,7 +41,7 @@ import {
   FaSolidPen,
   FaSolidTrash,
 } from "solid-icons/fa";
-import { createEffect, createMemo, createSignal, For, onMount } from "solid-js";
+import { createMemo, createSignal, For, onMount } from "solid-js";
 
 const AmountCell = (props: CellContext<Transaction, unknown>) => {
   const [currency] = useCurrency();
@@ -148,7 +148,6 @@ const fuzzyFilter = (
   addMeta: (meta: FilterMeta) => void,
 ) => {
   const itemRank = rankItem(row.getValue(columnId), filterValue);
-
   addMeta(itemRank);
   return itemRank.passed;
 };
@@ -193,7 +192,7 @@ export const TransactionTable = () => {
   });
 
   const headerGroups = table.getHeaderGroups;
-  const rowModel = table.getSortedRowModel;
+  const rowModel = table.getRowModel;
 
   let el!: HTMLDivElement;
   const virtualizer = createVirtualizer({
@@ -227,9 +226,6 @@ export const TransactionTable = () => {
   let tbody!: HTMLTableSectionElement;
   onMount(() => {
     virtualizer.measureElement(tbody);
-  });
-
-  createEffect(() => {
     fetchMoreTransactionOnPageEnd(el);
   });
 

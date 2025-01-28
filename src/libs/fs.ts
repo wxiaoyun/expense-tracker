@@ -1,4 +1,3 @@
-import { DATABASE_FILENAME } from "@/constants/db";
 import { db, reloadDb } from "@/db";
 import { validateDatabase } from "@/db/validate";
 import * as path from "@tauri-apps/api/path";

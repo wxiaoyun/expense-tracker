@@ -1,8 +1,3 @@
-import {
-  BUY_ME_A_COFFEE_URL,
-  GITHUB_ISSUE_URL,
-  GITHUB_URL,
-} from "@/constants/url";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { BiSolidCoffeeAlt } from "solid-icons/bi";
 import { FaSolidBug, FaSolidStar } from "solid-icons/fa";

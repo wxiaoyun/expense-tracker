@@ -1,5 +1,3 @@
-import { DEFAULT_CURRENCY } from "@/constants/settings";
-
 export const formatCurrency = (
   amount: number,
   options?: {

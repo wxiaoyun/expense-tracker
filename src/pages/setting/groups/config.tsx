@@ -1,16 +1,18 @@
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CURRENCY_OPTIONS,
-  DEFAULT_CURRENCY,
-  DEFAULT_THEME,
-  THEME_OPTIONS,
-} from "@/constants/settings";
+import { DEFAULT_THEME } from "@/constants/settings";
 import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
@@ -39,19 +41,25 @@ const CurrencySetting = () => {
   return (
     <div class="flex justify-between items-center">
       <label>Currency</label>
-      <Select
+
+      <Combobox
         value={currency().data ?? DEFAULT_CURRENCY}
-        onChange={(val) => setCurrency(val ?? DEFAULT_CURRENCY)}
+        onChange={(value) => {
+          if (value) setCurrency(value);
+        }}
         options={CURRENCY_OPTIONS}
+        placeholder="Select currency"
         itemComponent={(props) => (
-          <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+          <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
         )}
+        disallowEmptySelection={false}
+        required
       >
-        <SelectTrigger class="w-32 py-1 h-fit">
-          <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
-        </SelectTrigger>
-        <SelectContent />
-      </Select>
+        <ComboboxTrigger class="w-fit">
+          <ComboboxInput class="w-[5.5rem] py-1" />
+        </ComboboxTrigger>
+        <ComboboxContent class="overflow-y-auto max-h-[200px]" />
+      </Combobox>
     </div>
   );
 };

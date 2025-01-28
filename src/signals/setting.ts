@@ -1,9 +1,4 @@
-import {
-  CURRENCY_SETTING_KEY,
-  DEFAULT_CURRENCY,
-  DEFAULT_THEME,
-  THEME_SETTING_KEY,
-} from "@/constants/settings";
+import { DEFAULT_THEME } from "@/constants/settings";
 import { settings } from "@/db";
 import { createSettingQuery } from "@/query/settings";
 import { createMemo } from "solid-js";

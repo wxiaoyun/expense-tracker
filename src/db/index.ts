@@ -1,4 +1,3 @@
-import { DATABASE_FILENAME } from "@/constants";
 import Database from "@tauri-apps/plugin-sql";
 
 const dbUri = `sqlite:${DATABASE_FILENAME}`;
