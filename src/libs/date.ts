@@ -90,6 +90,9 @@ export const occurrenceToText = (recurrenceValue: string) => {
 };
 
 export const validateOccurrence = (recurrenceValue: string) => {
+  if (!recurrenceValue)
+    return { ok: false, err: "Cron expression is required" };
+
   try {
     parseExpression(recurrenceValue);
     return {

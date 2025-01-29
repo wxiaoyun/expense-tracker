@@ -12,7 +12,7 @@ import { formatCurrency } from "@/libs/currency";
 import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
 import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
-import { useSearchTransactionParams } from "@/signals/params";
+import { useDateRange, useSearchTransactionParams } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useInfiniteTransactions } from "@/signals/transactions";
 import { useNavigate } from "@solidjs/router";
@@ -140,6 +140,7 @@ const fuzzyFilter = (
 };
 
 export const TransactionTable = () => {
+  const { dateRange } = useDateRange();
   const [sorting, setSorting] = createSignal<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
 
@@ -289,9 +290,11 @@ export const TransactionTable = () => {
               let tr!: HTMLTableRowElement;
               const row = () => rowModel().rows[item.index];
 
+              // Workaround: manually access signals such that Solidjs tracks them as dependency and re-run the effect
               createEffect(() => {
-                // Workaround: manually access item.start such that Solidjs tracks it as dependency and re-run the effect
                 sorting();
+                dateRange();
+                globalFilter();
                 //eslint-disable-next-line
                 item.start;
                 virtualizer.measureElement(tr);

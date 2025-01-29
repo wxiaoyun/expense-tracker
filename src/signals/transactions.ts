@@ -2,6 +2,7 @@ import { transactions } from "@/db";
 import { formatCurrency } from "@/libs/currency";
 import {
   createInfiniteTransactionListQuery,
+  createTransactionCategoriesQuery,
   createTransactionListQuery,
   createTransactionSummarizeByCategoryQuery,
 } from "@/query/transactions";
@@ -37,6 +38,14 @@ export const useTransactionParams = (prefix = "") => {
     description,
     category,
   };
+};
+
+export const useTransactionCategories = () => {
+  const query = createTransactionCategoriesQuery();
+  const categories = createMemo(() => {
+    return (query.data ?? []).map((category) => category.category);
+  });
+  return categories;
 };
 
 export const useTransactions = () => {

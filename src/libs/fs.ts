@@ -63,12 +63,14 @@ export const importDatabase = async (
     // Create a temp db in app dir for validation
     // on iOS we cannot read load db directly from download dir
     const tmpDbName = `temp_${nanoid()}.db`;
-    const tmpDbPath = await path.join(getAppDir(), tmpDbName);
     const dbData = await readFile(file);
-    const tmpDb = await create(tmpDbPath);
+    const tmpDb = await create(tmpDbName, {
+      baseDir: path.BaseDirectory.AppData,
+    });
     await tmpDb.write(dbData);
     await tmpDb.close();
 
+    const tmpDbPath = await path.join(getAppDir(), tmpDbName);
     const isValid = await validateDatabase(tmpDbPath);
     await remove(tmpDbPath);
 
@@ -82,8 +84,9 @@ export const importDatabase = async (
 
     await db.close();
 
-    const dbPath = getDbPath();
-    const dbFile = await create(dbPath);
+    const dbFile = await create(DATABASE_FILENAME, {
+      baseDir: path.BaseDirectory.AppData,
+    });
     await dbFile.write(dbData);
     await dbFile.close();
 

@@ -29,24 +29,23 @@ import {
 } from "@/components/ui/date-picker";
 import {
   TextField,
+  TextFieldErrorMessage,
   TextFieldLabel,
   TextFieldRoot,
 } from "@/components/ui/textfield";
 import transactions from "@/db/transactions";
 import { queryClient } from "@/query/query";
+import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
 import {
-  createTransactionCategoriesQuery,
-  TRANSACTIONS_QUERY_KEY,
-} from "@/query/transactions";
-import { useTransactionParams } from "@/signals/transactions";
+  useTransactionCategories,
+  useTransactionParams,
+} from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
-import { createMemo, createSignal, Index } from "solid-js";
+import { createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-
-export const otherCategory = "Other";
 
 export const NewTransactionPage = () => {
   return (
@@ -75,8 +74,9 @@ const TransactionForm = () => {
   const navigate = useNavigate();
   // Allow search params to prefill the fields.
   const form = useTransactionParams("new_");
+  const categories = useTransactionCategories();
 
-  const [amount, setAmount] = createSignal(parseFloat(form.amount()) || 0);
+  const [amount, setAmount] = createSignal(form.amount());
   const [date, setDate] = createSignal(
     (() => {
       const date = form.date();
@@ -90,6 +90,17 @@ const TransactionForm = () => {
   const [description, setDescription] = createSignal(form.description());
   const [category, setCategory] = createSignal(form.category());
   const [newCategory, setNewCategory] = createSignal("");
+
+  const isAmountValid = createMemo(() => {
+    const amt = Number(amount());
+    return !isNaN(amt) && isFinite(amt) && amt !== 0;
+  });
+  const isCategoryValid = createMemo(() => {
+    return category() || newCategory();
+  });
+  const isAllFieldsValid = createMemo(() => {
+    return isAmountValid() && isCategoryValid();
+  });
 
   const mutation = createMutation(() => ({
     mutationFn: async () => {
@@ -105,35 +116,33 @@ const TransactionForm = () => {
       toastSuccess("Transaction created successfully");
       navigate("/transactions");
     },
-    onError: (error) => toastError(error.message),
+    onError: (error) => {
+      console.error("[UI] Error creating transaction", error);
+      toastError(error.message);
+    },
   }));
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
+    if (!isAllFieldsValid()) return;
     mutation.mutate();
   };
 
-  const categoriesQuery = createTransactionCategoriesQuery();
-  const categories = createMemo(() => {
-    const categories = (categoriesQuery.data ?? []).map(
-      (category) => category.category,
-    );
-    categories.push(otherCategory);
-    return categories;
-  });
-
   return (
     <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-      <TextFieldRoot>
+      <TextFieldRoot validationState={isAmountValid() ? "valid" : "invalid"}>
         <TextFieldLabel>Amount</TextFieldLabel>
         <TextField
-          type="number"
-          step="0.01"
           placeholder="Amount"
-          value={Number(amount())}
-          onChange={(e) => setAmount(parseFloat(e.currentTarget.value) || 0)}
+          value={amount()}
+          onChange={(e) => setAmount(e.currentTarget.value)}
           required
         />
+        <Show when={!isAmountValid()}>
+          <TextFieldErrorMessage>
+            Please enter a valid amount
+          </TextFieldErrorMessage>
+        </Show>
       </TextFieldRoot>
 
       <div class="flex flex-col gap-1">
@@ -147,7 +156,7 @@ const TransactionForm = () => {
           }}
         >
           <DatePickerControl class="w-full">
-            <DatePickerInput placeholder="Pick a date" />
+            <DatePickerInput placeholder="Pick a date" disabled />
             <DatePickerTrigger />
           </DatePickerControl>
 
@@ -314,19 +323,27 @@ const TransactionForm = () => {
         </Combobox>
       </div>
 
-      <TextFieldRoot>
+      <TextFieldRoot validationState={isCategoryValid() ? "valid" : "invalid"}>
         <TextFieldLabel>New category</TextFieldLabel>
         <TextField
           placeholder="New category"
           value={newCategory()}
           onChange={(e) => {
-            setCategory(otherCategory);
+            setCategory("");
             setNewCategory(e.currentTarget.value);
           }}
         />
+        <Show when={!isCategoryValid()}>
+          <TextFieldErrorMessage>
+            Please enter a valid category
+          </TextFieldErrorMessage>
+        </Show>
       </TextFieldRoot>
 
-      <Button type="submit" disabled={mutation.isPending}>
+      <Button
+        type="submit"
+        disabled={mutation.isPending || !isAllFieldsValid()}
+      >
         {mutation.isPending ? "Creating..." : "Create Transaction"}
       </Button>
     </form>

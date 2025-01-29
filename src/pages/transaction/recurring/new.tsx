@@ -37,14 +37,13 @@ import { recurringTransactions } from "@/db";
 import { validateOccurrence } from "@/libs/date";
 import { queryClient } from "@/query";
 import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
-import { createTransactionCategoriesQuery } from "@/query/transactions";
+import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
 import { createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { otherCategory } from "../new";
 
 export const NewRecurringTransactionPage = () => {
   return (
@@ -71,17 +70,9 @@ const Header = () => {
 
 const NewForm = () => {
   const navigate = useNavigate();
+  const categories = useTransactionCategories();
 
-  const categoriesQuery = createTransactionCategoriesQuery();
-  const categories = createMemo(() => {
-    const categories = (categoriesQuery.data ?? []).map(
-      (category) => category.category,
-    );
-    categories.push(otherCategory);
-    return categories;
-  });
-
-  const [amount, setAmount] = createSignal(0);
+  const [amount, setAmount] = createSignal("");
   const [startDate, setStartDate] = createSignal(
     new CalendarDate(new Date().getFullYear(), 0, 0),
   );
@@ -89,14 +80,26 @@ const NewForm = () => {
   const [newCategory, setNewCategory] = createSignal("");
   const [description, setDescription] = createSignal("");
   const [recurrenceValue, setRecurrenceValue] = createSignal("");
+
+  const isCategoryValid = createMemo(() => {
+    return category() !== "" || newCategory() !== "";
+  });
+  const isAmountValid = createMemo(() => {
+    const amt = Number(amount());
+    return !isNaN(amt) && isFinite(amt);
+  });
   const isRecurrenceValueValid = createMemo(() =>
     validateOccurrence(recurrenceValue()),
   );
 
+  const isAllFieldsValid = createMemo(() => {
+    return isAmountValid() && isRecurrenceValueValid().ok && isCategoryValid();
+  });
+
   const mutation = createMutation(() => ({
     mutationFn: async () => {
       return recurringTransactions.create({
-        amount: amount(),
+        amount: Number(amount()),
         start_date: new Date(startDate().toString()).getTime(),
         category: newCategory() || category(),
         description: description(),
@@ -111,27 +114,32 @@ const NewForm = () => {
       });
     },
     onError: (error) => {
+      console.error("[UI] Error creating recurring transaction %o", error);
       toastError(error.message);
     },
   }));
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
+    if (!isAllFieldsValid()) return;
     mutation.mutate();
   };
 
   return (
     <form class="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <TextFieldRoot>
+      <TextFieldRoot validationState={isAmountValid() ? "valid" : "invalid"}>
         <TextFieldLabel>Amount</TextFieldLabel>
         <TextField
-          type="number"
-          step="0.01"
           placeholder="Amount"
-          value={Number(amount())}
-          onChange={(e) => setAmount(parseFloat(e.currentTarget.value) || 0)}
+          value={amount()}
+          onChange={(e) => setAmount(e.currentTarget.value)}
           required
         />
+        <Show when={!isAmountValid()}>
+          <TextFieldErrorMessage>
+            Amount must be a valid number
+          </TextFieldErrorMessage>
+        </Show>
       </TextFieldRoot>
 
       <div class="flex flex-col gap-1">
@@ -147,7 +155,7 @@ const NewForm = () => {
           }}
         >
           <DatePickerControl class="w-full">
-            <DatePickerInput placeholder="Pick a date" />
+            <DatePickerInput placeholder="Pick a date" disabled />
             <DatePickerTrigger />
           </DatePickerControl>
 
@@ -313,16 +321,21 @@ const NewForm = () => {
         </Combobox>
       </div>
 
-      <TextFieldRoot>
+      <TextFieldRoot validationState={isCategoryValid() ? "valid" : "invalid"}>
         <TextFieldLabel>New category</TextFieldLabel>
         <TextField
           placeholder="New category"
           value={newCategory()}
           onChange={(e) => {
-            setCategory(otherCategory);
+            setCategory("");
             setNewCategory(e.currentTarget.value);
           }}
         />
+        <Show when={!isCategoryValid()}>
+          <TextFieldErrorMessage>
+            Either select a category or enter a new one
+          </TextFieldErrorMessage>
+        </Show>
       </TextFieldRoot>
 
       <TextFieldRoot
@@ -344,7 +357,7 @@ const NewForm = () => {
 
       <Button
         type="submit"
-        disabled={mutation.isPending || !isRecurrenceValueValid().ok}
+        disabled={mutation.isPending || !isAllFieldsValid()}
       >
         {mutation.isPending ? "Saving..." : "Save Changes"}
       </Button>
