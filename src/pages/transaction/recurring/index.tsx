@@ -11,6 +11,7 @@ import {
   createRecurringTransactionListQuery,
   RECURRING_TRANSACTIONS_QUERY_KEY,
 } from "@/query/recurring-transactions";
+import { useCurrency } from "@/signals/setting";
 import { useNavigate } from "@solidjs/router";
 import {
   FaSolidPen,
@@ -76,6 +77,7 @@ const RecurringTransactionCard = (props: {
   transaction: RecurringTransaction;
 }) => {
   const navigate = useNavigate();
+  const [currency] = useCurrency();
   const isIncome = () => props.transaction.amount > 0;
 
   const incurredQuery = createIncurredRecurringTransactionListQuery(
@@ -151,7 +153,9 @@ const RecurringTransactionCard = (props: {
               isIncome() ? "text-green-600" : "text-red-600",
             )}
           >
-            {formatCurrency(props.transaction.amount)}
+            {formatCurrency(props.transaction.amount, {
+              currency: currency(),
+            })}
           </p>
         </span>
 
@@ -163,7 +167,9 @@ const RecurringTransactionCard = (props: {
               isIncome() ? "text-green-600" : "text-red-600",
             )}
           >
-            {formatCurrency(totalIncurred())}
+            {formatCurrency(totalIncurred(), {
+              currency: currency(),
+            })}
           </p>
         </span>
       </div>

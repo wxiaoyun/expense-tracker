@@ -1,17 +1,10 @@
 # Expense Tracker
 
-A cross-platform mobile expense tracker built with Tauri. It is offline-first and provides cloud sync functionality.
+### Planned Features
 
-### TODO
-
-### Features
-
-- [ ] Deep link opener
-- [ ] Biometric authentication
+- [ ] CSV import
 - [ ] Periodic backup
 - [ ] Human readable cron builder
 - [ ] Cloud sync
 
-### Bugs
-
-- [ ] Db transactions
+###
