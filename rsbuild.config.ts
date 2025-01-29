@@ -66,6 +66,9 @@ export default defineConfig({
       "@": resolve(__dirname, "./src"),
     },
   },
+  performance: {
+    removeConsole: ["error", "info", "warn", "log"],
+  },
   source: {
     define: compileTime,
   },

@@ -99,7 +99,6 @@ export const SummaryTable: Component = () => {
   const table = createSolidTable({
     columns,
     get data() {
-      console.log(data());
       return data();
     },
     state: {
