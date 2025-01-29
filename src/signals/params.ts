@@ -1,0 +1,51 @@
+import { DateRange, getDateRange } from "@/libs/date";
+import { useSearchParams } from "@solidjs/router";
+import { createMemo } from "solid-js";
+import { useWeekStart } from "./setting";
+
+export const useDateRange = () => {
+  const [searchParams, setSearchParams] = useSearchParams<{
+    date: string;
+    range: DateRange;
+  }>();
+
+  const [weekStart] = useWeekStart();
+  const weekStartEnum = createMemo(() => {
+    return weekStart() === "monday" ? 1 : 0;
+  });
+
+  const currentDate = createMemo(() => {
+    if (!searchParams.date) {
+      return new Date();
+    }
+    return new Date(Number(searchParams.date));
+  });
+  const currentRange = createMemo(
+    () => (searchParams.range || "monthly") as DateRange,
+  );
+  const dateRange = createMemo(() =>
+    getDateRange(currentDate(), currentRange(), weekStartEnum()),
+  );
+  const setDate = (date: Date) =>
+    setSearchParams({ date: date.getTime().toString() });
+  const setRange = (range: DateRange) => setSearchParams({ range });
+
+  return {
+    currentDate,
+    currentRange,
+    dateRange,
+    setDate,
+    setRange,
+  };
+};
+
+export const useSearchTransactionParams = () => {
+  const [searchParams, setSearchParams] = useSearchParams<{
+    query: string;
+  }>();
+
+  const currentQuery = () => searchParams.query || "";
+  const setQuery = (query: string) => setSearchParams({ query });
+
+  return [currentQuery, setQuery] as const;
+};

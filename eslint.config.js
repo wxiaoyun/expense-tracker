@@ -1,4 +1,5 @@
 import pluginJs from "@eslint/js";
+import pluginQuery from "@tanstack/eslint-plugin-query";
 import * as tsParser from "@typescript-eslint/parser";
 import solid from "eslint-plugin-solid/configs/typescript";
 import globals from "globals";
@@ -12,7 +13,7 @@ export default [
       "dist",
       "build",
       "src-tauri",
-      "**/*.config.{ts,js}",
+      "**/*.config.{ts,js,cjs,mjs}",
     ],
   },
   { files: ["**/*.{js,mjs,cjs,ts}"] },
@@ -27,6 +28,11 @@ export default [
       parserOptions: {
         project: "tsconfig.json",
       },
+    },
+  },
+  {
+    plugins: {
+      "@tanstack/query": pluginQuery,
     },
   },
 ];
