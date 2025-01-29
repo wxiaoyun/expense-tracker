@@ -310,6 +310,46 @@ const batchCreateTransactions = async (
   return result.rowsAffected === transactions.length;
 };
 
+const summarizeByCategory = async (query?: { start?: Date; end?: Date }) => {
+  const { start, end } = query ?? {};
+  const startDate = start?.getTime() ?? 0;
+  const endDate = end?.getTime() ?? new Date().getTime();
+
+  console.info(
+    "[DB][summarizeByCategory] startDate %s, endDate %s",
+    startDate,
+    endDate,
+  );
+
+  const result: {
+    category: string;
+    balance: number;
+    income: number;
+    expense: number;
+  }[] = await db.select(
+    "SELECT category, SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 GROUP BY category",
+    [startDate, endDate],
+  );
+
+  if (result.length === 0) {
+    console.warn(
+      "[DB][summarizeByCategory] no result found for start %s and end %s, returning null",
+      startDate,
+      endDate,
+    );
+    return null;
+  }
+
+  console.info(
+    "[DB][summarizeByCategory] result found for start %s and end %s, returning %o",
+    startDate,
+    endDate,
+    result,
+  );
+
+  return result;
+};
+
 export default {
   get: getTransaction,
   list: listTransactions,
@@ -320,4 +360,5 @@ export default {
   clear: clearTransactions,
   batchCreate: batchCreateTransactions,
   summarize: summarizeTransactions,
+  summarizeByCategory,
 };

@@ -1,10 +1,22 @@
 import { parseExpression } from "cron-parser";
 
-export type DateRange = "daily" | "weekly" | "monthly" | "yearly";
+export type DateRange = "daily" | "weekly" | "monthly" | "yearly" | "all";
+
+export const dateRangeOptions: DateRange[] = [
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+  "all",
+];
+
+// 0 for Sunday, 1 for Monday
+export type WeekStartsOn = 0 | 1;
 
 export const getDateRange = (
   date: Date,
   range: DateRange,
+  weekStartsOn: WeekStartsOn = 1,
 ): { start: Date; end: Date } => {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
@@ -15,10 +27,13 @@ export const getDateRange = (
   switch (range) {
     case "daily":
       return { start, end };
-    case "weekly":
-      start.setDate(start.getDate() - start.getDay());
-      end.setDate(end.getDate() + (6 - end.getDay()));
+    case "weekly": {
+      const currentDay = start.getDay();
+      const daysToSubtract = (currentDay + 7 - weekStartsOn) % 7;
+      start.setDate(start.getDate() - daysToSubtract);
+      end.setDate(end.getDate() - daysToSubtract + 6);
       return { start, end };
+    }
     case "monthly":
       start.setDate(1);
       end.setMonth(end.getMonth() + 1);
@@ -27,6 +42,10 @@ export const getDateRange = (
     case "yearly":
       start.setMonth(0, 1);
       end.setMonth(11, 31);
+      return { start, end };
+    case "all":
+      start.setFullYear(0);
+      end.setFullYear(9999);
       return { start, end };
   }
 };

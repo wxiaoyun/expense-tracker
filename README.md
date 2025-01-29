@@ -4,5 +4,5 @@ A cross-platform mobile expense tracker built with Tauri. It is offline-first an
 
 ### TODO
 
+- [ ] Human readable cron builder
 - [ ] Cloud sync
-- [ ] Summary breakdown

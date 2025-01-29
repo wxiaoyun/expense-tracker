@@ -68,5 +68,21 @@ export const createTransactionSummarizeQuery = (
       params(),
     ],
     queryFn: async () => transactions.summarize(params()),
+    placeholderData: keepPreviousData,
+  }));
+};
+
+export const createTransactionSummarizeByCategoryQuery = (
+  params: () => { start: Date; end: Date },
+) => {
+  return createQuery(() => ({
+    queryKey: [
+      TRANSACTIONS_QUERY_KEY,
+      TRANSACTIONS_SUMMARIZE_QUERY_KEY,
+      CATEGORIES_QUERY_KEY,
+      params(),
+    ],
+    queryFn: async () => transactions.summarizeByCategory(params()),
+    placeholderData: keepPreviousData,
   }));
 };

@@ -12,11 +12,9 @@ import { formatCurrency } from "@/libs/currency";
 import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
 import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
-import {
-  useInfiniteTransactions,
-  useSearchTransactionParams,
-} from "@/signals/params";
+import { useSearchTransactionParams } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
+import { useInfiniteTransactions } from "@/signals/transactions";
 import { useNavigate } from "@solidjs/router";
 import { rankItem } from "@tanstack/match-sorter-utils";
 import {
@@ -27,12 +25,12 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getSortedRowModel,
   Row,
   SortingState,
 } from "@tanstack/solid-table";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import {
+  FaSolidBars,
   FaSolidChevronDown,
   FaSolidChevronUp,
   FaSolidPen,
@@ -45,7 +43,7 @@ const AmountCell = (props: CellContext<Transaction, unknown>) => {
   const isIncome = () => props.row.original.amount > 0;
   const formattedAmount = () =>
     formatCurrency(props.row.original.amount, {
-      currency: currency().data,
+      currency: currency(),
     });
 
   return (
@@ -100,40 +98,32 @@ const columns = [
     header: "Date",
     size: 80,
     enableGlobalFilter: true,
-    enableSorting: true,
-    sortingFn: "datetime",
     cell: (props) => (
-      <>{new Date(props.row.original.transaction_date).toLocaleDateString()}</>
+      <span>
+        {new Date(props.row.original.transaction_date).toLocaleDateString()}
+      </span>
     ),
   }),
   columnHelper.accessor("category", {
     header: "Category",
     size: 100,
     enableGlobalFilter: true,
-    enableSorting: true,
-    sortingFn: "basic",
-    cell: (props) => <>{props.row.original.category}</>,
+    cell: (props) => <span>{props.row.original.category}</span>,
   }),
   columnHelper.accessor("description", {
     header: "Description",
-    minSize: 200,
     enableGlobalFilter: true,
-    enableSorting: true,
-    sortingFn: "basic",
-    cell: (props) => <>{props.row.original.description || "-"}</>,
+    cell: (props) => <span>{props.row.original.description || "-"}</span>,
   }),
   columnHelper.accessor("amount", {
     header: "Amount",
     size: 100,
-    enableSorting: true,
-    sortingFn: "basic",
     cell: AmountCell,
   }),
   columnHelper.display({
     id: "actions",
     header: "Actions",
     size: 60,
-    enableSorting: false,
     cell: ActionCell,
   }),
 ];
@@ -153,7 +143,7 @@ export const TransactionTable = () => {
   const [sorting, setSorting] = createSignal<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
 
-  const query = useInfiniteTransactions(() => {
+  const queryParam = createMemo(() => {
     const srt = sorting();
     const firstSorting = srt.length > 0 ? srt[0] : null;
     const orderBy = !firstSorting
@@ -164,6 +154,9 @@ export const TransactionTable = () => {
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
     };
   });
+
+  //eslint-disable-next-line
+  const query = useInfiniteTransactions(queryParam);
   const allTransactions = createMemo(() => {
     return query.data?.pages.flatMap((page) => page.items) ?? [];
   });
@@ -186,12 +179,12 @@ export const TransactionTable = () => {
       },
     },
     enableSorting: true,
+    manualSorting: true, // server side sorting
     onSortingChange: setSorting,
     enableGlobalFilter: true,
     globalFilterFn: fuzzyFilter,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
 
@@ -210,7 +203,7 @@ export const TransactionTable = () => {
       navigator.userAgent.indexOf("Firefox") === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
-    overscan: 20,
+    overscan: 5,
   });
 
   const fetchMoreTransactionOnPageEnd = (target: HTMLDivElement) => {
@@ -266,10 +259,16 @@ export const TransactionTable = () => {
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
-                          {{
-                            asc: <FaSolidChevronUp />,
-                            desc: <FaSolidChevronDown />,
-                          }[header.column.getIsSorted() as string] ?? null}
+                          {header.column.getCanSort() &&
+                            {
+                              asc: <FaSolidChevronUp />,
+                              desc: <FaSolidChevronDown />,
+                              false: (
+                                <FaSolidBars class="opacity-50" size={14} />
+                              ),
+                            }[
+                              (header.column.getIsSorted() as string) ?? "false"
+                            ]}
                         </div>
                       </TableHead>
                     )
@@ -292,6 +291,7 @@ export const TransactionTable = () => {
 
               createEffect(() => {
                 // Workaround: manually access item.start such that Solidjs tracks it as dependency and re-run the effect
+                sorting();
                 //eslint-disable-next-line
                 item.start;
                 virtualizer.measureElement(tr);
@@ -299,9 +299,9 @@ export const TransactionTable = () => {
 
               return (
                 <TableRow
+                  ref={tr}
                   class="flex w-full absolute top-0 left-0"
                   data-index={item.index}
-                  ref={tr}
                   style={{
                     transform: `translateY(${item.start}px)`,
                   }}

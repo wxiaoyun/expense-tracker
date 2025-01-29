@@ -17,7 +17,7 @@ import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
 import { SETTINGS_QUERY_KEY } from "@/query/settings";
-import { useCurrency, useTheme } from "@/signals/setting";
+import { useCurrency, useTheme, useWeekStart } from "@/signals/setting";
 import { ConfigColorMode, useColorMode } from "@kobalte/core";
 import { FaSolidTrash } from "solid-icons/fa";
 import { createEffect } from "solid-js";
@@ -28,6 +28,7 @@ export const ConfigGroup = () => {
     <SettingGroup title="Settings">
       <div class="flex flex-col gap-4">
         <CurrencySetting />
+        <WeekStartSetting />
         <ThemeSetting />
         <ClearSettings />
       </div>
@@ -43,7 +44,7 @@ const CurrencySetting = () => {
       <label>Currency</label>
 
       <Combobox
-        value={currency().data ?? DEFAULT_CURRENCY}
+        value={currency()}
         onChange={(value) => {
           if (value) setCurrency(value);
         }}
@@ -64,23 +65,43 @@ const CurrencySetting = () => {
   );
 };
 
+const WeekStartSetting = () => {
+  const [weekStart, setWeekStart] = useWeekStart();
+
+  return (
+    <div class="flex justify-between items-center">
+      <label>Week start</label>
+      <Select
+        value={weekStart()}
+        onChange={(value) => setWeekStart(value ?? DEFAULT_WEEK_START)}
+        options={WEEK_START_OPTIONS}
+        itemComponent={(props) => (
+          <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+        )}
+      >
+        <SelectTrigger class="w-32 py-1 h-fit">
+          <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+        </SelectTrigger>
+        <SelectContent />
+      </Select>
+    </div>
+  );
+};
+
 const ThemeSetting = () => {
   const { setColorMode } = useColorMode();
   const [theme, setTheme] = useTheme();
 
   createEffect(() => {
-    const newTheme = theme().data;
-    if (!newTheme) return;
-
-    console.info("[UI][createEffect] updating theme to '%s'", newTheme);
-    setColorMode(newTheme as ConfigColorMode);
+    console.info("[UI][createEffect] updating theme to '%s'", theme());
+    setColorMode(theme() as ConfigColorMode);
   });
 
   return (
     <div class="flex justify-between items-center">
       <label>Theme</label>
       <Select
-        value={theme().data ?? DEFAULT_THEME}
+        value={theme()}
         onChange={(value) => setTheme(value ?? DEFAULT_THEME)}
         options={THEME_OPTIONS}
         itemComponent={(props) => (
@@ -112,7 +133,7 @@ const ClearSettings = () => {
 
   return (
     <div class="flex justify-between items-center">
-      <label>Clear Settings</label>
+      <label>Clear settings</label>
 
       <FaSolidTrash
         class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer"

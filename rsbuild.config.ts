@@ -10,10 +10,26 @@ const host = process.env.TAURI_DEV_HOST;
 const compileTime = {
   THEME_SETTING_KEY: JSON.stringify("theme"),
   CURRENCY_SETTING_KEY: JSON.stringify("currency"),
+  WEEK_START_SETTING_KEY: JSON.stringify("week_start"),
+
+  THEME_OPTIONS: JSON.stringify(["system", "light", "dark"]),
+  CURRENCY_OPTIONS: JSON.stringify(codes()),
+  WEEK_START_OPTIONS: JSON.stringify(["monday", "sunday"]),
 
   DEFAULT_CURRENCY: JSON.stringify("USD"),
-  CURRENCY_OPTIONS: JSON.stringify(codes()),
-  THEME_OPTIONS: JSON.stringify(["system", "light", "dark"]),
+  DEFAULT_WEEK_START: JSON.stringify("monday"),
+  DEFAULT_COLOR_SCHEME: JSON.stringify([
+    "#f94144",
+    "#f3722c",
+    "#f8961e",
+    "#f9844a",
+    "#f9c74f",
+    "#90be6d",
+    "#43aa8b",
+    "#4d908e",
+    "#577590",
+    "#277da1",
+  ]),
 
   DATABASE_NAME: JSON.stringify(
     process.env.SQLITE_DATABASE_NAME ?? "expense_tracker",

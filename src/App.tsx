@@ -7,6 +7,7 @@ import {
   NewTransactionPage,
   RecurringTransactionPage,
   SettingPage,
+  SummaryPage,
   TransactionPage,
 } from "@/pages";
 import { queryClient } from "@/query";
@@ -15,7 +16,6 @@ import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
 import { AppLauncher } from "./components/launcher";
-import { WorkInProgress } from "./components/workInProgress";
 import { AppLayout } from "./layout";
 import { initializePaths } from "./libs/fs";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
@@ -72,7 +72,7 @@ const Routes = () => {
         </Route>
       </Route>
 
-      <Route path="/summary" component={WorkInProgress} />
+      <Route path="/summary" component={SummaryPage} />
 
       <Route path="/settings" component={SettingPage} />
     </Router>

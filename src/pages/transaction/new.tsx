@@ -38,7 +38,7 @@ import {
   createTransactionCategoriesQuery,
   TRANSACTIONS_QUERY_KEY,
 } from "@/query/transactions";
-import { useTransactionParams } from "@/signals/transaction-form";
+import { useTransactionParams } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createMutation } from "@tanstack/solid-query";
