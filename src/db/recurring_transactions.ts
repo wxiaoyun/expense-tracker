@@ -1,5 +1,6 @@
 import { parseExpression } from "cron-parser";
 import { db, transactions } from ".";
+import { withTransaction } from "./transaction";
 import { Transaction } from "./transactions";
 
 export type RecurringTransaction = {
@@ -118,7 +119,7 @@ const deleteRecurringTransaction = async (id: number) => {
   return result.rowsAffected > 0;
 };
 
-const incurRecurringTransaction = async (id: number) => {
+const incurRecurringTransaction = withTransaction(async (id: number) => {
   const now = new Date();
   const rt = await getRecurringTransaction(id);
 
@@ -190,7 +191,7 @@ const incurRecurringTransaction = async (id: number) => {
   }
 
   return incurred;
-};
+});
 
 const listTransactionsByRecurringTransactionId = async (id: number) => {
   const result = await db.select(
