@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DEFAULT_THEME } from "@/constants/settings";
 import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import { queryClient } from "@/query";
@@ -45,9 +44,7 @@ const CurrencySetting = () => {
 
       <Combobox
         value={currency()}
-        onChange={(value) => {
-          if (value) setCurrency(value);
-        }}
+        onChange={(value) => value && setCurrency(value)}
         options={CURRENCY_OPTIONS}
         placeholder="Select currency"
         itemComponent={(props) => (
@@ -73,7 +70,7 @@ const WeekStartSetting = () => {
       <label>Week start</label>
       <Select
         value={weekStart()}
-        onChange={(value) => setWeekStart(value ?? DEFAULT_WEEK_START)}
+        onChange={(value) => value && setWeekStart(value)}
         options={WEEK_START_OPTIONS}
         itemComponent={(props) => (
           <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
@@ -102,7 +99,7 @@ const ThemeSetting = () => {
       <label>Theme</label>
       <Select
         value={theme()}
-        onChange={(value) => setTheme(value ?? DEFAULT_THEME)}
+        onChange={(value) => value && setTheme(value)}
         options={THEME_OPTIONS}
         itemComponent={(props) => (
           <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>

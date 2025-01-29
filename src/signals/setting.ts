@@ -56,14 +56,23 @@ export const useTheme = () => {
     const data = query().data;
     if (!data) return DEFAULT_THEME;
 
-    if (data === "system") {
-      return getSystemTheme();
-    }
-
-    return data as "light" | "dark";
+    return data as "light" | "dark" | "system";
   });
 
   return [theme, setTheme] as const;
+};
+
+export const useResolvedTheme = () => {
+  const [theme] = useTheme();
+
+  const resolvedTheme = createMemo(() => {
+    if (theme() === "system") {
+      return getSystemTheme();
+    }
+    return theme() as "light" | "dark";
+  });
+
+  return resolvedTheme;
 };
 
 export const useWeekStart = () => {

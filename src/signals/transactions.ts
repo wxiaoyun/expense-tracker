@@ -9,7 +9,7 @@ import { useSearchParams } from "@solidjs/router";
 import { ChartConfiguration } from "chart.js";
 import { createMemo } from "solid-js";
 import { useDateRange } from "./params";
-import { useCurrency, useTheme } from "./setting";
+import { useCurrency, useResolvedTheme } from "./setting";
 
 export const useTransactionParams = (prefix = "") => {
   const [searchParams] = useSearchParams();
@@ -53,7 +53,7 @@ export const useInfiniteTransactions = (
 };
 
 export const useTransactionChartConfig = () => {
-  const [theme] = useTheme();
+  const theme = useResolvedTheme();
   const [currency] = useCurrency();
   const { dateRange } = useDateRange();
   const query = createTransactionSummarizeByCategoryQuery(dateRange);
