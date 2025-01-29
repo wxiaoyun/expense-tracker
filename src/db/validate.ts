@@ -1,10 +1,10 @@
 import Database from "@tauri-apps/plugin-sql";
 
-export const validateDatabase = async (filePath: string): Promise<boolean> => {
+export const validateDatabase = async (dbPath: string): Promise<boolean> => {
   try {
-    const tempDb = await Database.load(`sqlite:${filePath}`);
+    const db = await Database.load(`sqlite:${dbPath}`);
 
-    const tables = await tempDb.select<{ name: string }[]>(
+    const tables = await db.select<{ name: string }[]>(
       "SELECT name FROM sqlite_master WHERE type='table'",
     );
 
@@ -48,7 +48,7 @@ export const validateDatabase = async (filePath: string): Promise<boolean> => {
     };
 
     for (const [table, expectedColumns] of Object.entries(schemas)) {
-      const tableInfo = await tempDb.select<{ name: string }[]>(
+      const tableInfo = await db.select<{ name: string }[]>(
         `PRAGMA table_info(${table})`,
       );
 
@@ -62,7 +62,7 @@ export const validateDatabase = async (filePath: string): Promise<boolean> => {
       }
     }
 
-    await tempDb.close();
+    await db.close();
     return true;
   } catch (error) {
     console.error("[validateDatabase] Database validation failed:", error);

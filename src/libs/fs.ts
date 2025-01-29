@@ -2,7 +2,14 @@ import { db, reloadDb } from "@/db";
 import { validateDatabase } from "@/db/validate";
 import * as path from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { create, readFile, watch, WatchEvent } from "@tauri-apps/plugin-fs";
+import {
+  create,
+  readFile,
+  remove,
+  watch,
+  WatchEvent,
+} from "@tauri-apps/plugin-fs";
+import { nanoid } from "nanoid";
 
 // https://tauri.app/plugin/file-system/
 
@@ -46,14 +53,6 @@ export const importDatabase = async (
       multiple: false,
       directory: false,
       defaultPath: getDownloadDir(),
-      filters: [
-        {
-          name: "SQLite Database",
-          // Bug: https://github.com/tauri-apps/tauri/issues/5922
-          // Workaround to have two extensions
-          extensions: ["text/csv", "db", "sqlite3", "sqlite"],
-        },
-      ],
     });
 
     if (!file) {
@@ -61,7 +60,17 @@ export const importDatabase = async (
       return;
     }
 
-    const isValid = await validateDatabase(file);
+    // Create a temp db in app dir for validation
+    // on iOS we cannot read load db directly from download dir
+    const tmpDbName = `temp_${nanoid()}.db`;
+    const tmpDbPath = await path.join(getAppDir(), tmpDbName);
+    const dbData = await readFile(file);
+    const tmpDb = await create(tmpDbPath);
+    await tmpDb.write(dbData);
+    await tmpDb.close();
+
+    const isValid = await validateDatabase(tmpDbPath);
+    await remove(tmpDbPath);
 
     if (!isValid) {
       console.info("[FS][importDatabase] Invalid database file format");
@@ -73,10 +82,9 @@ export const importDatabase = async (
 
     await db.close();
 
-    const fileData = await readFile(file);
     const dbPath = getDbPath();
     const dbFile = await create(dbPath);
-    await dbFile.write(fileData);
+    await dbFile.write(dbData);
     await dbFile.close();
 
     await reloadDb();
