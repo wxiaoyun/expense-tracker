@@ -330,7 +330,8 @@ const EditForm = () => {
           <Combobox
             value={category()}
             onChange={(value) => {
-              if (value) setCategory(value);
+              if (!value) return;
+              setCategory(value);
               setNewCategory("");
             }}
             options={categories()}
@@ -338,10 +339,9 @@ const EditForm = () => {
             itemComponent={(props) => (
               <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
             )}
-            required
           >
             <ComboboxTrigger>
-              <ComboboxInput />
+              <ComboboxInput value={category()} />
             </ComboboxTrigger>
             <ComboboxContent class="overflow-y-auto max-h-[200px]" />
           </Combobox>
