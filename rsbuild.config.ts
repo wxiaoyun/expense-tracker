@@ -31,6 +31,8 @@ const compileTime = {
     "#277da1",
   ]),
 
+  CLIPBOARD_CMD_PREFIX: JSON.stringify("clipboard-cmd:"),
+
   DATABASE_NAME: JSON.stringify(
     process.env.SQLITE_DATABASE_NAME ?? "expense_tracker",
   ),
@@ -41,9 +43,9 @@ const compileTime = {
   IS_DEV: JSON.stringify(process.env.NODE_ENV === "development"),
 
   BUY_ME_A_COFFEE_URL: JSON.stringify("https://buymeacoffee.com/wxiaoyun"),
-  GITHUB_URL: JSON.stringify("https://github.com/wxiaoyun/money-tracker"),
+  GITHUB_URL: JSON.stringify("https://github.com/wxiaoyun/expense-tracker"),
   GITHUB_ISSUE_URL: JSON.stringify(
-    "https://github.com/wxiaoyun/money-tracker/issues",
+    "https://github.com/wxiaoyun/expense-tracker/issues",
   ),
 };
 

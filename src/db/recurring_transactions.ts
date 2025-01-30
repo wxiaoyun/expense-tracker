@@ -1,18 +1,25 @@
+import { validateOccurrence } from "@/libs/date";
 import { parseExpression } from "cron-parser";
+import { z } from "zod";
 import { db, transactions } from ".";
 import { Transaction } from "./transactions";
 
-export type RecurringTransaction = {
-  id: number;
-  amount: number;
-  category: string;
-  description?: string;
-  start_date: number;
-  last_charged?: number;
-  recurrence_value: string;
-  created_at: number;
-  updated_at: number;
-};
+export const RecurringTransactionSchema = z.object({
+  id: z.number().int().positive(),
+  amount: z.number(),
+  category: z.string(),
+  description: z.string().optional(),
+  start_date: z.number().int().positive(),
+  last_charged: z.number().int().positive().optional(),
+  recurrence_value: z.string().refine((data) => {
+    const res = validateOccurrence(data);
+    return res.ok;
+  }, "Recurrence value is invalid cron expression"),
+  created_at: z.number().int().positive(),
+  updated_at: z.number().int().positive(),
+});
+
+export type RecurringTransaction = z.infer<typeof RecurringTransactionSchema>;
 
 const getRecurringTransaction = async (id: number) => {
   const result: RecurringTransaction[] = await db.select(
