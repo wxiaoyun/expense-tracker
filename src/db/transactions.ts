@@ -1,15 +1,18 @@
+import { z } from "zod";
 import { db } from ".";
 
-export type Transaction = {
-  id: number;
-  amount: number;
-  transaction_date: number;
-  category: string;
-  description?: string;
-  recurring_transaction_id?: number;
-  created_at: number;
-  updated_at: number;
-};
+export const TransactionSchema = z.object({
+  id: z.number().int().positive(),
+  amount: z.number(),
+  transaction_date: z.number().int().positive(),
+  category: z.string(),
+  description: z.string().optional(),
+  recurring_transaction_id: z.number().int().positive().optional(),
+  created_at: z.number().int().positive(),
+  updated_at: z.number().int().positive(),
+});
+
+export type Transaction = z.infer<typeof TransactionSchema>;
 
 const validOrderBy = new Set([
   "transaction_date",

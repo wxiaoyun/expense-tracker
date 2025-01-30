@@ -2,7 +2,12 @@ import Database from "@tauri-apps/plugin-sql";
 
 const dbUri = `sqlite:${DATABASE_FILENAME}`;
 
-export let db = await Database.load(dbUri);
+export let db: Database;
+
+export const initDb = async () => {
+  db = await Database.load(dbUri);
+  db.execute("PRAGMA journal_mode=WAL");
+};
 
 export const reloadDb = async () => {
   db = await Database.load(dbUri);

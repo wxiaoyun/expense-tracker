@@ -14,6 +14,8 @@ declare const CURRENCY_OPTIONS: string[];
 declare const THEME_OPTIONS: string[];
 declare const WEEK_START_OPTIONS: string[];
 
+declare const CLIPBOARD_CMD_PREFIX: string;
+
 declare const DATABASE_NAME: string;
 declare const DATABASE_FILENAME: string;
 
