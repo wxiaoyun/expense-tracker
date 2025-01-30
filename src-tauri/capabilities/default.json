@@ -8,11 +8,11 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "fs:default",
     "upload:default",
     "sql:default",
     "sql:allow-execute",
     "dialog:default",
+    "fs:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "fs:allow-app-read-recursive",

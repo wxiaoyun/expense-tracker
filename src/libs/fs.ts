@@ -4,11 +4,10 @@ import { validateDatabase } from "@/db/validate";
 import * as path from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
-  create,
-  readFile,
+  copyFile,
+  readTextFile,
   remove,
-  watch,
-  WatchEvent,
+  writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import { chunk } from "lodash";
 import { nanoid } from "nanoid";
@@ -16,7 +15,6 @@ import { generateCsvContent, parseCsvContent } from "./csv";
 
 // https://tauri.app/plugin/file-system/
 
-let dbPath: string = "";
 let appDataDir: string = "";
 let downloadDir: string = "";
 
@@ -38,11 +36,8 @@ export const initializePaths = async () => {
 
   appDataDir = appDataDirRes.value;
   downloadDir = downloadDirRes.value;
-
-  dbPath = await path.join(appDataDir, DATABASE_FILENAME);
 };
 
-export const getDbPath = () => dbPath;
 export const getAppDir = () => appDataDir;
 export const getDownloadDir = () => downloadDir;
 
@@ -74,16 +69,15 @@ export const importDatabase = async (
     // Create a temp db in app dir for validation
     // on iOS we cannot read load db directly from download dir
     const tmpDbName = `temp_${nanoid()}.db`;
-    const dbData = await readFile(file);
-    const tmpDb = await create(tmpDbName, {
-      baseDir: path.BaseDirectory.AppData,
+    await copyFile(file, tmpDbName, {
+      toPathBaseDir: path.BaseDirectory.AppData,
     });
-    await tmpDb.write(dbData);
-    await tmpDb.close();
 
     const tmpDbPath = await path.join(getAppDir(), tmpDbName);
     const isValid = await validateDatabase(tmpDbPath);
-    await remove(tmpDbPath);
+    await remove(tmpDbName, {
+      baseDir: path.BaseDirectory.AppData,
+    });
 
     if (!isValid) {
       console.info("[FS][importDatabase] Invalid database file format");
@@ -95,11 +89,9 @@ export const importDatabase = async (
 
     await db.close();
 
-    const dbFile = await create(DATABASE_FILENAME, {
-      baseDir: path.BaseDirectory.AppData,
+    await copyFile(file, DATABASE_FILENAME, {
+      toPathBaseDir: path.BaseDirectory.AppData,
     });
-    await dbFile.write(dbData);
-    await dbFile.close();
 
     console.info("[FS][importDatabase] Data imported successfully");
     onSuccess("Data imported successfully");
@@ -133,12 +125,9 @@ export const exportDatabase = async (
 
     console.info("[FS][exportDatabase] downloadPath: %s", downloadPath);
 
-    const dbPath = getDbPath();
-    const appData = await readFile(dbPath);
-    const downloadFile = await create(downloadPath);
-
-    await downloadFile.write(appData);
-    await downloadFile.close();
+    await copyFile(DATABASE_FILENAME, downloadPath, {
+      fromPathBaseDir: path.BaseDirectory.AppData,
+    });
 
     console.info("[FS][exportDatabase] Data exported successfully");
     onSuccess("Data exported successfully");
@@ -171,12 +160,12 @@ export const exportCsv = async (
     console.info("[FS][exportCsv] downloadPath: %s", downloadPath);
 
     const csvContentString = await generateCsvContent();
-    const encoder = new TextEncoder();
-    const csvData = encoder.encode(csvContentString);
+    console.info(
+      "[FS][exportCsv] csvContentString length: %d",
+      csvContentString.length,
+    );
 
-    const downloadFile = await create(downloadPath);
-    await downloadFile.write(csvData);
-    await downloadFile.close();
+    await writeTextFile(downloadPath, csvContentString);
 
     console.info("[FS][exportCsv] Data exported successfully");
     onSuccess("Data exported successfully");
@@ -215,11 +204,9 @@ export const importCsv = async (
       return;
     }
 
-    const csvData = await readFile(file);
-    const decoder = new TextDecoder();
-    const csvContentString = decoder.decode(csvData);
+    const csvData = await readTextFile(file);
 
-    const parseResult = parseCsvContent(csvContentString);
+    const parseResult = parseCsvContent(csvData);
 
     if (!parseResult.ok) {
       console.error(
@@ -255,14 +242,4 @@ export const importCsv = async (
     console.error("[FS][importCsv] Failed to import data %o", error);
     onError("Something went wrong, failed to import data");
   }
-};
-
-export const watchDb = async (cb: (event: WatchEvent) => void) => {
-  const unwatch = await watch(getDbPath(), cb, {
-    recursive: false,
-    delayMs: 1000,
-  });
-
-  console.info("[FS][watchDb] Watching db at %s", dbPath);
-  return unwatch;
 };

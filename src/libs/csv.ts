@@ -1,15 +1,14 @@
 import transactions, {
-  Transaction,
-  TransactionSchema,
+  Transaction
 } from "@/db/transactions";
-import { parse } from "csv-parse/sync";
+import { parse } from "@std/csv";
 import { z } from "zod";
 
 export const TransactionCsvSchema = z.tuple([
-  TransactionSchema.shape.amount,
-  TransactionSchema.shape.transaction_date,
-  TransactionSchema.shape.category,
-  TransactionSchema.shape.description,
+  z.coerce.number(),
+  z.coerce.number().int().positive(),
+  z.string(),
+  z.string().optional(),
 ]);
 
 export type TransactionCsv = z.infer<typeof TransactionCsvSchema>;
@@ -38,6 +37,8 @@ export const generateCsvContent = async () => {
     );
   }
 
+  console.info("[CSV][generateCsvContent] csvContent: ", csvContent);
+
   return csvContent
     .map((row) =>
       row
@@ -51,11 +52,9 @@ export const generateCsvContent = async () => {
 
 export const parseCsvContent = (csvContentString: string) => {
   const records = parse(csvContentString, {
-    trim: true,
-    skip_empty_lines: true,
-    delimiter: CSV_DELIMITER,
-    quote: '"',
-    cast: true,
+    separator: CSV_DELIMITER,
+    trimLeadingSpace: true,
+    fieldsPerRecord: 4,
   });
 
   const schema = z.array(TransactionCsvSchema);

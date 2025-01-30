@@ -52,6 +52,8 @@ export const validateDatabase = async (dbPath: string): Promise<boolean> => {
         `PRAGMA table_info(${table})`,
       );
 
+      console.info("[validateDatabase] %s tableInfo: %o, expectedColumns: %o", table, tableInfo, expectedColumns);
+
       const hasAllColumns = expectedColumns.every((col) =>
         tableInfo.some((info) => info.name === col),
       );
