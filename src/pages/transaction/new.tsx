@@ -305,7 +305,8 @@ const TransactionForm = () => {
         <Combobox
           value={category()}
           onChange={(value) => {
-            if (value) setCategory(value);
+            if (!value) return;
+            setCategory(value);
             setNewCategory("");
           }}
           options={categories()}
@@ -314,10 +315,9 @@ const TransactionForm = () => {
             <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
           )}
           disallowEmptySelection={false}
-          required
         >
           <ComboboxTrigger>
-            <ComboboxInput />
+            <ComboboxInput value={category()} />
           </ComboboxTrigger>
           <ComboboxContent class="overflow-y-auto max-h-[200px]" />
         </Combobox>
