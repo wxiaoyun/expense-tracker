@@ -102,7 +102,7 @@ const EditForm = () => {
   });
 
   createEffect(() => {
-    if (!query.isSuccess || !query.data) return;
+    if (!query.data) return;
 
     const transaction = query.data;
     const startDate = new Date(transaction.start_date);

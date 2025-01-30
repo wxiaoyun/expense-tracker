@@ -57,10 +57,11 @@ const createRecurringTransaction = async (
   const now = new Date().getTime();
 
   const result = await db.execute(
-    "INSERT INTO recurring_transactions (amount, category, start_date, recurrence_value, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    "INSERT INTO recurring_transactions (amount, category, description, start_date, recurrence_value, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
     [
       transaction.amount,
       transaction.category,
+      transaction.description,
       transaction.start_date,
       transaction.recurrence_value,
       now,
@@ -94,10 +95,11 @@ const updateRecurringTransaction = async (
     updated_at: now,
   } as RecurringTransaction;
   const result = await db.execute(
-    "UPDATE recurring_transactions SET amount = $1, category = $2, start_date = $3, last_charged = $4, recurrence_value = $5, updated_at = $6 WHERE id = $7",
+    "UPDATE recurring_transactions SET amount = $1, category = $2, description = $3, start_date = $4, last_charged = $5, recurrence_value = $6, updated_at = $7 WHERE id = $8",
     [
       updatedTransaction.amount,
       updatedTransaction.category,
+      updatedTransaction.description,
       updatedTransaction.start_date,
       updatedTransaction.last_charged,
       updatedTransaction.recurrence_value,
