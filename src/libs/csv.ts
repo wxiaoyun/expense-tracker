@@ -1,6 +1,4 @@
-import transactions, {
-  Transaction
-} from "@/db/transactions";
+import transactions, { Transaction } from "@/db/transactions";
 import { parse } from "@std/csv";
 import { z } from "zod";
 
