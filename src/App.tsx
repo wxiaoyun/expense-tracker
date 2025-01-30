@@ -24,7 +24,7 @@ export const App = () => {
     <ErrorBoundary fallback={ErrorComponent}>
       <ColorModeScript />
       <ColorModeProvider>
-        <ToastRegion>
+        <ToastRegion swipeDirection="right">
           <ToastList />
         </ToastRegion>
         <QueryClientProvider client={queryClient}>
