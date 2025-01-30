@@ -275,7 +275,6 @@ const listCategories = async () => {
 const clearTransactions = async () => {
   const result = await db.execute("DELETE FROM transactions");
   console.info("[DB][clearTransactions] result %o", result);
-  return result.rowsAffected > 0;
 };
 
 const batchCreateTransactions = async (
