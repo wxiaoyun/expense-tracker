@@ -5,6 +5,7 @@ import { codes } from "currency-codes";
 import { resolve } from "path";
 
 const host = process.env.TAURI_DEV_HOST;
+const databaseName = process.env.SQLITE_DATABASE_NAME ?? "expense_tracker";
 
 // Update global.d.ts as well
 const compileTime = {
@@ -33,12 +34,10 @@ const compileTime = {
 
   CLIPBOARD_CMD_PREFIX: JSON.stringify("clipboard-cmd:"),
 
-  DATABASE_NAME: JSON.stringify(
-    process.env.SQLITE_DATABASE_NAME ?? "expense_tracker",
-  ),
-  DATABASE_FILENAME: JSON.stringify(
-    `${process.env.SQLITE_DATABASE_NAME ?? "expense_tracker"}.db`,
-  ),
+  CSV_DELIMITER: JSON.stringify(","),
+  CSV_FILENAME: JSON.stringify(`${databaseName}.csv`),
+  DATABASE_NAME: JSON.stringify(databaseName),
+  DATABASE_FILENAME: JSON.stringify(`${databaseName}.db`),
 
   IS_DEV: JSON.stringify(process.env.NODE_ENV === "development"),
 
