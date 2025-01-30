@@ -21,7 +21,7 @@ export const toastSuccess = (msg: string) => {
 
 export const toastError = (msg: string) => {
   toaster.show((props) => (
-    <Toast {...props}>
+    <Toast {...props} variant="destructive">
       <ToastContent>
         <ToastTitle>Error</ToastTitle>
         <ToastDescription>{msg}</ToastDescription>
