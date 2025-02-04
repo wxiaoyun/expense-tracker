@@ -2,7 +2,7 @@ import transactions from "@/db/transactions";
 import {
   createInfiniteQuery,
   createQuery,
-  keepPreviousData
+  keepPreviousData,
 } from "@tanstack/solid-query";
 import { queryClient } from "./query";
 

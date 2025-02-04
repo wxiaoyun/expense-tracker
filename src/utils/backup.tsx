@@ -33,10 +33,7 @@ const shouldBackup = async () => {
 
 export const backupDataIfShouldBackup = async () => {
   const shouldBackupNow = await shouldBackup();
-  console.info(
-    "[Backup] shouldBackupNow: %s",
-    shouldBackupNow,
-  );
+  console.info("[Backup] shouldBackupNow: %s", shouldBackupNow);
   if (!shouldBackupNow) return;
 
   await backupDatabase(toastSuccess, toastError);
