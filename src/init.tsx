@@ -1,37 +1,11 @@
-import { settings } from "@/db";
 import { toastError, toastSuccess } from "./components/toast";
 import { initDb } from "./db";
 import { readClipboardAndExecuteCmd } from "./libs/clipboard";
-import { backupDatabase } from "./libs/fs";
 import { queryClient } from "./query";
 import { RECURRING_TRANSACTIONS_QUERY_KEY } from "./query/recurring-transactions";
 import { TRANSACTIONS_QUERY_KEY } from "./query/transactions";
+import { backupData } from "./utils/backup";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
-
-const shouldBackup = async () => {
-  const interval = await settings.get(BACKUP_INTERVAL_SETTING_KEY);
-  if (!interval?.value || interval.value === 'off') return false;
-
-  const lastBackup = await settings.get(LAST_BACKUP_SETTING_KEY);
-  if (!lastBackup?.value) return true;
-
-  const lastBackupDate = new Date(lastBackup.value);
-  const now = new Date();
-  const diffDays = (now.getTime() - lastBackupDate.getTime()) / (1000 * 60 * 60 * 24);
-
-  switch (interval.value) {
-    case 'daily': return diffDays >= 1;
-    case 'weekly': return diffDays >= 7;
-    case 'monthly': return diffDays >= 30;
-    default: return false;
-  }
-};
-
-const backupData = async () => {
-  if (await shouldBackup()) {
-    await backupDatabase();
-  }
-};
 
 export const init = async () => {
   const res = await Promise.allSettled([initDb()]);

@@ -98,8 +98,8 @@ export const useBackupInterval = () => {
 
   const backupInterval = createMemo(() => {
     const data = query().data;
-    if (!data) return DEFAULT_BACKUP_INTERVAL;
-    return data;
+    if (!data) return DEFAULT_BACKUP_INTERVAL as BackupInterval;
+    return data as BackupInterval;
   });
 
   return [backupInterval, setBackupInterval] as const;
@@ -112,7 +112,7 @@ export const useLastBackup = () => {
     {
       parser: (value) => Number(value),
       serializer: (value) => String(value),
-    }
+    },
   );
 
   const lastBackup = createMemo(() => {

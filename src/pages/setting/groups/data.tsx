@@ -27,7 +27,7 @@ export const DataGroup = () => {
   return (
     <SettingGroup title="Data">
       <div class="flex flex-col gap-4">
-        <BackupSettings />
+        <PeriodicBackup />
         <Separator />
         <ExportData />
         <ImportData />
@@ -165,8 +165,7 @@ export const ClearTransactionsData = () => {
   );
 };
 
-
-export const BackupSettings = () => {
+export const PeriodicBackup = () => {
   const [backupInterval, setBackupInterval] = useBackupInterval();
   const [lastBackup] = useLastBackup();
 
@@ -177,7 +176,9 @@ export const BackupSettings = () => {
 
   const handleIntervalChange = (value: string) => {
     setBackupInterval(value);
-    queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY, BACKUP_INTERVAL_SETTING_KEY] });
+    queryClient.invalidateQueries({
+      queryKey: [SETTINGS_QUERY_KEY, BACKUP_INTERVAL_SETTING_KEY],
+    });
   };
 
   return (
@@ -186,18 +187,16 @@ export const BackupSettings = () => {
         <label>Backup Interval</label>
         <Select
           value={backupInterval()}
-          onChange={val => val && handleIntervalChange(val)}
-          options={BACKUP_INTERVAL_OPTIONS.map(interval => ({
+          onChange={(val) => val && handleIntervalChange(val)}
+          options={BACKUP_INTERVAL_OPTIONS.map((interval) => ({
             label: interval.charAt(0).toUpperCase() + interval.slice(1),
-            value: interval
+            value: interval,
           }))}
         />
       </div>
       <div class="flex justify-between items-center text-sm text-muted-foreground">
         <label>Last Backup</label>
-        <span>
-            {lastBackupDate()}
-        </span>
+        <span>{lastBackupDate()}</span>
       </div>
     </>
   );

@@ -29,7 +29,7 @@ const compileTime = {
   CURRENCY_SETTING_KEY: JSON.stringify("currency"),
   CURRENCY_OPTIONS: JSON.stringify(codes()),
   DEFAULT_CURRENCY: JSON.stringify("USD"),
-  
+
   WEEK_START_SETTING_KEY: JSON.stringify("week_start"),
   WEEK_START_OPTIONS: JSON.stringify(["monday", "sunday"]),
   DEFAULT_WEEK_START: JSON.stringify("monday"),
@@ -37,7 +37,12 @@ const compileTime = {
   BACKUP_DIR: JSON.stringify("backup"),
   BACKUP_INTERVAL_SETTING_KEY: JSON.stringify("backup_interval"),
   LAST_BACKUP_SETTING_KEY: JSON.stringify("last_backup"),
-  BACKUP_INTERVAL_OPTIONS: JSON.stringify(["off", "daily", "weekly", "monthly"]),
+  BACKUP_INTERVAL_OPTIONS: JSON.stringify([
+    "off",
+    "daily",
+    "weekly",
+    "monthly",
+  ]),
   DEFAULT_BACKUP_INTERVAL: JSON.stringify("off"),
 
   CLIPBOARD_CMD_PREFIX: JSON.stringify("clipboard-cmd:"),
