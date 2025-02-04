@@ -9,10 +9,8 @@ import {
   importCsv,
   importDatabase,
 } from "@/libs/fs";
-import { queryClient } from "@/query";
-import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
-import { SETTINGS_QUERY_KEY } from "@/query/settings";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
+import { invalidateTransactionQueries } from "@/query/transactions";
 import { useBackupInterval, useLastBackup } from "@/signals/setting";
 import {
   FaSolidDownload,
@@ -137,10 +135,8 @@ export const ClearTransactionsData = () => {
   const clearTransactionsData = async () => {
     await transactions.clear();
     await recurringTransactions.clear();
-    queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
-    queryClient.invalidateQueries({
-      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-    });
+    invalidateTransactionQueries();
+    invalidateRecurringTransactionsQueries();
   };
 
   const onClick = confirmationCallback(
@@ -174,20 +170,13 @@ export const PeriodicBackup = () => {
     return new Date(lastBackup()).toLocaleString();
   });
 
-  const handleIntervalChange = (value: string) => {
-    setBackupInterval(value);
-    queryClient.invalidateQueries({
-      queryKey: [SETTINGS_QUERY_KEY, BACKUP_INTERVAL_SETTING_KEY],
-    });
-  };
-
   return (
     <>
       <div class="flex justify-between items-center">
         <label>Backup Interval</label>
         <Select
           value={backupInterval()}
-          onChange={(val) => val && handleIntervalChange(val)}
+          onChange={(val) => val && setBackupInterval(val)}
           options={BACKUP_INTERVAL_OPTIONS.map((interval) => ({
             label: interval.charAt(0).toUpperCase() + interval.slice(1),
             value: interval,

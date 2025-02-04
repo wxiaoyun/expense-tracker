@@ -34,10 +34,9 @@ import {
   TextFieldRoot,
 } from "@/components/ui/textfield";
 import transactions from "@/db/transactions";
-import { queryClient } from "@/query/query";
 import {
   createTransactionQuery,
-  TRANSACTIONS_QUERY_KEY,
+  invalidateTransactionQueries,
 } from "@/query/transactions";
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
@@ -122,7 +121,7 @@ const EditTransactionForm = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+      invalidateTransactionQueries();
       toastSuccess("Transaction updated successfully");
       navigate("/transactions");
     },

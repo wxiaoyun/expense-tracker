@@ -98,11 +98,14 @@ export const useBackupInterval = () => {
 
   const backupInterval = createMemo(() => {
     const data = query().data;
-    if (!data) return DEFAULT_BACKUP_INTERVAL as BackupInterval;
-    return data as BackupInterval;
+    if (!data) return DEFAULT_BACKUP_INTERVAL;
+    return data;
   });
 
-  return [backupInterval, setBackupInterval] as const;
+  return [backupInterval, setBackupInterval] as [
+    () => BackupInterval,
+    (value: BackupInterval) => void,
+  ];
 };
 
 export const useLastBackup = () => {

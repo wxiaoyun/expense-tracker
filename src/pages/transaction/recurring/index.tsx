@@ -5,11 +5,10 @@ import { cn } from "@/libs/cn";
 import { formatCurrency } from "@/libs/currency";
 import { getNextRecurrenceDate, occurrenceToText } from "@/libs/date";
 import { confirmationCallback } from "@/libs/dialog";
-import { queryClient } from "@/query/query";
 import {
   createIncurredRecurringTransactionListQuery,
   createRecurringTransactionListQuery,
-  RECURRING_TRANSACTIONS_QUERY_KEY,
+  invalidateRecurringTransactionsQueries,
 } from "@/query/recurring-transactions";
 import { useCurrency } from "@/signals/setting";
 import { useNavigate } from "@solidjs/router";
@@ -106,9 +105,7 @@ const RecurringTransactionCard = (props: {
       cancelLabel: "Cancel",
       onConfirm: async () => {
         await recurringTransactions.delete(props.transaction.id);
-        queryClient.invalidateQueries({
-          queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-        });
+        invalidateRecurringTransactionsQueries();
       },
     },
   );

@@ -6,9 +6,8 @@ import {
   ToastTitle,
 } from "@/components/ui/toast";
 import recurringTransactions from "@/db/recurring_transactions";
-import { queryClient } from "@/query";
-import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
+import { invalidateTransactionQueries } from "@/query/transactions";
 import { toaster } from "@kobalte/core";
 
 export const incurDueRecurringTransactions = async () => {
@@ -43,6 +42,8 @@ export const incurDueRecurringTransactions = async () => {
     );
 
     if (totalIncurred > 0) {
+      invalidateTransactionQueries();
+      invalidateRecurringTransactionsQueries();
       toaster.show((props) => (
         <Toast {...props}>
           <ToastContent>
@@ -53,13 +54,6 @@ export const incurDueRecurringTransactions = async () => {
         </Toast>
       ));
     }
-
-    queryClient.invalidateQueries({
-      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [TRANSACTIONS_QUERY_KEY],
-    });
 
     return totalIncurred;
   } catch (error) {

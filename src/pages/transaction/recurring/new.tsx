@@ -35,8 +35,7 @@ import {
 } from "@/components/ui/textfield";
 import { recurringTransactions } from "@/db";
 import { validateOccurrence } from "@/libs/date";
-import { queryClient } from "@/query";
-import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
+import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
@@ -107,11 +106,9 @@ const NewForm = () => {
       });
     },
     onSuccess: () => {
+      invalidateRecurringTransactionsQueries();
       toastSuccess("Recurring transaction updated successfully");
       navigate(`/transactions/recurring`);
-      queryClient.invalidateQueries({
-        queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-      });
     },
     onError: (error) => {
       console.error("[UI] Error creating recurring transaction %o", error);
