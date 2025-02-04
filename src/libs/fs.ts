@@ -134,7 +134,7 @@ export const exportDatabase = async (
 ) => {
   try {
     const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
     const suggestedDownloadName = `${formattedDate}_${DATABASE_FILENAME}`;
     const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
 
@@ -232,7 +232,7 @@ export const exportCsv = async (
 ) => {
   try {
     const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
     const suggestedDownloadName = `${formattedDate}_${CSV_FILENAME}`;
     const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
 
@@ -263,7 +263,7 @@ export const backupDatabase = async (
 ) => {
   try {
     const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
     const backupFileName = `${formattedDate}_${DATABASE_FILENAME}`;
     const backupPath = await getBackupPath(backupFileName);
 

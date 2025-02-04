@@ -2,9 +2,9 @@ import transactions from "@/db/transactions";
 import {
   createInfiniteQuery,
   createQuery,
-  keepPreviousData,
-  useQueryClient,
+  keepPreviousData
 } from "@tanstack/solid-query";
+import { queryClient } from "./query";
 
 export const TRANSACTIONS_QUERY_KEY = "transactions";
 export const CATEGORIES_QUERY_KEY = "categories";
@@ -12,7 +12,6 @@ export const INFINITE_TRANSACTIONS_QUERY_KEY = "infinite";
 export const TRANSACTIONS_SUMMARIZE_QUERY_KEY = "summarize";
 
 export const invalidateTransactionQueries = () => {
-  const queryClient = useQueryClient();
   queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
 };
 

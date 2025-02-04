@@ -1,6 +1,13 @@
 import { toastError, toastSuccess } from "@/components/toast";
-import { Select } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch, SwitchControl, SwitchThumb } from "@/components/ui/switch";
 import { recurringTransactions, transactions } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import {
@@ -12,27 +19,28 @@ import {
 import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
 import { invalidateTransactionQueries } from "@/query/transactions";
 import { useBackupInterval, useLastBackup } from "@/signals/setting";
+import { backupDataIfShouldBackup } from "@/utils/backup";
 import {
   FaSolidDownload,
   FaSolidFileCsv,
   FaSolidTrash,
   FaSolidUpload,
 } from "solid-icons/fa";
-import { createMemo } from "solid-js";
+import { createEffect, createMemo, Show } from "solid-js";
 import { SettingGroup } from "../components/group";
 
 export const DataGroup = () => {
   return (
     <SettingGroup title="Data">
       <div class="flex flex-col gap-4">
-        <PeriodicBackup />
-        <Separator />
         <ExportData />
         <ImportData />
         <Separator />
         <ExportCsv />
         <ImportCsv />
         <AppendCsv />
+        <Separator />
+        <PeriodicBackup />
         <Separator />
         <ClearTransactionsData />
       </div>
@@ -165,24 +173,60 @@ export const PeriodicBackup = () => {
   const [backupInterval, setBackupInterval] = useBackupInterval();
   const [lastBackup] = useLastBackup();
 
+  const backupEnabled = createMemo(() => backupInterval() !== "off");
+  const setBackupEnabled = (checked: boolean) => {
+    if (checked) {
+      setBackupInterval("monthly");
+    } else {
+      setBackupInterval("off");
+    }
+  };
+
   const lastBackupDate = createMemo(() => {
     if (!lastBackup()) return "Never";
     return new Date(lastBackup()).toLocaleString();
   });
 
+  createEffect(() => {
+    backupInterval(); // subscribe to backup interval changes
+    backupDataIfShouldBackup();
+  });
+
   return (
     <>
       <div class="flex justify-between items-center">
-        <label>Backup Interval</label>
-        <Select
-          value={backupInterval()}
-          onChange={(val) => val && setBackupInterval(val)}
-          options={BACKUP_INTERVAL_OPTIONS.map((interval) => ({
-            label: interval.charAt(0).toUpperCase() + interval.slice(1),
-            value: interval,
-          }))}
-        />
+        <label>Periodic backup</label>
+        <Switch
+          checked={backupEnabled()}
+          onChange={(checked) => setBackupEnabled(checked)}
+        >
+          <SwitchControl>
+            <SwitchThumb />
+          </SwitchControl>
+        </Switch>
       </div>
+
+      <Show when={backupEnabled()}>
+        <div class="flex justify-between items-center">
+          <label>Backup Interval</label>
+          <Select
+            value={backupInterval()}
+            onChange={(val) => val && setBackupInterval(val)}
+            options={BACKUP_INTERVAL_OPTIONS}
+            itemComponent={(props) => (
+              <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+            )}
+          >
+            <SelectTrigger class="w-32 py-1 h-fit">
+              <SelectValue<string>>
+                {(state) => state.selectedOption()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent />
+          </Select>
+        </div>
+      </Show>
+
       <div class="flex justify-between items-center text-sm text-muted-foreground">
         <label>Last Backup</label>
         <span>{lastBackupDate()}</span>

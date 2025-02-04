@@ -52,7 +52,7 @@ export const SummaryChart: Component<ComponentProps<"div">> = (props) => {
       />
       <Show when={!chartConfig()}>
         <div class="flex items-center justify-center h-full">
-          <span class="text-xs text-gray-500">No data</span>
+          <span class="text-xs text-muted-foreground">No data</span>
         </div>
       </Show>
     </div>

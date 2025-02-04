@@ -3,7 +3,7 @@ import { initDb } from "./db";
 import { readClipboardAndExecuteCmd } from "./libs/clipboard";
 import { invalidateRecurringTransactionsQueries } from "./query/recurring-transactions";
 import { invalidateTransactionQueries } from "./query/transactions";
-import { backupData } from "./utils/backup";
+import { backupDataIfShouldBackup } from "./utils/backup";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
 
 export const init = async () => {
@@ -21,7 +21,7 @@ export const init = async () => {
   // These can run async
   incurDueRecurringTransactions();
   readClipboardAndExec();
-  backupData();
+  backupDataIfShouldBackup();
 };
 
 const readClipboardAndExec = async () => {

@@ -1,23 +1,25 @@
 import { toastError, toastSuccess } from "@/components/toast";
+import { settings } from "@/db";
 import { backupDatabase } from "@/libs/fs";
-import { queryClient } from "@/query";
-import { SETTINGS_QUERY_KEY } from "@/query/settings";
-import { useBackupInterval, useLastBackup } from "@/signals/setting";
+import { invalidateSettingsQuery } from "@/query/settings";
 
 const shouldBackup = async () => {
-  const [backupInterval] = useBackupInterval();
-  const [lastBackup] = useLastBackup();
+  const backupInterval = await settings.get(
+    BACKUP_INTERVAL_SETTING_KEY,
+    DEFAULT_BACKUP_INTERVAL,
+  );
+  const lastBackup = await settings.get(LAST_BACKUP_SETTING_KEY, "0");
+  const lastBackupNumber = Number(lastBackup || "0");
 
-  if (backupInterval() === "off") return false;
+  if (backupInterval === "off") return false;
+  if (!lastBackupNumber) return true;
 
-  if (!lastBackup()) return true;
-
-  const lastBackupDate = new Date(lastBackup());
+  const lastBackupDate = new Date(lastBackupNumber);
   const now = new Date();
   const diffDays =
     (now.getTime() - lastBackupDate.getTime()) / (1000 * 60 * 60 * 24);
 
-  switch (backupInterval()) {
+  switch (backupInterval) {
     case "daily":
       return diffDays >= 1;
     case "weekly":
@@ -29,17 +31,16 @@ const shouldBackup = async () => {
   }
 };
 
-export const backupData = async () => {
+export const backupDataIfShouldBackup = async () => {
   const shouldBackupNow = await shouldBackup();
-
+  console.info(
+    "[Backup] shouldBackupNow: %s",
+    shouldBackupNow,
+  );
   if (!shouldBackupNow) return;
 
-  const onSuccess = (msg: string) => {
-    toastSuccess(msg);
-    queryClient.invalidateQueries({
-      queryKey: [SETTINGS_QUERY_KEY, LAST_BACKUP_SETTING_KEY],
-    });
-  };
-
-  await backupDatabase(onSuccess, toastError);
+  await backupDatabase(toastSuccess, toastError);
+  settings.set(LAST_BACKUP_SETTING_KEY, new Date().getTime().toString());
+  invalidateSettingsQuery();
+  console.info("[Backup] Backup completed");
 };

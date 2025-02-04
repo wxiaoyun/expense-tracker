@@ -14,8 +14,7 @@ import {
 } from "@/components/ui/select";
 import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
-import { queryClient } from "@/query";
-import { SETTINGS_QUERY_KEY } from "@/query/settings";
+import { invalidateSettingsQuery } from "@/query/settings";
 import { useCurrency, useTheme, useWeekStart } from "@/signals/setting";
 import { ConfigColorMode, useColorMode } from "@kobalte/core";
 import { FaSolidTrash } from "solid-icons/fa";
@@ -123,7 +122,7 @@ const ClearSettings = () => {
       cancelLabel: "Cancel",
       onConfirm: async () => {
         await settings.clear();
-        queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY] });
+        invalidateSettingsQuery();
       },
     },
   );

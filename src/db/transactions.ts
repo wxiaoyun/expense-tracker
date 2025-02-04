@@ -1,3 +1,4 @@
+import { chunk } from "lodash";
 import { z } from "zod";
 import { db } from ".";
 
@@ -279,7 +280,23 @@ const clearTransactions = async () => {
 
 const batchCreateTransactions = async (
   transactions: BeforeCreate<Transaction>[],
-) => {
+): Promise<boolean> => {
+  if (transactions.length > 300) {
+    console.warn(
+      "[DB][batchCreateTransactions] batch size %d is too large, chunking into slices of 300",
+      transactions.length,
+    );
+
+    const chunks = chunk(transactions, 300);
+    const results = await Promise.allSettled(
+      chunks.map((chunk) => batchCreateTransactions(chunk)),
+    );
+
+    return results.every(
+      (result) => result.status === "fulfilled" && result.value,
+    );
+  }
+
   if (transactions.length === 0) {
     console.warn("[DB][batchCreateTransactions] no transactions to create");
     return false;

@@ -67,6 +67,11 @@ const RecurringTransactionList = () => {
         <For each={transactionsQuery.data}>
           {(t) => <RecurringTransactionCard transaction={t} />}
         </For>
+        <Show when={transactionsQuery.data?.length === 0}>
+          <div class="flex justify-center items-center h-full">
+            <p class="text-xs text-muted-foreground">No recurring transactions found</p>
+          </div>
+        </Show>
       </Show>
     </div>
   );

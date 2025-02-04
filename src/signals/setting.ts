@@ -1,6 +1,6 @@
 import { DEFAULT_THEME } from "@/constants/settings";
 import { settings } from "@/db";
-import { createSettingQuery } from "@/query/settings";
+import { createSettingQuery, invalidateSettingsQuery } from "@/query/settings";
 import { getSystemTheme } from "@/utils/theme";
 import { createMemo } from "solid-js";
 
@@ -26,9 +26,7 @@ export const useSetting = <T = string>(
   const setSetting = (value: T) => {
     settings
       .set(key(), options?.serializer ? options.serializer(value) : value)
-      .then(() => {
-        query.refetch();
-      });
+      .then(() => invalidateSettingsQuery(key()));
   };
 
   return [res, setSetting] as [() => typeof query, (value: T) => void];
