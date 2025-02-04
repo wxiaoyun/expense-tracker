@@ -1,7 +1,7 @@
 import { db, reloadDb } from "@/db";
 import transactions from "@/db/transactions";
 import { validateDatabase } from "@/db/validate";
-import { BaseDirectory, join, tempDir } from "@tauri-apps/api/path";
+import { appDataDir, BaseDirectory, join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   copyFile,
@@ -73,14 +73,14 @@ export const importDatabase = async (
     // on iOS we cannot read load db directly from download dir
     const tmpDbName = `${nanoid()}.db`;
     await copyFile(file, tmpDbName, {
-      toPathBaseDir: BaseDirectory.Temp,
+      toPathBaseDir: BaseDirectory.AppData,
     });
 
-    const tmpDir = await tempDir();
-    const tmpDbPath = await join(tmpDir, tmpDbName);
+    const appDataDirPath = await appDataDir();
+    const tmpDbPath = await join(appDataDirPath, tmpDbName);
     const isValid = await validateDatabase(tmpDbPath);
     await remove(tmpDbName, {
-      baseDir: BaseDirectory.Temp,
+      baseDir: BaseDirectory.AppData,
     });
 
     if (!isValid) {

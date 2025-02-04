@@ -8,17 +8,34 @@ export const validateDatabase = async (dbPath: string): Promise<boolean> => {
       "SELECT name FROM sqlite_master WHERE type='table'",
     );
 
+    console.info("[validateDatabase] Found tables:", tables);
+
     const requiredTables = [
       "recurring_transactions",
       "transactions",
       "settings",
     ];
+
+    // Log each table check
+    for (const table of requiredTables) {
+      const exists = tables.some((t) => t.name === table);
+      console.info(
+        `[validateDatabase] Checking table '${table}': ${exists ? "found" : "not found"}`,
+      );
+    }
+
     const hasAllTables = requiredTables.every((table) =>
       tables.some((t) => t.name === table),
     );
 
     if (!hasAllTables) {
-      console.error("[validateDatabase] Missing required tables");
+      const missingTables = requiredTables.filter(
+        (t) => !tables.some((table) => table.name === t),
+      );
+      console.error(
+        "[validateDatabase] Missing required tables:",
+        missingTables,
+      );
       return false;
     }
 
