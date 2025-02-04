@@ -9,6 +9,8 @@ const databaseName = process.env.SQLITE_DATABASE_NAME ?? "expense_tracker";
 
 // Update global.d.ts as well
 const compileTime = {
+  EXPORT_DIR: JSON.stringify("export"),
+
   THEME_SETTING_KEY: JSON.stringify("theme"),
   CURRENCY_SETTING_KEY: JSON.stringify("currency"),
   WEEK_START_SETTING_KEY: JSON.stringify("week_start"),

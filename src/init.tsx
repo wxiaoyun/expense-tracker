@@ -1,14 +1,13 @@
 import { toastError, toastSuccess } from "./components/toast";
 import { initDb } from "./db";
 import { readClipboardAndExecuteCmd } from "./libs/clipboard";
-import { initializePaths } from "./libs/fs";
 import { queryClient } from "./query";
 import { RECURRING_TRANSACTIONS_QUERY_KEY } from "./query/recurring-transactions";
 import { TRANSACTIONS_QUERY_KEY } from "./query/transactions";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
 
 export const init = async () => {
-  const res = await Promise.allSettled([initDb(), initializePaths()]);
+  const res = await Promise.allSettled([initDb()]);
 
   if (res.some((r) => r.status === "rejected")) {
     console.error(

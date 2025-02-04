@@ -1,3 +1,5 @@
+declare const EXPORT_DIR: string;
+
 declare const BUY_ME_A_COFFEE_URL: string;
 declare const GITHUB_URL: string;
 declare const GITHUB_ISSUE_URL: string;
