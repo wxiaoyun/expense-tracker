@@ -12,15 +12,7 @@ const compileTime = {
   EXPORT_DIR: JSON.stringify("export"),
 
   THEME_SETTING_KEY: JSON.stringify("theme"),
-  CURRENCY_SETTING_KEY: JSON.stringify("currency"),
-  WEEK_START_SETTING_KEY: JSON.stringify("week_start"),
-
   THEME_OPTIONS: JSON.stringify(["system", "light", "dark"]),
-  CURRENCY_OPTIONS: JSON.stringify(codes()),
-  WEEK_START_OPTIONS: JSON.stringify(["monday", "sunday"]),
-
-  DEFAULT_CURRENCY: JSON.stringify("USD"),
-  DEFAULT_WEEK_START: JSON.stringify("monday"),
   DEFAULT_COLOR_SCHEME: JSON.stringify([
     "#f94144",
     "#f3722c",
@@ -33,6 +25,20 @@ const compileTime = {
     "#577590",
     "#277da1",
   ]),
+
+  CURRENCY_SETTING_KEY: JSON.stringify("currency"),
+  CURRENCY_OPTIONS: JSON.stringify(codes()),
+  DEFAULT_CURRENCY: JSON.stringify("USD"),
+  
+  WEEK_START_SETTING_KEY: JSON.stringify("week_start"),
+  WEEK_START_OPTIONS: JSON.stringify(["monday", "sunday"]),
+  DEFAULT_WEEK_START: JSON.stringify("monday"),
+
+  BACKUP_DIR: JSON.stringify("backup"),
+  BACKUP_INTERVAL_SETTING_KEY: JSON.stringify("backup_interval"),
+  LAST_BACKUP_SETTING_KEY: JSON.stringify("last_backup"),
+  BACKUP_INTERVAL_OPTIONS: JSON.stringify(["off", "daily", "weekly", "monthly"]),
+  DEFAULT_BACKUP_INTERVAL: JSON.stringify("off"),
 
   CLIPBOARD_CMD_PREFIX: JSON.stringify("clipboard-cmd:"),
 

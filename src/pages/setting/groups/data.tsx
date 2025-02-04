@@ -1,4 +1,5 @@
 import { toastError, toastSuccess } from "@/components/toast";
+import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { recurringTransactions, transactions } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
@@ -10,19 +11,24 @@ import {
 } from "@/libs/fs";
 import { queryClient } from "@/query";
 import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
+import { SETTINGS_QUERY_KEY } from "@/query/settings";
 import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { useBackupInterval, useLastBackup } from "@/signals/setting";
 import {
   FaSolidDownload,
   FaSolidFileCsv,
   FaSolidTrash,
   FaSolidUpload,
 } from "solid-icons/fa";
+import { createMemo } from "solid-js";
 import { SettingGroup } from "../components/group";
 
 export const DataGroup = () => {
   return (
     <SettingGroup title="Data">
       <div class="flex flex-col gap-4">
+        <BackupSettings />
+        <Separator />
         <ExportData />
         <ImportData />
         <Separator />
@@ -156,5 +162,43 @@ export const ClearTransactionsData = () => {
         onClick={onClick}
       />
     </div>
+  );
+};
+
+
+export const BackupSettings = () => {
+  const [backupInterval, setBackupInterval] = useBackupInterval();
+  const [lastBackup] = useLastBackup();
+
+  const lastBackupDate = createMemo(() => {
+    if (!lastBackup()) return "Never";
+    return new Date(lastBackup()).toLocaleString();
+  });
+
+  const handleIntervalChange = (value: string) => {
+    setBackupInterval(value);
+    queryClient.invalidateQueries({ queryKey: [SETTINGS_QUERY_KEY, BACKUP_INTERVAL_SETTING_KEY] });
+  };
+
+  return (
+    <>
+      <div class="flex justify-between items-center">
+        <label>Backup Interval</label>
+        <Select
+          value={backupInterval()}
+          onChange={val => val && handleIntervalChange(val)}
+          options={BACKUP_INTERVAL_OPTIONS.map(interval => ({
+            label: interval.charAt(0).toUpperCase() + interval.slice(1),
+            value: interval
+          }))}
+        />
+      </div>
+      <div class="flex justify-between items-center text-sm text-muted-foreground">
+        <label>Last Backup</label>
+        <span>
+            {lastBackupDate()}
+        </span>
+      </div>
+    </>
   );
 };

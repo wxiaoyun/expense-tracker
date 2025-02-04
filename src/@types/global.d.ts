@@ -8,6 +8,11 @@ declare const CURRENCY_SETTING_KEY: string;
 declare const THEME_SETTING_KEY: string;
 declare const WEEK_START_SETTING_KEY: string;
 
+declare const BACKUP_DIR: string;
+declare const BACKUP_INTERVAL_SETTING_KEY: string;
+declare const LAST_BACKUP_SETTING_KEY: string;
+declare const BACKUP_INTERVAL_OPTIONS: string[];
+declare const DEFAULT_BACKUP_INTERVAL: string;
 declare const DEFAULT_CURRENCY: string;
 declare const DEFAULT_WEEK_START: string;
 declare const DEFAULT_COLOR_SCHEME: string[];
