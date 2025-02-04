@@ -1,10 +1,12 @@
 import { db, reloadDb } from "@/db";
 import transactions from "@/db/transactions";
 import { validateDatabase } from "@/db/validate";
-import * as path from "@tauri-apps/api/path";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { BaseDirectory, join, tempDir } from "@tauri-apps/api/path";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   copyFile,
+  exists,
+  mkdir,
   readTextFile,
   remove,
   writeTextFile,
@@ -15,31 +17,33 @@ import { generateCsvContent, parseCsvContent } from "./csv";
 
 // https://tauri.app/plugin/file-system/
 
-let appDataDir: string = "";
-let downloadDir: string = "";
+const createExportDirIfNotExists = async () => {
+  const exportDirExists = await exists(EXPORT_DIR, {
+    baseDir: BaseDirectory.Document,
+  });
+  console.info(
+    "[FS][createExportDirIfNotExists] exportDirExists: %s",
+    exportDirExists,
+  );
 
-export const initializePaths = async () => {
-  const [appDataDirRes, downloadDirRes] = await Promise.allSettled([
-    path.appDataDir(),
-    path.downloadDir(),
-  ]);
-
-  if (
-    appDataDirRes.status === "rejected" ||
-    downloadDirRes.status === "rejected"
-  ) {
-    console.error(
-      "[FS][initializePaths] Failed to get app data dir or download dir",
-    );
-    throw new Error("Failed to get app data dir or download dir");
+  if (!exportDirExists) {
+    await mkdir(EXPORT_DIR, {
+      baseDir: BaseDirectory.Document,
+      recursive: true,
+    });
+    console.info("[FS][createExportDirIfNotExists] export dir created");
   }
 
-  appDataDir = appDataDirRes.value;
-  downloadDir = downloadDirRes.value;
+  return EXPORT_DIR;
 };
 
-export const getAppDir = () => appDataDir;
-export const getDownloadDir = () => downloadDir;
+/**
+ * Get the path to the export directory, recursively creating the directory if it doesn't exist
+ */
+const getExportPath = async (fileName: string) => {
+  await createExportDirIfNotExists();
+  return join(EXPORT_DIR, fileName);
+};
 
 export const importDatabase = async (
   onSuccess: (msg: string) => void,
@@ -50,7 +54,6 @@ export const importDatabase = async (
       title: "Import Data",
       multiple: false,
       directory: false,
-      defaultPath: getDownloadDir(),
     });
 
     if (!file) {
@@ -68,15 +71,16 @@ export const importDatabase = async (
 
     // Create a temp db in app dir for validation
     // on iOS we cannot read load db directly from download dir
-    const tmpDbName = `temp_${nanoid()}.db`;
+    const tmpDbName = `${nanoid()}.db`;
     await copyFile(file, tmpDbName, {
-      toPathBaseDir: path.BaseDirectory.AppData,
+      toPathBaseDir: BaseDirectory.Temp,
     });
 
-    const tmpDbPath = await path.join(getAppDir(), tmpDbName);
+    const tmpDir = await tempDir();
+    const tmpDbPath = await join(tmpDir, tmpDbName);
     const isValid = await validateDatabase(tmpDbPath);
     await remove(tmpDbName, {
-      baseDir: path.BaseDirectory.AppData,
+      baseDir: BaseDirectory.Temp,
     });
 
     if (!isValid) {
@@ -90,7 +94,7 @@ export const importDatabase = async (
     await db.close();
 
     await copyFile(file, DATABASE_FILENAME, {
-      toPathBaseDir: path.BaseDirectory.AppData,
+      toPathBaseDir: BaseDirectory.AppData,
     });
 
     console.info("[FS][importDatabase] Data imported successfully");
@@ -108,69 +112,27 @@ export const exportDatabase = async (
   onError: (errMsg: string) => void,
 ) => {
   try {
-    const suggestedDownloadPath = await path.join(
-      getDownloadDir(),
-      "backup_" + DATABASE_FILENAME,
+    const now = new Date();
+    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
+    const suggestedDownloadName = `backup_${formattedDate}_${DATABASE_FILENAME}`;
+    const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
+
+    console.info(
+      "[FS][exportDatabase] suggestedDownloadPath: %s",
+      suggestedDownloadPath,
     );
-    const downloadPath = await save({
-      title: "Export Data",
-      defaultPath: suggestedDownloadPath,
-      canCreateDirectories: true,
-    });
 
-    if (!downloadPath) {
-      console.info("[FS][exportDatabase] User cancelled the dialog");
-      return;
-    }
-
-    console.info("[FS][exportDatabase] downloadPath: %s", downloadPath);
-
-    await copyFile(DATABASE_FILENAME, downloadPath, {
-      fromPathBaseDir: path.BaseDirectory.AppData,
+    await copyFile(DATABASE_FILENAME, suggestedDownloadPath, {
+      fromPathBaseDir: BaseDirectory.AppData,
+      toPathBaseDir: BaseDirectory.Document,
     });
 
     console.info("[FS][exportDatabase] Data exported successfully");
-    onSuccess("Data exported successfully");
+    onSuccess(
+      `Data exported successfully, downloaded to ${suggestedDownloadPath}`,
+    );
   } catch (error) {
     console.error("[FS][exportDatabase] Failed to export data %o", error);
-    onError("Something went wrong, failed to export data");
-  }
-};
-
-export const exportCsv = async (
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-) => {
-  try {
-    const suggestedDownloadPath = await path.join(
-      getDownloadDir(),
-      "backup_" + CSV_FILENAME,
-    );
-    const downloadPath = await save({
-      title: "Export Data",
-      defaultPath: suggestedDownloadPath,
-      canCreateDirectories: true,
-    });
-
-    if (!downloadPath) {
-      console.info("[FS][exportCsv] User cancelled the dialog");
-      return;
-    }
-
-    console.info("[FS][exportCsv] downloadPath: %s", downloadPath);
-
-    const csvContentString = await generateCsvContent();
-    console.info(
-      "[FS][exportCsv] csvContentString length: %d",
-      csvContentString.length,
-    );
-
-    await writeTextFile(downloadPath, csvContentString);
-
-    console.info("[FS][exportCsv] Data exported successfully");
-    onSuccess("Data exported successfully");
-  } catch (error) {
-    console.error("[FS][exportCsv] Failed to export data %o", error);
     onError("Something went wrong, failed to export data");
   }
 };
@@ -188,7 +150,6 @@ export const importCsv = async (
       title: "Import Data",
       multiple: false,
       directory: false,
-      defaultPath: getDownloadDir(),
     });
 
     if (!file) {
@@ -241,5 +202,36 @@ export const importCsv = async (
   } catch (error) {
     console.error("[FS][importCsv] Failed to import data %o", error);
     onError("Something went wrong, failed to import data");
+  }
+};
+
+export const exportCsv = async (
+  onSuccess: (msg: string) => void,
+  onError: (errMsg: string) => void,
+) => {
+  try {
+    const now = new Date();
+    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
+    const suggestedDownloadName = `backup_${formattedDate}_${CSV_FILENAME}`;
+    const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
+
+    console.info(
+      "[FS][exportCsv] suggestedDownloadPath: %s",
+      suggestedDownloadPath,
+    );
+
+    const csvContentString = await generateCsvContent();
+
+    await writeTextFile(suggestedDownloadPath, csvContentString, {
+      baseDir: BaseDirectory.Document,
+    });
+
+    console.info("[FS][exportCsv] Data exported successfully");
+    onSuccess(
+      `Data exported successfully, downloaded to ${suggestedDownloadPath}`,
+    );
+  } catch (error) {
+    console.error("[FS][exportCsv] Failed to export data %o", error);
+    onError("Something went wrong, failed to export data");
   }
 };
