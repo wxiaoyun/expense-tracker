@@ -1,5 +1,13 @@
 import { toastError, toastSuccess } from "@/components/toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch, SwitchControl, SwitchThumb } from "@/components/ui/switch";
 import { recurringTransactions, transactions } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import {
@@ -8,15 +16,17 @@ import {
   importCsv,
   importDatabase,
 } from "@/libs/fs";
-import { queryClient } from "@/query";
-import { RECURRING_TRANSACTIONS_QUERY_KEY } from "@/query/recurring-transactions";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
+import { invalidateTransactionQueries } from "@/query/transactions";
+import { useBackupInterval, useLastBackup } from "@/signals/setting";
+import { backupDataIfShouldBackup } from "@/utils/backup";
 import {
   FaSolidDownload,
   FaSolidFileCsv,
   FaSolidTrash,
   FaSolidUpload,
 } from "solid-icons/fa";
+import { createEffect, createMemo, Show } from "solid-js";
 import { SettingGroup } from "../components/group";
 
 export const DataGroup = () => {
@@ -29,6 +39,8 @@ export const DataGroup = () => {
         <ExportCsv />
         <ImportCsv />
         <AppendCsv />
+        <Separator />
+        <PeriodicBackup />
         <Separator />
         <ClearTransactionsData />
       </div>
@@ -131,10 +143,8 @@ export const ClearTransactionsData = () => {
   const clearTransactionsData = async () => {
     await transactions.clear();
     await recurringTransactions.clear();
-    queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
-    queryClient.invalidateQueries({
-      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-    });
+    invalidateTransactionQueries();
+    invalidateRecurringTransactionsQueries();
   };
 
   const onClick = confirmationCallback(
@@ -156,5 +166,71 @@ export const ClearTransactionsData = () => {
         onClick={onClick}
       />
     </div>
+  );
+};
+
+export const PeriodicBackup = () => {
+  const [backupInterval, setBackupInterval] = useBackupInterval();
+  const [lastBackup] = useLastBackup();
+
+  const backupEnabled = createMemo(() => backupInterval() !== "off");
+  const setBackupEnabled = (checked: boolean) => {
+    if (checked) {
+      setBackupInterval("monthly");
+    } else {
+      setBackupInterval("off");
+    }
+  };
+
+  const lastBackupDate = createMemo(() => {
+    if (!lastBackup()) return "Never";
+    return new Date(lastBackup()).toLocaleString();
+  });
+
+  createEffect(() => {
+    backupInterval(); // subscribe to backup interval changes
+    backupDataIfShouldBackup();
+  });
+
+  return (
+    <>
+      <div class="flex justify-between items-center">
+        <label>Periodic backup</label>
+        <Switch
+          checked={backupEnabled()}
+          onChange={(checked) => setBackupEnabled(checked)}
+        >
+          <SwitchControl>
+            <SwitchThumb />
+          </SwitchControl>
+        </Switch>
+      </div>
+
+      <Show when={backupEnabled()}>
+        <div class="flex justify-between items-center">
+          <label>Backup Interval</label>
+          <Select
+            value={backupInterval()}
+            onChange={(val) => val && setBackupInterval(val)}
+            options={BACKUP_INTERVAL_OPTIONS}
+            itemComponent={(props) => (
+              <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+            )}
+          >
+            <SelectTrigger class="w-32 py-1 h-fit">
+              <SelectValue<string>>
+                {(state) => state.selectedOption()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent />
+          </Select>
+        </div>
+      </Show>
+
+      <div class="flex justify-between items-center text-sm text-muted-foreground">
+        <label>Last Backup</label>
+        <span>{lastBackupDate()}</span>
+      </div>
+    </>
   );
 };

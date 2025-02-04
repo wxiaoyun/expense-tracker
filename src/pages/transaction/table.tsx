@@ -10,8 +10,7 @@ import transactions, { Transaction } from "@/db/transactions";
 import { cn } from "@/libs/cn";
 import { formatCurrency } from "@/libs/currency";
 import { confirmationCallback } from "@/libs/dialog";
-import { queryClient } from "@/query";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { invalidateTransactionQueries } from "@/query/transactions";
 import { useDateRange, useSearchTransactionParams } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useInfiniteTransactions } from "@/signals/transactions";
@@ -68,9 +67,7 @@ const ActionCell = (props: CellContext<Transaction, unknown>) => {
       cancelLabel: "Cancel",
       onConfirm: async () => {
         await transactions.delete(props.row.original.id);
-        queryClient.invalidateQueries({
-          queryKey: [TRANSACTIONS_QUERY_KEY],
-        });
+        invalidateTransactionQueries();
       },
     },
   );

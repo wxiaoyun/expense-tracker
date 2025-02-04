@@ -71,26 +71,36 @@ export const generateTransactions = async (numTransactions: number) => {
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - 3); // Last 3 months of data
 
-  const recurringTransactionIds = (await recurringTransactions.list()).map(
-    (t) => t.id,
-  );
+  const rts = await recurringTransactions.list();
+  const randomRt = () => rts[Math.floor(Math.random() * rts.length)];
+  const randomShouldBeRecurring = () => Math.random() < 0.2 && rts.length > 0;
 
   const transactionList: BeforeCreate<Transaction>[] = [];
   for (let i = 0; i < numTransactions; i++) {
+    const shouldBeRecurring = randomShouldBeRecurring();
+
+    if (shouldBeRecurring) {
+      const rt = randomRt();
+
+      transactionList.push({
+        amount: rt.amount,
+        transaction_date: randomDate(startDate, endDate).getTime(),
+        category: rt.category,
+        description: rt.description,
+        recurring_transaction_id: rt.id,
+      });
+      continue;
+    }
+
     const category = categories[Math.floor(Math.random() * categories.length)];
     const descList = descriptions[category as keyof typeof descriptions];
     const description = descList[Math.floor(Math.random() * descList.length)];
-    const recurringTransactionId =
-      recurringTransactionIds[
-        Math.floor(Math.random() * recurringTransactionIds.length)
-      ];
 
     transactionList.push({
       amount: randomAmount(category),
       transaction_date: randomDate(startDate, endDate).getTime(),
       category,
       description,
-      recurring_transaction_id: recurringTransactionId,
     });
   }
 

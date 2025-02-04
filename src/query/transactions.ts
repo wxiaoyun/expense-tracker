@@ -4,11 +4,16 @@ import {
   createQuery,
   keepPreviousData,
 } from "@tanstack/solid-query";
+import { queryClient } from "./query";
 
 export const TRANSACTIONS_QUERY_KEY = "transactions";
 export const CATEGORIES_QUERY_KEY = "categories";
 export const INFINITE_TRANSACTIONS_QUERY_KEY = "infinite";
 export const TRANSACTIONS_SUMMARIZE_QUERY_KEY = "summarize";
+
+export const invalidateTransactionQueries = () => {
+  queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+};
 
 export const createTransactionListQuery = (
   params: () => { start: Date; end: Date },

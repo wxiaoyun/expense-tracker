@@ -1,9 +1,9 @@
 import { toastError, toastSuccess } from "./components/toast";
 import { initDb } from "./db";
 import { readClipboardAndExecuteCmd } from "./libs/clipboard";
-import { queryClient } from "./query";
-import { RECURRING_TRANSACTIONS_QUERY_KEY } from "./query/recurring-transactions";
-import { TRANSACTIONS_QUERY_KEY } from "./query/transactions";
+import { invalidateRecurringTransactionsQueries } from "./query/recurring-transactions";
+import { invalidateTransactionQueries } from "./query/transactions";
+import { backupDataIfShouldBackup } from "./utils/backup";
 import { incurDueRecurringTransactions } from "./utils/recurring-transactions";
 
 export const init = async () => {
@@ -21,6 +21,7 @@ export const init = async () => {
   // These can run async
   incurDueRecurringTransactions();
   readClipboardAndExec();
+  backupDataIfShouldBackup();
 };
 
 const readClipboardAndExec = async () => {
@@ -37,13 +38,8 @@ const readClipboardAndExec = async () => {
 
   console.info("[Init] Read clipboard and executed command: %o", res.data);
   if (res.data) {
+    invalidateTransactionQueries();
+    invalidateRecurringTransactionsQueries();
     toastSuccess(res.data);
-
-    queryClient.invalidateQueries({
-      queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [TRANSACTIONS_QUERY_KEY],
-    });
   }
 };

@@ -35,10 +35,9 @@ import {
 } from "@/components/ui/textfield";
 import { recurringTransactions } from "@/db";
 import { validateOccurrence } from "@/libs/date";
-import { queryClient } from "@/query";
 import {
   createRecurringTransactionQuery,
-  RECURRING_TRANSACTIONS_QUERY_KEY,
+  invalidateRecurringTransactionsQueries,
 } from "@/query/recurring-transactions";
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
@@ -130,11 +129,9 @@ const EditForm = () => {
       });
     },
     onSuccess: () => {
+      invalidateRecurringTransactionsQueries();
       toastSuccess("Recurring transaction updated successfully");
       navigate(`/transactions/recurring`);
-      queryClient.invalidateQueries({
-        queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
-      });
     },
     onError: (error) => {
       console.error("[UI] Error updating recurring transaction %o", error);

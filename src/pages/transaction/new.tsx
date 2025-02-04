@@ -34,8 +34,7 @@ import {
   TextFieldRoot,
 } from "@/components/ui/textfield";
 import transactions from "@/db/transactions";
-import { queryClient } from "@/query/query";
-import { TRANSACTIONS_QUERY_KEY } from "@/query/transactions";
+import { invalidateTransactionQueries } from "@/query/transactions";
 import {
   useTransactionCategories,
   useTransactionParams,
@@ -112,7 +111,7 @@ const TransactionForm = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY] });
+      invalidateTransactionQueries();
       toastSuccess("Transaction created successfully");
       navigate("/transactions");
     },

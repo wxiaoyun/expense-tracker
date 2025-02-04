@@ -1,6 +1,6 @@
 import { DEFAULT_THEME } from "@/constants/settings";
 import { settings } from "@/db";
-import { createSettingQuery } from "@/query/settings";
+import { createSettingQuery, invalidateSettingsQuery } from "@/query/settings";
 import { getSystemTheme } from "@/utils/theme";
 import { createMemo } from "solid-js";
 
@@ -26,9 +26,7 @@ export const useSetting = <T = string>(
   const setSetting = (value: T) => {
     settings
       .set(key(), options?.serializer ? options.serializer(value) : value)
-      .then(() => {
-        query.refetch();
-      });
+      .then(() => invalidateSettingsQuery(key()));
   };
 
   return [res, setSetting] as [() => typeof query, (value: T) => void];
@@ -88,4 +86,41 @@ export const useWeekStart = () => {
   });
 
   return [weekStart, setWeekStart] as const;
+};
+
+export const useBackupInterval = () => {
+  const [query, setBackupInterval] = useSetting(
+    () => BACKUP_INTERVAL_SETTING_KEY,
+    DEFAULT_BACKUP_INTERVAL,
+  );
+
+  const backupInterval = createMemo(() => {
+    const data = query().data;
+    if (!data) return DEFAULT_BACKUP_INTERVAL;
+    return data;
+  });
+
+  return [backupInterval, setBackupInterval] as [
+    () => BackupInterval,
+    (value: BackupInterval) => void,
+  ];
+};
+
+export const useLastBackup = () => {
+  const [query, setLastBackup] = useSetting(
+    () => LAST_BACKUP_SETTING_KEY,
+    "0",
+    {
+      parser: (value) => Number(value),
+      serializer: (value) => String(value),
+    },
+  );
+
+  const lastBackup = createMemo(() => {
+    const data = query().data;
+    if (!data) return 0;
+    return Number(data);
+  });
+
+  return [lastBackup, setLastBackup] as const;
 };

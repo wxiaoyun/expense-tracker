@@ -45,6 +45,26 @@ const getExportPath = async (fileName: string) => {
   return join(EXPORT_DIR, fileName);
 };
 
+const createBackupDirIfNotExists = async () => {
+  const backupDirExists = await exists(BACKUP_DIR, {
+    baseDir: BaseDirectory.Document,
+  });
+
+  if (!backupDirExists) {
+    await mkdir(BACKUP_DIR, {
+      baseDir: BaseDirectory.Document,
+      recursive: true,
+    });
+    console.info("[FS][createBackupDirIfNotExists] backup dir created");
+  }
+  return BACKUP_DIR;
+};
+
+const getBackupPath = async (fileName: string) => {
+  await createBackupDirIfNotExists();
+  return join(BACKUP_DIR, fileName);
+};
+
 export const importDatabase = async (
   onSuccess: (msg: string) => void,
   onError: (errMsg: string) => void,
@@ -78,10 +98,11 @@ export const importDatabase = async (
 
     const appDataDirPath = await appDataDir();
     const tmpDbPath = await join(appDataDirPath, tmpDbName);
-    const isValid = await validateDatabase(tmpDbPath);
-    await remove(tmpDbName, {
-      baseDir: BaseDirectory.AppData,
-    });
+    const isValid = await validateDatabase(tmpDbPath).finally(() =>
+      remove(tmpDbName, {
+        baseDir: BaseDirectory.AppData,
+      }),
+    );
 
     if (!isValid) {
       console.info("[FS][importDatabase] Invalid database file format");
@@ -113,8 +134,8 @@ export const exportDatabase = async (
 ) => {
   try {
     const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
-    const suggestedDownloadName = `backup_${formattedDate}_${DATABASE_FILENAME}`;
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
+    const suggestedDownloadName = `${formattedDate}_${DATABASE_FILENAME}`;
     const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
 
     console.info(
@@ -211,8 +232,8 @@ export const exportCsv = async (
 ) => {
   try {
     const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0].replace(/\s/g, "_");
-    const suggestedDownloadName = `backup_${formattedDate}_${CSV_FILENAME}`;
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
+    const suggestedDownloadName = `${formattedDate}_${CSV_FILENAME}`;
     const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
 
     console.info(
@@ -233,5 +254,30 @@ export const exportCsv = async (
   } catch (error) {
     console.error("[FS][exportCsv] Failed to export data %o", error);
     onError("Something went wrong, failed to export data");
+  }
+};
+
+export const backupDatabase = async (
+  onSuccess: (msg: string) => void,
+  onError: (errMsg: string) => void,
+) => {
+  try {
+    const now = new Date();
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
+    const backupFileName = `${formattedDate}_${DATABASE_FILENAME}`;
+    const backupPath = await getBackupPath(backupFileName);
+
+    await copyFile(DATABASE_FILENAME, backupPath, {
+      fromPathBaseDir: BaseDirectory.AppData,
+      toPathBaseDir: BaseDirectory.Document,
+    });
+
+    console.info("[FS][backupDatabase] Backup created successfully");
+    onSuccess("Backup created successfully");
+    return true;
+  } catch (error) {
+    console.error("[FS][backupDatabase] Failed to create backup: %o", error);
+    onError("Something went wrong, failed to create backup");
+    return false;
   }
 };

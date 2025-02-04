@@ -1,8 +1,15 @@
 import recurringTransactions from "@/db/recurring_transactions";
 import { createQuery } from "@tanstack/solid-query";
+import { queryClient } from "./query";
 
 export const RECURRING_TRANSACTIONS_QUERY_KEY = "recurring-transactions";
 export const INCURRED_QUERY_KEY = "incurred";
+
+export const invalidateRecurringTransactionsQueries = () => {
+  queryClient.invalidateQueries({
+    queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
+  });
+};
 
 export const createRecurringTransactionListQuery = (
   params: () => { start?: Date; end?: Date },
