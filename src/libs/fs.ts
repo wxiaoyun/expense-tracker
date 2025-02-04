@@ -11,7 +11,6 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { chunk } from "lodash";
 import { nanoid } from "nanoid";
 import { generateCsvContent, parseCsvContent } from "./csv";
 
@@ -187,7 +186,6 @@ export const importCsv = async (
     }
 
     const csvData = await readTextFile(file);
-
     const parseResult = parseCsvContent(csvData);
 
     if (!parseResult.ok) {
@@ -205,17 +203,14 @@ export const importCsv = async (
       await transactions.clear();
     }
 
-    for (const chk of chunk(parseResult.data, 300)) {
-      const ok = await transactions.batchCreate(chk);
-
-      if (!ok) {
-        console.error(
-          "[FS][importCsv] Failed to batch create transactions %o",
-          ok,
-        );
-        onError("Something went wrong, failed to batch create transactions");
-        return;
-      }
+    const ok = await transactions.batchCreate(parseResult.data ?? []);
+    if (!ok) {
+      console.error(
+        "[FS][importCsv] Failed to batch create transactions %o",
+        ok,
+      );
+      onError("Something went wrong, failed to batch create transactions");
+      return;
     }
 
     console.info("[FS][importCsv] Data imported successfully");
