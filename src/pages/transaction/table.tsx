@@ -201,7 +201,7 @@ export const TransactionTable = () => {
       navigator.userAgent.indexOf("Firefox") === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
-    overscan: 5,
+    overscan: 10,
   });
 
   const fetchMoreTransactionOnPageEnd = (target: HTMLDivElement) => {
