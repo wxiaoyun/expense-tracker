@@ -147,39 +147,51 @@ const listTransactions = async (query?: {
   };
 };
 
-const summarizeTransactions = async (query?: { start?: Date; end?: Date }) => {
-  const { start, end } = query ?? {};
+const summarizeTransactions = async (query?: {
+  start?: Date;
+  end?: Date;
+  categories?: string[];
+}) => {
+  const { start, end, categories = [] } = query ?? {};
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
   console.info(
-    "[DB][summarizeTransactions] startDate %s, endDate %s",
+    "[DB][summarizeTransactions] startDate %s, endDate %s, categories %o",
     startDate,
     endDate,
+    categories,
   );
+
+  const categoryClause =
+    categories.length > 0
+      ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
+      : "";
 
   const result: {
     balance: number;
     income: number;
     expense: number;
   }[] = await db.select(
-    "SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
-    [startDate, endDate],
+    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+    [startDate, endDate, ...categories],
   );
 
   if (result.length === 0) {
     console.warn(
-      "[DB][summarizeTransactions] no result found for start %s and end %s, returning null",
+      "[DB][summarizeTransactions] no result found for start %s and end %s, categories %o, returning null",
       startDate,
       endDate,
+      categories,
     );
     return null;
   }
 
   console.info(
-    "[DB][summarizeTransactions] result found for start %s and end %s, returning %o",
+    "[DB][summarizeTransactions] result found for start %s and end %s, categories %o, returning %o",
     startDate,
     endDate,
+    categories,
     result[0],
   );
 

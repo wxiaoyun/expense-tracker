@@ -64,7 +64,7 @@ export const createTransactionCategoriesQuery = () => {
 };
 
 export const createTransactionSummarizeQuery = (
-  params: () => { start: Date; end: Date },
+  params: () => Parameters<typeof transactions.summarize>[0],
 ) => {
   return createQuery(() => ({
     queryKey: [
