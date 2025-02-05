@@ -41,7 +41,7 @@ export const RecurringTransactionPage = () => {
 const Header = () => {
   const navigate = useNavigate();
   return (
-    <header class="flex justify-between">
+    <header class="flex justify-between items-start">
       <h1 class="text-lg font-semibold ml-2">Recurring Transactions</h1>
 
       <div class="flex items-center gap-2">

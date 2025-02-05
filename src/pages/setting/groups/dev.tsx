@@ -42,7 +42,8 @@ const SeedTransactions = lazy(async () => {
             class="w-16"
           />
           <FaSolidSeedling
-            class="w-4 h-4 cursor-pointer"
+            size={24}
+            class="cursor-pointer"
             onClick={handleSeedData}
           />
         </div>
@@ -75,7 +76,8 @@ const SeedRecurringTransactions = lazy(async () => {
             class="w-16"
           />
           <FaSolidSeedling
-            class="w-4 h-4 cursor-pointer"
+            size={24}
+            class="cursor-pointer"
             onClick={handleSeedData}
           />
         </div>

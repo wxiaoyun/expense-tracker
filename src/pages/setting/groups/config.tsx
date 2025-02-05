@@ -132,7 +132,8 @@ const ClearSettings = () => {
       <label>Clear settings</label>
 
       <FaSolidTrash
-        class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+        size={24}
+        class="text-red-500 hover:text-red-600 transition-colors cursor-pointer"
         onClick={handleClearSettings}
       />
     </div>

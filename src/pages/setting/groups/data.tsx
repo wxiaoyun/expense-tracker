@@ -56,7 +56,8 @@ export const ExportData = () => {
       <label>Export database</label>
 
       <FaSolidDownload
-        class="w-4 h-4 hover:opacity-65 transition-opacity cursor-pointer"
+        size={24}
+        class="cursor-pointer hover:opacity-65 transition-opacity"
         onClick={handleExport}
       />
     </div>
@@ -78,7 +79,8 @@ export const ImportData = () => {
     <div class="flex justify-between items-center">
       <label>Import database</label>
       <FaSolidUpload
-        class="w-4 h-4 hover:opacity-65 transition-opacity cursor-pointer"
+        size={24}
+        class="cursor-pointer hover:opacity-65 transition-opacity"
         onClick={handleImport}
       />
     </div>
@@ -93,7 +95,8 @@ export const ExportCsv = () => {
       <label>Export as CSV</label>
 
       <FaSolidFileCsv
-        class="w-4 h-4 hover:opacity-65 transition-opacity cursor-pointer"
+        size={24}
+        class="cursor-pointer hover:opacity-65 transition-opacity"
         onClick={handleExportCsv}
       />
     </div>
@@ -116,7 +119,8 @@ export const ImportCsv = () => {
       <label>Import CSV data</label>
 
       <FaSolidFileCsv
-        class="w-4 h-4 hover:opacity-65 transition-opacity cursor-pointer"
+        size={24}
+        class="cursor-pointer hover:opacity-65 transition-opacity"
         onClick={handleImportCsv}
       />
     </div>
@@ -132,7 +136,8 @@ export const AppendCsv = () => {
       <label>Append CSV data</label>
 
       <FaSolidFileCsv
-        class="w-4 h-4 hover:opacity-65 transition-opacity cursor-pointer"
+        size={24}
+        class="cursor-pointer hover:opacity-65 transition-opacity"
         onClick={handleAppendCsv}
       />
     </div>
@@ -162,7 +167,8 @@ export const ClearTransactionsData = () => {
       <label>Clear transactions data</label>
 
       <FaSolidTrash
-        class="w-4 h-4 text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+        size={24}
+        class="text-red-500 hover:text-red-600 transition-colors cursor-pointer"
         onClick={onClick}
       />
     </div>
