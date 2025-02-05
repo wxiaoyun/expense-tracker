@@ -1,39 +1,12 @@
 import { DateRangeSetter } from "@/components/dateRangeSetter";
-import { Badge } from "@/components/ui/badge";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxTrigger,
-} from "@/components/ui/combobox";
+import { ParamsFilter } from "@/components/filter";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { TextField, TextFieldRoot } from "@/components/ui/textfield";
 import { formatCurrency } from "@/libs/currency";
-import {
-  createTransactionCategoriesQuery,
-  createTransactionSummarizeQuery,
-} from "@/query/transactions";
-import {
-  useDateRange,
-  useSearchTransactionParams,
-  useTransactionCategoryParams,
-} from "@/signals/params";
+import { createTransactionSummarizeQuery } from "@/query/transactions";
+import { useDateRange } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
-import { debounce } from "lodash";
 import { FaSolidPlus } from "solid-icons/fa";
-import { IoClose, IoSearch } from "solid-icons/io";
-import { VsSettings } from "solid-icons/vs";
-import { createMemo, createSignal, For } from "solid-js";
-import { DOMElement } from "solid-js/jsx-runtime";
+import { createMemo } from "solid-js";
 import { TransactionTable } from "./table";
 
 export * from "./edit";
@@ -57,7 +30,7 @@ const Header = () => {
 
   return (
     <header class="relative flex flex-col">
-      <div class="flex justify-between items-center gap-2">
+      <div class="flex justify-between items-start gap-2">
         <div class="flex flex-col text-start">
           <span class="text-xs">
             From <b>{dateRange().start.toDateString()}</b>
@@ -66,20 +39,16 @@ const Header = () => {
             To <b>{dateRange().end.toDateString()}</b>
           </span>
         </div>
+
         <div class="flex items-center gap-2">
+          <ParamsFilter />
+
           <a href="/transactions/new">
             <FaSolidPlus
               class="cursor-pointer hover:opacity-65 transition-opacity"
               size={24}
             />
           </a>
-
-          <Sheet>
-            <SheetTrigger>
-              <VsSettings size={24} />
-            </SheetTrigger>
-            <CategoryFilter />
-          </Sheet>
         </div>
       </div>
 
@@ -123,92 +92,5 @@ const IntervalSummary = () => {
         <p class="text-blue-500">{summary().balance}</p>
       </div>
     </section>
-  );
-};
-
-const CategoryFilter = () => {
-  const [currentQuery, setQuery] = useSearchTransactionParams();
-  const [localQuery, setLocalQuery] = createSignal(currentQuery());
-
-  const debouncedSetQuery = debounce(setQuery, 300);
-
-  const handleChange = (
-    e: InputEvent & {
-      currentTarget: HTMLInputElement;
-      target: DOMElement;
-    },
-  ) => {
-    setLocalQuery(e.currentTarget.value);
-    debouncedSetQuery(e.currentTarget.value);
-  };
-
-  const [selectedCategories, setSelectedCategories] =
-    useTransactionCategoryParams();
-
-  const categoriesQuery = createTransactionCategoriesQuery();
-  const categories = createMemo(() => {
-    const data = categoriesQuery.data ?? [];
-    return data.map((category) => category.category);
-  });
-
-  return (
-    <SheetContent class="flex flex-col gap-2">
-      <SheetHeader>
-        <SheetTitle>Advanced Filter</SheetTitle>
-        <SheetDescription class="text-sm text-left">
-          Search for transactions or filter by category
-        </SheetDescription>
-      </SheetHeader>
-
-      <div class="flex items-center gap-2 self-center">
-        <TextFieldRoot>
-          <TextField
-            placeholder="Search"
-            value={localQuery()}
-            onInput={handleChange}
-          />
-        </TextFieldRoot>
-        <IoSearch
-          class="cursor-pointer hover:opacity-65 transition-opacity"
-          size={20}
-          onClick={() => setQuery(localQuery())}
-        />
-      </div>
-
-      <Combobox<string>
-        multiple
-        options={categories()}
-        value={selectedCategories()}
-        onChange={(value) => setSelectedCategories(value)}
-        itemComponent={(props) => (
-          <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
-        )}
-        placeholder="Select categories"
-      >
-        <ComboboxTrigger class="w-fit">
-          <ComboboxInput class="py-1" />
-        </ComboboxTrigger>
-        <ComboboxContent class="overflow-y-auto max-h-[200px]" />
-      </Combobox>
-
-      <div class="flex flex-wrap gap-2">
-        <For each={selectedCategories()}>
-          {(category) => {
-            const handleRemove = () => {
-              setSelectedCategories(
-                selectedCategories().filter((c) => c !== category),
-              );
-            };
-
-            return (
-              <Badge variant="secondary" class="flex items-center gap-1">
-                <span>{category}</span>
-                <IoClose size={12} onClick={handleRemove} />
-              </Badge>
-            );
-          }}
-        </For>
-      </div>
-    </SheetContent>
   );
 };

@@ -39,16 +39,29 @@ const getRecurringTransaction = async (id: number) => {
 const listRecurringTransactions = async (query?: {
   start?: Date;
   end?: Date;
+  categories?: string[];
 }) => {
-  const { start, end } = query ?? {};
+  const { start, end, categories = []} = query ?? {};
 
-  const result = await db.select(
-    "SELECT * FROM recurring_transactions WHERE start_date BETWEEN $1 AND $2 ORDER BY created_at DESC",
-    [start?.getTime() ?? 0, end?.getTime() ?? new Date().getTime()],
+  const categoryClause =
+  categories.length > 0
+    ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
+    : "";
+
+  console.info(
+    "[DB][listRecurringTransactions] start %s, end %s, categories %o",
+    start,
+    end,
+    categories,
+  );
+
+  const result: RecurringTransaction[] = await db.select(
+    `SELECT * FROM recurring_transactions WHERE start_date BETWEEN $1 AND $2 ${categoryClause} ORDER BY created_at DESC`,
+    [start?.getTime() ?? 0, end?.getTime() ?? new Date().getTime(), ...categories],
   );
 
   console.info("[DB][listRecurringTransactions] result %o", result);
-  return result as RecurringTransaction[];
+  return result;
 };
 
 const createRecurringTransaction = async (
