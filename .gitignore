@@ -1,4 +1,5 @@
 .vscode
+.cursor
 node_modules
 dist
 tmp

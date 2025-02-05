@@ -52,6 +52,7 @@ const listTransactions = async (query?: {
   limit?: number;
   offset?: number;
   orderBy?: [keyof Transaction, "ASC" | "DESC"];
+  categories?: string[];
 }) => {
   const {
     start,
@@ -59,6 +60,7 @@ const listTransactions = async (query?: {
     limit = Number.MAX_SAFE_INTEGER,
     offset = 0,
     orderBy = ["transaction_date", "DESC"],
+    categories = [],
   } = query ?? {};
 
   if (!validOrderBy.has(orderBy[0])) {
@@ -76,18 +78,25 @@ const listTransactions = async (query?: {
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
+  const categoryClause =
+    categories.length > 0
+      ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
+      : "";
+
   console.info(
-    "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o",
+    "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o, categories %o",
     startDate,
     endDate,
     limit,
     offset,
     orderBy,
+    categories,
   );
 
   const countResult: { count: number }[] = await db.select(
-    "SELECT COUNT(*) as count FROM transactions WHERE transaction_date BETWEEN $1 AND $2",
-    [startDate, endDate],
+    `SELECT COUNT(*) as count FROM transactions 
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+    [startDate, endDate, ...categories],
   );
 
   if (countResult.length === 0) {
@@ -113,10 +122,10 @@ const listTransactions = async (query?: {
 
   const result: Transaction[] = await db.select(
     `SELECT * FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}
      ORDER BY ${orderBy[0]} ${orderBy[1]} 
-     LIMIT $3 OFFSET $4`,
-    [startDate, endDate, limit, offset],
+     LIMIT $${categories.length + 3} OFFSET $${categories.length + 4}`,
+    [startDate, endDate, ...categories, limit, offset],
   );
 
   const nextOffset = result.length === 0 ? null : offset + limit;

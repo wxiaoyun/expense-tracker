@@ -49,3 +49,20 @@ export const useSearchTransactionParams = () => {
 
   return [currentQuery, setQuery] as const;
 };
+
+export const useTransactionCategoryParams = () => {
+  const [searchParams, setSearchParams] = useSearchParams<{
+    transaction_categories: string[];
+  }>();
+
+  const currentCategories = createMemo(() => {
+    if (typeof searchParams.transaction_categories === "string") {
+      return [searchParams.transaction_categories];
+    }
+    return searchParams.transaction_categories || [];
+  });
+  const setCategories = (categories: string[]) =>
+    setSearchParams({ transaction_categories: categories });
+
+  return [currentCategories, setCategories] as const;
+};
