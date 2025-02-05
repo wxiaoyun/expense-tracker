@@ -16,7 +16,7 @@ export const invalidateTransactionQueries = () => {
 };
 
 export const createTransactionListQuery = (
-  params: () => { start: Date; end: Date },
+  params: () => Parameters<typeof transactions.list>[0],
 ) => {
   return createQuery(() => ({
     queryKey: [TRANSACTIONS_QUERY_KEY, params()],
@@ -64,7 +64,7 @@ export const createTransactionCategoriesQuery = () => {
 };
 
 export const createTransactionSummarizeQuery = (
-  params: () => { start: Date; end: Date },
+  params: () => Parameters<typeof transactions.summarize>[0],
 ) => {
   return createQuery(() => ({
     queryKey: [

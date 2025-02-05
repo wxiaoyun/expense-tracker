@@ -11,7 +11,11 @@ import { cn } from "@/libs/cn";
 import { formatCurrency } from "@/libs/currency";
 import { confirmationCallback } from "@/libs/dialog";
 import { invalidateTransactionQueries } from "@/query/transactions";
-import { useDateRange, useSearchTransactionParams } from "@/signals/params";
+import {
+  useDateRange,
+  useSearchTransactionParams,
+  useTransactionCategoryParams,
+} from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useInfiniteTransactions } from "@/signals/transactions";
 import { useNavigate } from "@solidjs/router";
@@ -140,6 +144,7 @@ export const TransactionTable = () => {
   const { dateRange } = useDateRange();
   const [sorting, setSorting] = createSignal<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
+  const [selectedCategories] = useTransactionCategoryParams();
 
   const queryParam = createMemo(() => {
     const srt = sorting();
@@ -149,6 +154,7 @@ export const TransactionTable = () => {
       : [firstSorting.id, firstSorting.desc ? "DESC" : "ASC"];
     return {
       limit: 50,
+      categories: selectedCategories(),
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
     };
   });

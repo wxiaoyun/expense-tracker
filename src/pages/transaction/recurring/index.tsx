@@ -1,3 +1,4 @@
+import { ParamsFilter } from "@/components/filter";
 import { Separator } from "@/components/ui/separator";
 import { recurringTransactions } from "@/db";
 import { RecurringTransaction } from "@/db/recurring_transactions";
@@ -10,8 +11,13 @@ import {
   createRecurringTransactionListQuery,
   invalidateRecurringTransactionsQueries,
 } from "@/query/recurring-transactions";
+import {
+  useSearchTransactionParams,
+  useTransactionCategoryParams,
+} from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useNavigate } from "@solidjs/router";
+import Fuse from "fuse.js";
 import {
   FaSolidPen,
   FaSolidPlus,
@@ -35,19 +41,46 @@ export const RecurringTransactionPage = () => {
 const Header = () => {
   const navigate = useNavigate();
   return (
-    <header class="flex justify-between">
+    <header class="flex justify-between items-start">
       <h1 class="text-lg font-semibold ml-2">Recurring Transactions</h1>
-      <FaSolidPlus
-        class="hover:opacity-65 transition-opacity cursor-pointer"
-        size={20}
-        onClick={() => navigate("/transactions/recurring/new")}
-      />
+
+      <div class="flex items-center gap-2">
+        <ParamsFilter />
+        <FaSolidPlus
+          class="hover:opacity-65 transition-opacity cursor-pointer"
+          size={24}
+          onClick={() => navigate("/transactions/recurring/new")}
+        />
+      </div>
     </header>
   );
 };
 
 const RecurringTransactionList = () => {
-  const transactionsQuery = createRecurringTransactionListQuery(() => ({}));
+  const [categories] = useTransactionCategoryParams();
+  const [query] = useSearchTransactionParams();
+
+  const transactionsQuery = createRecurringTransactionListQuery(() => ({
+    categories: categories(),
+  }));
+
+  const filteredRecurringTransactions = createMemo(() => {
+    const transactions = transactionsQuery.data ?? [];
+
+    if (query().length === 0) {
+      return transactions;
+    }
+
+    const fuse = new Fuse(transactions, {
+      keys: [
+        "category",
+        "description",
+      ] satisfies (keyof RecurringTransaction)[],
+    });
+
+    const result = fuse.search(query());
+    return result.map((r) => r.item);
+  });
 
   return (
     <div class="flex flex-col gap-2">
@@ -64,10 +97,10 @@ const RecurringTransactionList = () => {
       </Show>
 
       <Show when={transactionsQuery.isSuccess}>
-        <For each={transactionsQuery.data}>
+        <For each={filteredRecurringTransactions()}>
           {(t) => <RecurringTransactionCard transaction={t} />}
         </For>
-        <Show when={transactionsQuery.data?.length === 0}>
+        <Show when={filteredRecurringTransactions().length === 0}>
           <div class="flex justify-center items-center h-full">
             <p class="text-xs text-muted-foreground">
               No recurring transactions found

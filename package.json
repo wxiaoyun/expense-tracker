@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@ark-ui/solid": "^4.10.1",
+    "@corvu/drawer": "^0.2.3",
     "@internationalized/date": "^3.7.0",
     "@kobalte/core": "^0.13.7",
     "@solidjs/router": "^0.15.3",
@@ -33,16 +34,17 @@
     "@tauri-apps/plugin-fs": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-sql": "~2",
-    "@tauri-apps/plugin-upload": "~2.2.1",
+    "@tauri-apps/plugin-upload": "~2",
     "chart.js": "^4.4.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cron-parser": "^4.9.0",
     "expense-tracker": "link:",
+    "fuse.js": "^7.1.0",
     "lodash": "^4.17.21",
     "nanoid": "^5.0.9",
     "solid-icons": "^1.1.0",
-    "solid-js": "^1.9.3",
+    "solid-js": "^1.9.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
@@ -50,7 +52,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
-    "@rsbuild/core": "^1.2.1",
+    "@rsbuild/core": "^1.2.4",
     "@rsbuild/plugin-babel": "^1.0.3",
     "@rsbuild/plugin-solid": "^1.0.4",
     "@tanstack/eslint-plugin-query": "4",
@@ -64,13 +66,11 @@
     "husky": "^9.1.7",
     "postcss": "^8.5.1",
     "prettier": "^3.4.2",
-    "typescript": "~5.6.2",
+    "typescript": "~5.6.3",
     "typescript-eslint": "^8.21.0"
   },
   "packageManager": "pnpm@10.0.0+sha512.b8fef5494bd3fe4cbd4edabd0745df2ee5be3e4b0b8b08fa643aa3e4c6702ccc0f00d68fa8a8c9858a735a0032485a44990ed2810526c875e416f001b17df12b",
   "pnpm": {
-    "overrides": {
-      "@rsbuild/core": "link:../rsbuild/packages/core"
-    }
+    "overrides": {}
   }
 }

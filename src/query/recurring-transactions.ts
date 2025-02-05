@@ -12,7 +12,7 @@ export const invalidateRecurringTransactionsQueries = () => {
 };
 
 export const createRecurringTransactionListQuery = (
-  params: () => { start?: Date; end?: Date },
+  params: () => Parameters<typeof recurringTransactions.list>[0],
 ) => {
   return createQuery(() => ({
     queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, params()],
