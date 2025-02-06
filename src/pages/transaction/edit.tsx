@@ -142,11 +142,9 @@ const EditTransactionForm = () => {
                 }
                 required
               />
-              <Show when={field().state.meta.errors.length > 0}>
-                <TextFieldErrorMessage>
-                  {field().state.meta.errors[0]}
-                </TextFieldErrorMessage>
-              </Show>
+              <TextFieldErrorMessage>
+                {field().state.meta.errors[0]}
+              </TextFieldErrorMessage>
             </TextFieldRoot>
           )}
         />
