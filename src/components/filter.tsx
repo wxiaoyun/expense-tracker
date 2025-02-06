@@ -1,8 +1,8 @@
+import { createRecurringTransactionCategoriesQuery } from "@/query/recurring-transactions";
 import { createTransactionCategoriesQuery } from "@/query/transactions";
 import {
   useSearchTransactionParams,
   useTransactionCategoryParams,
-  useVerifiedTransactionParams,
 } from "@/signals/params";
 import { debounce } from "lodash";
 import { FaSolidFilter } from "solid-icons/fa";
@@ -18,13 +18,6 @@ import {
   ComboboxTrigger,
 } from "./ui/combobox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -35,7 +28,6 @@ import {
 import { TextField, TextFieldRoot } from "./ui/textfield";
 
 export type ParamsFilterProps = {
-  hideVerified?: boolean;
   hideCategories?: boolean;
   hideQuery?: boolean;
 };
@@ -60,13 +52,18 @@ export const ParamsFilter: Component<ParamsFilterProps> = (props) => {
     useTransactionCategoryParams();
 
   const categoriesQuery = createTransactionCategoriesQuery();
-  const categories = createMemo(() => {
-    const data = categoriesQuery.data ?? [];
-    return data.map((category) => category.category);
-  });
+  const recurringCategoriesQuery = createRecurringTransactionCategoriesQuery();
 
-  const [selectedVerified, setSelectedVerified] =
-    useVerifiedTransactionParams();
+  const categories = createMemo(() => {
+    const data = (categoriesQuery.data ?? []).map(
+      (category) => category.category,
+    );
+    const recurringData = (recurringCategoriesQuery.data ?? []).map(
+      (category) => category.category,
+    );
+    const uniqueCategories = new Set([...data, ...recurringData]);
+    return Array.from(uniqueCategories);
+  });
 
   return (
     <Sheet>
@@ -95,26 +92,6 @@ export const ParamsFilter: Component<ParamsFilterProps> = (props) => {
               size={20}
               onClick={() => setQuery(localQuery())}
             />
-          </div>
-        </Show>
-
-        <Show when={!props.hideVerified}>
-          <div class="flex items-center gap-2">
-            <Select
-              options={["All", "Verified", "Unverified"]}
-              value={selectedVerified()}
-              onChange={(value) => value && setSelectedVerified(value)}
-              itemComponent={(props) => (
-                <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
-              )}
-            >
-              <SelectTrigger class="w-32 py-1 h-fit">
-                <SelectValue<string>>
-                  {(state) => state.selectedOption()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
           </div>
         </Show>
 

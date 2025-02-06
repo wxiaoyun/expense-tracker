@@ -71,7 +71,11 @@ export const ImportData = () => {
       title: "Are you sure?",
       okLabel: "Import",
       cancelLabel: "Cancel",
-      onConfirm: () => importDatabase(toastSuccess, toastError),
+      onConfirm: () =>
+        importDatabase((msg) => {
+          toastSuccess(msg);
+          invalidateTransactionQueries();
+        }, toastError),
     },
   );
 
@@ -110,7 +114,15 @@ export const ImportCsv = () => {
       title: "Are you sure?",
       okLabel: "Import",
       cancelLabel: "Cancel",
-      onConfirm: () => importCsv(true, toastSuccess, toastError),
+      onConfirm: () =>
+        importCsv(
+          true,
+          (msg) => {
+            toastSuccess(msg);
+            invalidateTransactionQueries();
+          },
+          toastError,
+        ),
     },
   );
 
@@ -129,7 +141,14 @@ export const ImportCsv = () => {
 
 export const AppendCsv = () => {
   const handleAppendCsv = async () =>
-    importCsv(false, toastSuccess, toastError);
+    importCsv(
+      false,
+      (msg) => {
+        toastSuccess(msg);
+        invalidateTransactionQueries();
+      },
+      toastError,
+    );
 
   return (
     <div class="flex justify-between items-center">

@@ -1,3 +1,4 @@
+import { Checkbox, CheckboxControl } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -16,11 +17,13 @@ import {
   useSearchTransactionParams,
   useTransactionCategoryParams,
   useVerifiedTransactionParams,
+  VerifiedTransactionParams,
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useInfiniteTransactions } from "@/signals/transactions";
 import { useNavigate } from "@solidjs/router";
 import { rankItem } from "@tanstack/match-sorter-utils";
+import { createMutation } from "@tanstack/solid-query";
 import {
   CellContext,
   createColumnHelper,
@@ -35,12 +38,22 @@ import {
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import {
   FaSolidBars,
+  FaSolidCheck,
   FaSolidChevronDown,
   FaSolidChevronUp,
   FaSolidPen,
   FaSolidTrash,
+  FaSolidXmark,
 } from "solid-icons/fa";
-import { createEffect, createMemo, createSignal, For, onMount } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  onMount,
+  Switch,
+} from "solid-js";
 
 const AmountCell = (props: CellContext<Transaction, unknown>) => {
   const [currency] = useCurrency();
@@ -93,6 +106,60 @@ const ActionCell = (props: CellContext<Transaction, unknown>) => {
   );
 };
 
+const VerificationCell = (props: CellContext<Transaction, unknown>) => {
+  const verified = () => props.row.original.verified === 1;
+  const toggleVerified = createMutation(() => ({
+    mutationFn: async (verified: boolean) => {
+      await transactions.setVerification(
+        props.row.original.id,
+        verified ? 1 : 0,
+      );
+    },
+    onSuccess: () => {
+      invalidateTransactionQueries();
+    },
+  }));
+
+  return (
+    <Checkbox
+      class="flex items-center space-x-2"
+      checked={verified()}
+      onChange={toggleVerified.mutate}
+    >
+      <CheckboxControl />
+    </Checkbox>
+  );
+};
+
+const VerificationHeader = () => {
+  const [verified, setVerified] = useVerifiedTransactionParams();
+  const options = ["All", "Verified", "Unverified"];
+  let idx = 0;
+
+  const cycleVerified = () => {
+    idx = (idx + 1) % options.length;
+    setVerified(options[idx] as VerifiedTransactionParams);
+  };
+
+  return (
+    <div class="flex justify-center items-center gap-2" onClick={cycleVerified}>
+      <span>Verified</span>
+
+      <Switch>
+        <Match when={verified() === "All"}>
+          <FaSolidBars class="opacity-50" size={14} />
+        </Match>
+        <Match when={verified() === "Verified"}>
+          <FaSolidCheck class="text-green-500" size={14} />
+        </Match>
+        <Match when={verified() === "Unverified"}>
+          <FaSolidXmark class="text-red-500" size={14} />
+        </Match>
+      </Switch>
+    </div>
+  );
+};
+
 const columnHelper = createColumnHelper<Transaction>();
 
 const columns = [
@@ -122,9 +189,16 @@ const columns = [
     size: 100,
     cell: AmountCell,
   }),
+  columnHelper.accessor("verified", {
+    header: VerificationHeader,
+    enableSorting: false,
+    size: 100,
+    cell: VerificationCell,
+  }),
   columnHelper.display({
     id: "actions",
     header: "Actions",
+    enableSorting: false,
     size: 60,
     cell: ActionCell,
   }),
@@ -147,11 +221,11 @@ export const TransactionTable = () => {
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
   const [selectedCategories] = useTransactionCategoryParams();
   const [verified] = useVerifiedTransactionParams();
-  const verifiedStr = () => {
+  const verifiedNum = () => {
     if (verified() === "All") {
       return undefined;
     }
-    return verified() === "Verified" ? true : false;
+    return verified() === "Verified" ? 1 : 0;
   };
 
   const queryParam = createMemo(() => {
@@ -164,7 +238,7 @@ export const TransactionTable = () => {
       limit: 50,
       categories: selectedCategories(),
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
-      checked: verifiedStr(),
+      verified: verifiedNum(),
     };
   });
 

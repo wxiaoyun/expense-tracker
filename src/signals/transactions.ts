@@ -1,5 +1,6 @@
 import { transactions } from "@/db";
 import { formatCurrency } from "@/libs/currency";
+import { createRecurringTransactionCategoriesQuery } from "@/query/recurring-transactions";
 import {
   createInfiniteTransactionListQuery,
   createTransactionCategoriesQuery,
@@ -42,6 +43,14 @@ export const useTransactionParams = (prefix = "") => {
 
 export const useTransactionCategories = () => {
   const query = createTransactionCategoriesQuery();
+  const categories = createMemo(() => {
+    return (query.data ?? []).map((category) => category.category);
+  });
+  return categories;
+};
+
+export const useRecurringTransactionCategories = () => {
+  const query = createRecurringTransactionCategoriesQuery();
   const categories = createMemo(() => {
     return (query.data ?? []).map((category) => category.category);
   });
