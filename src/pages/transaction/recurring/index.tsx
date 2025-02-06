@@ -45,7 +45,7 @@ const Header = () => {
       <h1 class="text-lg font-semibold ml-2">Recurring Transactions</h1>
 
       <div class="flex items-center gap-2">
-        <ParamsFilter />
+        <ParamsFilter hideVerified/>
         <FaSolidPlus
           class="hover:opacity-65 transition-opacity cursor-pointer"
           size={24}

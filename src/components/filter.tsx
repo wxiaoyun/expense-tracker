@@ -2,11 +2,12 @@ import { createTransactionCategoriesQuery } from "@/query/transactions";
 import {
   useSearchTransactionParams,
   useTransactionCategoryParams,
+  useVerifiedTransactionParams,
 } from "@/signals/params";
 import { debounce } from "lodash";
 import { FaSolidFilter } from "solid-icons/fa";
 import { IoClose, IoSearch } from "solid-icons/io";
-import { createMemo, createSignal, For } from "solid-js";
+import { Component, createMemo, createSignal, For, Show } from "solid-js";
 import { DOMElement } from "solid-js/jsx-runtime";
 import { Badge } from "./ui/badge";
 import {
@@ -17,6 +18,13 @@ import {
   ComboboxTrigger,
 } from "./ui/combobox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -26,7 +34,13 @@ import {
 } from "./ui/sheet";
 import { TextField, TextFieldRoot } from "./ui/textfield";
 
-export const ParamsFilter = () => {
+export type ParamsFilterProps = {
+  hideVerified?: boolean;
+  hideCategories?: boolean;
+  hideQuery?: boolean;
+};
+
+export const ParamsFilter: Component<ParamsFilterProps> = (props) => {
   const [currentQuery, setQuery] = useSearchTransactionParams();
   const [localQuery, setLocalQuery] = createSignal(currentQuery());
 
@@ -51,6 +65,9 @@ export const ParamsFilter = () => {
     return data.map((category) => category.category);
   });
 
+  const [selectedVerified, setSelectedVerified] =
+    useVerifiedTransactionParams();
+
   return (
     <Sheet>
       <SheetTrigger>
@@ -64,55 +81,79 @@ export const ParamsFilter = () => {
           </SheetDescription>
         </SheetHeader>
 
-        <div class="flex items-center gap-2 self-center">
-          <TextFieldRoot>
-            <TextField
-              placeholder="Search"
-              value={localQuery()}
-              onInput={handleChange}
+        <Show when={!props.hideQuery}>
+          <div class="flex items-center gap-2 self-center">
+            <TextFieldRoot>
+              <TextField
+                placeholder="Search"
+                value={localQuery()}
+                onInput={handleChange}
+              />
+            </TextFieldRoot>
+            <IoSearch
+              class="cursor-pointer hover:opacity-65 transition-opacity"
+              size={20}
+              onClick={() => setQuery(localQuery())}
             />
-          </TextFieldRoot>
-          <IoSearch
-            class="cursor-pointer hover:opacity-65 transition-opacity"
-            size={20}
-            onClick={() => setQuery(localQuery())}
-          />
-        </div>
+          </div>
+        </Show>
 
-        <Combobox<string>
-          multiple
-          options={categories()}
-          value={selectedCategories()}
-          onChange={(value) => setSelectedCategories(value)}
-          itemComponent={(props) => (
-            <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
-          )}
-          placeholder="Select categories"
-        >
-          <ComboboxTrigger class="w-fit">
-            <ComboboxInput class="py-1" />
-          </ComboboxTrigger>
-          <ComboboxContent class="overflow-y-auto max-h-[200px]" />
-        </Combobox>
+        <Show when={!props.hideVerified}>
+          <div class="flex items-center gap-2">
+            <Select
+              options={["All", "Verified", "Unverified"]}
+              value={selectedVerified()}
+              onChange={(value) => value && setSelectedVerified(value)}
+              itemComponent={(props) => (
+                <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+              )}
+            >
+              <SelectTrigger class="w-32 py-1 h-fit">
+                <SelectValue<string>>
+                  {(state) => state.selectedOption()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent />
+            </Select>
+          </div>
+        </Show>
 
-        <div class="flex flex-wrap gap-2">
-          <For each={selectedCategories()}>
-            {(category) => {
-              const handleRemove = () => {
-                setSelectedCategories(
-                  selectedCategories().filter((c) => c !== category),
+        <Show when={!props.hideCategories}>
+          <Combobox<string>
+            multiple
+            options={categories()}
+            value={selectedCategories()}
+            onChange={(value) => setSelectedCategories(value)}
+            itemComponent={(props) => (
+              <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
+            )}
+            placeholder="Select categories"
+          >
+            <ComboboxTrigger class="w-fit">
+              <ComboboxInput class="py-1" />
+            </ComboboxTrigger>
+            <ComboboxContent class="overflow-y-auto max-h-[200px]" />
+          </Combobox>
+
+          <div class="flex flex-wrap gap-2">
+            <For each={selectedCategories()}>
+              {(category) => {
+                const handleRemove = () => {
+                  setSelectedCategories(
+                    selectedCategories().filter((c) => c !== category),
+                  );
+                };
+
+                return (
+                  <Badge variant="secondary" class="flex items-center gap-1">
+                    <span>{category}</span>
+                    <IoClose size={12} onClick={handleRemove} />
+                  </Badge>
                 );
-              };
-
-              return (
-                <Badge variant="secondary" class="flex items-center gap-1">
-                  <span>{category}</span>
-                  <IoClose size={12} onClick={handleRemove} />
-                </Badge>
-              );
-            }}
-          </For>
-        </div>
+              }}
+            </For>
+          </div>
+        </Show>
       </SheetContent>
     </Sheet>
   );

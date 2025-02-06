@@ -15,6 +15,7 @@ import {
   useDateRange,
   useSearchTransactionParams,
   useTransactionCategoryParams,
+  useVerifiedTransactionParams,
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { useInfiniteTransactions } from "@/signals/transactions";
@@ -145,6 +146,13 @@ export const TransactionTable = () => {
   const [sorting, setSorting] = createSignal<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
   const [selectedCategories] = useTransactionCategoryParams();
+  const [verified] = useVerifiedTransactionParams();
+  const verifiedStr = () => {
+    if (verified() === "All") {
+      return undefined;
+    }
+    return verified() === "Verified" ? true : false;
+  };
 
   const queryParam = createMemo(() => {
     const srt = sorting();
@@ -156,6 +164,7 @@ export const TransactionTable = () => {
       limit: 50,
       categories: selectedCategories(),
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],
+      checked: verifiedStr(),
     };
   });
 

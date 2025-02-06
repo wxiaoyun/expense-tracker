@@ -66,3 +66,25 @@ export const useTransactionCategoryParams = () => {
 
   return [currentCategories, setCategories] as const;
 };
+
+export type VerifiedTransactionParams = "All" | "Verified" | "Unverified";
+
+export const useVerifiedTransactionParams = () => {
+  const [searchParams, setSearchParams] = useSearchParams<{
+    verified: VerifiedTransactionParams;
+  }>();
+
+  const currentVerified = createMemo(() => {
+    if (
+      !["All", "Verified", "Unverified"].includes(searchParams.verified ?? "")
+    ) {
+      return "All";
+    }
+    return searchParams.verified as VerifiedTransactionParams;
+  });
+
+  const setVerified = (verified: VerifiedTransactionParams) =>
+    setSearchParams({ verified });
+
+  return [currentVerified, setVerified] as const;
+};

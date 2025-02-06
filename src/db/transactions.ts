@@ -9,6 +9,7 @@ export const TransactionSchema = z.object({
   category: z.string(),
   description: z.string().optional(),
   recurring_transaction_id: z.number().int().positive().optional(),
+  checked: z.boolean().optional(),
   created_at: z.number().int().positive(),
   updated_at: z.number().int().positive(),
 });
@@ -53,6 +54,7 @@ const listTransactions = async (query?: {
   offset?: number;
   orderBy?: [keyof Transaction, "ASC" | "DESC"];
   categories?: string[];
+  checked?: boolean;
 }) => {
   const {
     start,
@@ -61,6 +63,7 @@ const listTransactions = async (query?: {
     offset = 0,
     orderBy = ["transaction_date", "DESC"],
     categories = [],
+    checked
   } = query ?? {};
 
   if (!validOrderBy.has(orderBy[0])) {
@@ -83,6 +86,11 @@ const listTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
+  const checkedClause =
+    checked !== undefined
+      ? `AND checked = ${checked}`
+      : "";
+
   console.info(
     "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o, categories %o",
     startDate,
@@ -95,7 +103,7 @@ const listTransactions = async (query?: {
 
   const countResult: { count: number }[] = await db.select(
     `SELECT COUNT(*) as count FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${checkedClause}`,
     [startDate, endDate, ...categories],
   );
 
@@ -122,7 +130,7 @@ const listTransactions = async (query?: {
 
   const result: Transaction[] = await db.select(
     `SELECT * FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${checkedClause}
      ORDER BY ${orderBy[0]} ${orderBy[1]} 
      LIMIT $${categories.length + 3} OFFSET $${categories.length + 4}`,
     [startDate, endDate, ...categories, limit, offset],
@@ -151,8 +159,9 @@ const summarizeTransactions = async (query?: {
   start?: Date;
   end?: Date;
   categories?: string[];
+  checked?: boolean;
 }) => {
-  const { start, end, categories = [] } = query ?? {};
+  const { start, end, categories = [], checked } = query ?? {};
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
@@ -168,12 +177,17 @@ const summarizeTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
+  const checkedClause =
+    checked !== undefined
+      ? `AND checked = ${checked}`
+      : "";
+
   const result: {
     balance: number;
     income: number;
     expense: number;
   }[] = await db.select(
-    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${checkedClause}`,
     [startDate, endDate, ...categories],
   );
 
