@@ -29,6 +29,9 @@ importers:
       '@tanstack/match-sorter-utils':
         specifier: ^8.19.4
         version: 8.19.4
+      '@tanstack/solid-form':
+        specifier: ^0.41.3
+        version: 0.41.3(solid-js@1.9.4)
       '@tanstack/solid-query':
         specifier: ^5.64.2
         version: 5.64.2(solid-js@1.9.4)
@@ -640,6 +643,9 @@ packages:
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
 
+  '@tanstack/form-core@0.41.3':
+    resolution: {integrity: sha512-ifGRimfnYgc+SQikx8ngWGhIxs5UHutSwUQ1IPFHZ6PRAfCTEEqDtXqaWZGkuzvf8itoxXdwsR+chEdwiPtsPA==}
+
   '@tanstack/match-sorter-utils@8.19.4':
     resolution: {integrity: sha512-Wo1iKt2b9OT7d+YGhvEPD3DXvPv2etTusIMhMUoG7fbhmxcXCtIjJDEygy91Y2JFlwGyjqiBPRozme7UD8hoqg==}
     engines: {node: '>=12'}
@@ -647,8 +653,18 @@ packages:
   '@tanstack/query-core@5.64.2':
     resolution: {integrity: sha512-hdO8SZpWXoADNTWXV9We8CwTkXU88OVWRBcsiFrk7xJQnhm6WRlweDzMD+uH+GnuieTBVSML6xFa17C2cNV8+g==}
 
+  '@tanstack/solid-form@0.41.3':
+    resolution: {integrity: sha512-QVSLJItAaFPDIgX2WraruHSqvCTUwLj8jY0GWbdmFccrtE0WB5Ywe3WPpith3TnMeVZ+tZMhq+B54TPFhhQsSg==}
+    peerDependencies:
+      solid-js: ^1.6.0
+
   '@tanstack/solid-query@5.64.2':
     resolution: {integrity: sha512-SxYRxU4hU4fBNBrFujxpohVdAcjeivCY0hZh+YkdBsyZ7NphJq6VulS4TKGt8LsGyOtMSullvsCvIlOza0n/iQ==}
+    peerDependencies:
+      solid-js: ^1.6.0
+
+  '@tanstack/solid-store@0.7.0':
+    resolution: {integrity: sha512-uDQYkUuH3MppitiduZLTEcItkTr8vEJ33jzp2rH2VvlNRMGbuU54GQcqf3dLIlTbZ1/Z2TtIBtBjjl+N/OhwRg==}
     peerDependencies:
       solid-js: ^1.6.0
 
@@ -662,6 +678,9 @@ packages:
     resolution: {integrity: sha512-jjsdpk7pnT7AneBY/E2JhpuzgqIFfdE3j8PuRLuFbKy5oRKz6QJ9rn9lL81pM6tum8KWUBThDxEJE2SREihVkw==}
     peerDependencies:
       solid-js: ^1.3.0
+
+  '@tanstack/store@0.7.0':
+    resolution: {integrity: sha512-CNIhdoUsmD2NolYuaIs8VfWM467RK6oIBAW4nPEKZhg1smZ+/CwtCdpURgp7nxSqOaV9oKkzdWD80+bC66F/Jg==}
 
   '@tanstack/table-core@8.20.5':
     resolution: {integrity: sha512-P9dF7XbibHph2PFRz8gfBKEXEY/HJPOhym8CHmjF8y3q5mWpKx9xtZapXQUWCgkqvsK0R46Azuz+VaxD4Xl+Tg==}
@@ -2563,15 +2582,30 @@ snapshots:
     dependencies:
       eslint: 9.18.0(jiti@2.4.2)
 
+  '@tanstack/form-core@0.41.3':
+    dependencies:
+      '@tanstack/store': 0.7.0
+
   '@tanstack/match-sorter-utils@8.19.4':
     dependencies:
       remove-accents: 0.5.0
 
   '@tanstack/query-core@5.64.2': {}
 
+  '@tanstack/solid-form@0.41.3(solid-js@1.9.4)':
+    dependencies:
+      '@tanstack/form-core': 0.41.3
+      '@tanstack/solid-store': 0.7.0(solid-js@1.9.4)
+      solid-js: 1.9.4
+
   '@tanstack/solid-query@5.64.2(solid-js@1.9.4)':
     dependencies:
       '@tanstack/query-core': 5.64.2
+      solid-js: 1.9.4
+
+  '@tanstack/solid-store@0.7.0(solid-js@1.9.4)':
+    dependencies:
+      '@tanstack/store': 0.7.0
       solid-js: 1.9.4
 
   '@tanstack/solid-table@8.20.5(solid-js@1.9.4)':
@@ -2583,6 +2617,8 @@ snapshots:
     dependencies:
       '@tanstack/virtual-core': 3.11.3
       solid-js: 1.9.4
+
+  '@tanstack/store@0.7.0': {}
 
   '@tanstack/table-core@8.20.5': {}
 

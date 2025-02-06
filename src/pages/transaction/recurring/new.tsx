@@ -39,10 +39,26 @@ import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transa
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
-import { createMutation } from "@tanstack/solid-query";
+import { createForm } from "@tanstack/solid-form";
 import { TbArrowLeft } from "solid-icons/tb";
-import { createMemo, createSignal, Index, Show } from "solid-js";
+import { createMemo, Index } from "solid-js";
 import { Portal } from "solid-js/web";
+import { z } from "zod";
+
+export const NewRecurringTransactionSchema = z.object({
+  amount: z.number().refine((value) => value !== 0, "Amount must be non-zero"),
+  start_date: z.number(),
+  category: z.string().min(1, "Category is required"),
+  description: z.string().optional(),
+  recurrence_value: z.string().refine(
+    (value) => validateOccurrence(value).ok,
+    (value) => ({ message: validateOccurrence(value).err || "Invalid format" }),
+  ),
+});
+
+type NewRecurringTransactionForm = z.infer<
+  typeof NewRecurringTransactionSchema
+>;
 
 export const NewRecurringTransactionPage = () => {
   return (
@@ -71,293 +87,339 @@ const NewForm = () => {
   const navigate = useNavigate();
   const categories = useTransactionCategories();
 
-  const [amount, setAmount] = createSignal("");
-  const [startDate, setStartDate] = createSignal(
-    new CalendarDate(new Date().getFullYear(), 0, 0),
-  );
-  const [category, setCategory] = createSignal("");
-  const [newCategory, setNewCategory] = createSignal("");
-  const [description, setDescription] = createSignal("");
-  const [recurrenceValue, setRecurrenceValue] = createSignal("");
+  const defaultValues = createMemo(() => ({
+    amount: 0,
+    start_date: Date.now(),
+    category: "",
+    description: "",
+    recurrence_value: "",
+  }));
 
-  const isCategoryValid = createMemo(() => {
-    return category() !== "" || newCategory() !== "";
-  });
-  const isAmountValid = createMemo(() => {
-    const amt = Number(amount());
-    return !isNaN(amt) && isFinite(amt);
-  });
-  const isRecurrenceValueValid = createMemo(() =>
-    validateOccurrence(recurrenceValue()),
-  );
-
-  const isAllFieldsValid = createMemo(() => {
-    return isAmountValid() && isRecurrenceValueValid().ok && isCategoryValid();
-  });
-
-  const mutation = createMutation(() => ({
-    mutationFn: async () => {
-      return recurringTransactions.create({
-        amount: Number(amount()),
-        start_date: new Date(startDate().toString()).getTime(),
-        category: newCategory() || category(),
-        description: description(),
-        recurrence_value: recurrenceValue(),
-      });
-    },
-    onSuccess: () => {
-      invalidateRecurringTransactionsQueries();
-      toastSuccess("Recurring transaction updated successfully");
-      navigate(`/transactions/recurring`);
-    },
-    onError: (error) => {
-      console.error("[UI] Error creating recurring transaction %o", error);
-      toastError(error.message);
+  const form = createForm<NewRecurringTransactionForm>(() => ({
+    defaultValues: defaultValues(),
+    onSubmit: async ({ value }) => {
+      try {
+        await recurringTransactions.create(value);
+        invalidateRecurringTransactionsQueries();
+        toastSuccess("Recurring transaction created successfully");
+        navigate("/transactions/recurring");
+      } catch (error) {
+        console.error("[UI] Error creating recurring transaction", error);
+        if (error instanceof Error) {
+          toastError(error.message);
+        } else {
+          toastError("An unknown error occurred");
+        }
+      }
     },
   }));
 
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    if (!isAllFieldsValid()) return;
-    mutation.mutate();
-  };
-
   return (
-    <form class="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <TextFieldRoot validationState={isAmountValid() ? "valid" : "invalid"}>
-        <TextFieldLabel>Amount</TextFieldLabel>
-        <TextField
-          placeholder="Amount"
-          value={amount()}
-          onChange={(e) => setAmount(e.currentTarget.value)}
-          required
-        />
-        <Show when={!isAmountValid()}>
-          <TextFieldErrorMessage>
-            Amount must be a valid number
-          </TextFieldErrorMessage>
-        </Show>
-      </TextFieldRoot>
+    <form
+      class="flex flex-col gap-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <form.Field
+        name="amount"
+        validators={{
+          onChange: z
+            .number()
+            .refine((value) => value !== 0, "Amount must be non-zero"),
+        }}
+        children={(field) => (
+          <TextFieldRoot
+            validationState={
+              field().state.meta.errors.length ? "invalid" : "valid"
+            }
+          >
+            <TextFieldLabel>Amount</TextFieldLabel>
+            <TextField
+              placeholder="Amount"
+              value={field().state.value}
+              onInput={(e) =>
+                field().handleChange(Number(e.currentTarget.value))
+              }
+              required
+            />
+            <TextFieldErrorMessage>
+              {field().state.meta.errors[0]}
+            </TextFieldErrorMessage>
+          </TextFieldRoot>
+        )}
+      />
 
-      <div class="flex flex-col gap-1">
-        <label class="font-medium">Start Date</label>
-        <DatePicker
-          value={[startDate()]}
-          onValueChange={(change) =>
-            setStartDate(change.value[0] as CalendarDate)
-          }
-          locale="en"
-          positioning={{
-            placement: "bottom-start",
-          }}
-        >
-          <DatePickerControl class="w-full">
-            <DatePickerInput placeholder="Pick a date" disabled />
-            <DatePickerTrigger />
-          </DatePickerControl>
+      <form.Field
+        name="start_date"
+        children={(field) => {
+          const date = createMemo(() => new Date(field().state.value));
+          const calendarDate = createMemo(
+            () =>
+              new CalendarDate(
+                date().getFullYear(),
+                date().getMonth() + 1,
+                date().getDate(),
+              ),
+          );
 
-          <Portal>
-            <DatePickerPositioner>
-              <DatePickerContent>
-                <DatePickerView view="day">
-                  <DatePickerContext>
-                    {(context) => {
-                      return (
-                        <>
-                          <DatePickerViewControl>
-                            <DatePickerViewTrigger>
-                              <DatePickerRangeText />
-                            </DatePickerViewTrigger>
-                          </DatePickerViewControl>
-                          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <DatePickerTable>
-                              <DatePickerTableHead>
-                                <DatePickerTableRow>
-                                  <Index each={context().weekDays}>
-                                    {(weekDay) => (
-                                      <DatePickerTableHeader>
-                                        {weekDay().short}
-                                      </DatePickerTableHeader>
-                                    )}
-                                  </Index>
-                                </DatePickerTableRow>
-                              </DatePickerTableHead>
-                              <DatePickerTableBody>
-                                <Index each={context().weeks}>
-                                  {(week) => (
-                                    <DatePickerTableRow>
-                                      <Index each={week()}>
-                                        {(day) => (
-                                          <DatePickerTableCell value={day()}>
-                                            <DatePickerTableCellTrigger>
-                                              {day().day}
-                                            </DatePickerTableCellTrigger>
-                                          </DatePickerTableCell>
+          return (
+            <div class="flex flex-col gap-1">
+              <label class="font-medium">Start Date</label>
+              <DatePicker
+                value={[calendarDate()]}
+                onValueChange={(change) => {
+                  const date = change.value[0] as CalendarDate;
+                  field().handleChange(new Date(date.toString()).getTime());
+                }}
+                locale="en"
+                positioning={{ placement: "bottom-start" }}
+              >
+                <DatePickerControl class="w-full">
+                  <DatePickerInput placeholder="Pick a date" disabled />
+                  <DatePickerTrigger />
+                </DatePickerControl>
+
+                <Portal>
+                  <DatePickerPositioner>
+                    <DatePickerContent>
+                      <DatePickerView view="day">
+                        <DatePickerContext>
+                          {(context) => {
+                            return (
+                              <>
+                                <DatePickerViewControl>
+                                  <DatePickerViewTrigger>
+                                    <DatePickerRangeText />
+                                  </DatePickerViewTrigger>
+                                </DatePickerViewControl>
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                  <DatePickerTable>
+                                    <DatePickerTableHead>
+                                      <DatePickerTableRow>
+                                        <Index each={context().weekDays}>
+                                          {(weekDay) => (
+                                            <DatePickerTableHeader>
+                                              {weekDay().short}
+                                            </DatePickerTableHeader>
+                                          )}
+                                        </Index>
+                                      </DatePickerTableRow>
+                                    </DatePickerTableHead>
+                                    <DatePickerTableBody>
+                                      <Index each={context().weeks}>
+                                        {(week) => (
+                                          <DatePickerTableRow>
+                                            <Index each={week()}>
+                                              {(day) => (
+                                                <DatePickerTableCell
+                                                  value={day()}
+                                                >
+                                                  <DatePickerTableCellTrigger>
+                                                    {day().day}
+                                                  </DatePickerTableCellTrigger>
+                                                </DatePickerTableCell>
+                                              )}
+                                            </Index>
+                                          </DatePickerTableRow>
                                         )}
                                       </Index>
-                                    </DatePickerTableRow>
-                                  )}
-                                </Index>
-                              </DatePickerTableBody>
-                            </DatePickerTable>
-                          </div>
-                        </>
-                      );
-                    }}
-                  </DatePickerContext>
-                </DatePickerView>
-                <DatePickerView view="month">
-                  <DatePickerContext>
-                    {(context) => (
-                      <>
-                        <DatePickerViewControl>
-                          <DatePickerViewTrigger>
-                            <DatePickerRangeText />
-                          </DatePickerViewTrigger>
-                        </DatePickerViewControl>
-                        <DatePickerTable>
-                          <DatePickerTableBody>
-                            <Index
-                              each={context().getMonthsGrid({
-                                columns: 4,
-                                format: "short",
-                              })}
-                            >
-                              {(months) => (
-                                <DatePickerTableRow>
-                                  <Index each={months()}>
-                                    {(month) => (
-                                      <DatePickerTableCell
-                                        value={month().value}
-                                      >
-                                        <DatePickerTableCellTrigger>
-                                          {month().label}
-                                        </DatePickerTableCellTrigger>
-                                      </DatePickerTableCell>
+                                    </DatePickerTableBody>
+                                  </DatePickerTable>
+                                </div>
+                              </>
+                            );
+                          }}
+                        </DatePickerContext>
+                      </DatePickerView>
+                      <DatePickerView view="month">
+                        <DatePickerContext>
+                          {(context) => (
+                            <>
+                              <DatePickerViewControl>
+                                <DatePickerViewTrigger>
+                                  <DatePickerRangeText />
+                                </DatePickerViewTrigger>
+                              </DatePickerViewControl>
+                              <DatePickerTable>
+                                <DatePickerTableBody>
+                                  <Index
+                                    each={context().getMonthsGrid({
+                                      columns: 4,
+                                      format: "short",
+                                    })}
+                                  >
+                                    {(months) => (
+                                      <DatePickerTableRow>
+                                        <Index each={months()}>
+                                          {(month) => (
+                                            <DatePickerTableCell
+                                              value={month().value}
+                                            >
+                                              <DatePickerTableCellTrigger>
+                                                {month().label}
+                                              </DatePickerTableCellTrigger>
+                                            </DatePickerTableCell>
+                                          )}
+                                        </Index>
+                                      </DatePickerTableRow>
                                     )}
                                   </Index>
-                                </DatePickerTableRow>
-                              )}
-                            </Index>
-                          </DatePickerTableBody>
-                        </DatePickerTable>
-                      </>
-                    )}
-                  </DatePickerContext>
-                </DatePickerView>
-                <DatePickerView view="year">
-                  <DatePickerContext>
-                    {(context) => (
-                      <>
-                        <DatePickerViewControl>
-                          <DatePickerViewTrigger>
-                            <DatePickerRangeText />
-                          </DatePickerViewTrigger>
-                        </DatePickerViewControl>
-                        <DatePickerTable>
-                          <DatePickerTableBody>
-                            <Index
-                              each={context().getYearsGrid({
-                                columns: 4,
-                              })}
-                            >
-                              {(years) => (
-                                <DatePickerTableRow>
-                                  <Index each={years()}>
-                                    {(year) => (
-                                      <DatePickerTableCell value={year().value}>
-                                        <DatePickerTableCellTrigger>
-                                          {year().label}
-                                        </DatePickerTableCellTrigger>
-                                      </DatePickerTableCell>
+                                </DatePickerTableBody>
+                              </DatePickerTable>
+                            </>
+                          )}
+                        </DatePickerContext>
+                      </DatePickerView>
+                      <DatePickerView view="year">
+                        <DatePickerContext>
+                          {(context) => (
+                            <>
+                              <DatePickerViewControl>
+                                <DatePickerViewTrigger>
+                                  <DatePickerRangeText />
+                                </DatePickerViewTrigger>
+                              </DatePickerViewControl>
+                              <DatePickerTable>
+                                <DatePickerTableBody>
+                                  <Index
+                                    each={context().getYearsGrid({
+                                      columns: 4,
+                                    })}
+                                  >
+                                    {(years) => (
+                                      <DatePickerTableRow>
+                                        <Index each={years()}>
+                                          {(year) => (
+                                            <DatePickerTableCell
+                                              value={year().value}
+                                            >
+                                              <DatePickerTableCellTrigger>
+                                                {year().label}
+                                              </DatePickerTableCellTrigger>
+                                            </DatePickerTableCell>
+                                          )}
+                                        </Index>
+                                      </DatePickerTableRow>
                                     )}
                                   </Index>
-                                </DatePickerTableRow>
-                              )}
-                            </Index>
-                          </DatePickerTableBody>
-                        </DatePickerTable>
-                      </>
-                    )}
-                  </DatePickerContext>
-                </DatePickerView>
-              </DatePickerContent>
-            </DatePickerPositioner>
-          </Portal>
-        </DatePicker>
-      </div>
+                                </DatePickerTableBody>
+                              </DatePickerTable>
+                            </>
+                          )}
+                        </DatePickerContext>
+                      </DatePickerView>
+                    </DatePickerContent>
+                  </DatePickerPositioner>
+                </Portal>
+              </DatePicker>
+            </div>
+          );
+        }}
+      />
 
-      <TextFieldRoot>
-        <TextFieldLabel>Description</TextFieldLabel>
-        <TextField
-          placeholder="Description"
-          value={description()}
-          onInput={(e) => setDescription(e.currentTarget.value)}
-        />
-      </TextFieldRoot>
+      <form.Field
+        name="description"
+        children={(field) => (
+          <TextFieldRoot>
+            <TextFieldLabel>Description</TextFieldLabel>
+            <TextField
+              placeholder="Description"
+              value={field().state.value || ""}
+              onInput={(e) => field().handleChange(e.currentTarget.value)}
+            />
+          </TextFieldRoot>
+        )}
+      />
 
-      <div class="flex flex-col gap-1">
-        <label class="font-medium">Category</label>
-        <Combobox
-          value={category()}
-          onChange={(value) => {
-            if (!value) return;
-            setCategory(value);
-            setNewCategory("");
-          }}
-          options={categories()}
-          placeholder="Select or enter category"
-          itemComponent={(props) => (
-            <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
-          )}
-        >
-          <ComboboxTrigger>
-            <ComboboxInput value={category()} />
-          </ComboboxTrigger>
-          <ComboboxContent class="overflow-y-auto max-h-[200px]" />
-        </Combobox>
-      </div>
+      <form.Field
+        name="category"
+        validators={{
+          onChange: z.string().min(1, "Category is required"),
+        }}
+        children={(field) => (
+          <TextFieldRoot
+            validationState={
+              field().state.meta.errors.length ? "invalid" : "valid"
+            }
+          >
+            <TextFieldLabel>Category</TextFieldLabel>
+            <Combobox
+              value={field().state.value}
+              onInput={(e) => {
+                // @ts-expect-error the field actually exists
+                field().handleChange(e.target.value);
+              }}
+              onChange={(value) => {
+                if (!value) return;
+                field().handleChange(value);
+              }}
+              options={categories()}
+              placeholder="Select or enter category"
+              disallowEmptySelection={false}
+              itemComponent={(props) => (
+                <ComboboxItem {...props}>{props.item.rawValue}</ComboboxItem>
+              )}
+            >
+              <ComboboxTrigger>
+                <ComboboxInput value={field().state.value} />
+              </ComboboxTrigger>
+              <ComboboxContent class="overflow-y-auto max-h-[200px]" />
+            </Combobox>
 
-      <TextFieldRoot validationState={isCategoryValid() ? "valid" : "invalid"}>
-        <TextFieldLabel>New category</TextFieldLabel>
-        <TextField
-          placeholder="New category"
-          value={newCategory()}
-          onChange={(e) => {
-            setCategory("");
-            setNewCategory(e.currentTarget.value);
-          }}
-        />
-        <Show when={!isCategoryValid()}>
-          <TextFieldErrorMessage>
-            Either select a category or enter a new one
-          </TextFieldErrorMessage>
-        </Show>
-      </TextFieldRoot>
+            <TextFieldErrorMessage>
+              {field().state.meta.errors[0]}
+            </TextFieldErrorMessage>
+          </TextFieldRoot>
+        )}
+      />
 
-      <TextFieldRoot
-        validationState={isRecurrenceValueValid().ok ? "valid" : "invalid"}
-      >
-        <TextFieldLabel>Recurrence Value</TextFieldLabel>
-        <TextField
-          placeholder="Recurrence Value"
-          value={recurrenceValue()}
-          onChange={(e) => setRecurrenceValue(e.currentTarget.value)}
-          required
-        />
-        <Show when={!isRecurrenceValueValid().ok}>
-          <TextFieldErrorMessage>
-            {isRecurrenceValueValid().err}
-          </TextFieldErrorMessage>
-        </Show>
-      </TextFieldRoot>
+      <form.Field
+        name="recurrence_value"
+        validators={{
+          onChange: z.string().refine(
+            (value) => validateOccurrence(value).ok,
+            (value) => ({
+              message: validateOccurrence(value).err || "Invalid format",
+            }),
+          ),
+        }}
+        children={(field) => (
+          <TextFieldRoot
+            validationState={
+              field().state.meta.errors.length ? "invalid" : "valid"
+            }
+          >
+            <TextFieldLabel>Recurrence Value</TextFieldLabel>
+            <TextField
+              placeholder="Recurrence Value"
+              value={field().state.value}
+              onInput={(e) => field().handleChange(e.currentTarget.value)}
+              required
+            />
+            <TextFieldErrorMessage>
+              {field().state.meta.errors[0]}
+            </TextFieldErrorMessage>
+          </TextFieldRoot>
+        )}
+      />
 
-      <Button
-        type="submit"
-        disabled={mutation.isPending || !isAllFieldsValid()}
-      >
-        {mutation.isPending ? "Saving..." : "Save Changes"}
-      </Button>
+      <form.Subscribe
+        selector={(state) => ({
+          canSubmit: state.canSubmit,
+          isSubmitting: state.isSubmitting,
+        })}
+        children={(state) => (
+          <Button
+            type="submit"
+            disabled={!state().canSubmit || state().isSubmitting}
+          >
+            {state().isSubmitting ? "Creating..." : "Create Transaction"}
+          </Button>
+        )}
+      />
     </form>
   );
 };
