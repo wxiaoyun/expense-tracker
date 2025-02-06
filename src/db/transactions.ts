@@ -63,7 +63,7 @@ const listTransactions = async (query?: {
     offset = 0,
     orderBy = ["transaction_date", "DESC"],
     categories = [],
-    checked
+    checked,
   } = query ?? {};
 
   if (!validOrderBy.has(orderBy[0])) {
@@ -86,10 +86,7 @@ const listTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
-  const checkedClause =
-    checked !== undefined
-      ? `AND checked = ${checked}`
-      : "";
+  const checkedClause = checked !== undefined ? `AND checked = ${checked}` : "";
 
   console.info(
     "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o, categories %o",
@@ -177,10 +174,7 @@ const summarizeTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
-  const checkedClause =
-    checked !== undefined
-      ? `AND checked = ${checked}`
-      : "";
+  const checkedClause = checked !== undefined ? `AND checked = ${checked}` : "";
 
   const result: {
     balance: number;
