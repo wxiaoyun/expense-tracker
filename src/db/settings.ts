@@ -39,43 +39,17 @@ const getSetting = async (key: string, defaultValue?: string) => {
 };
 
 const setSetting = async <T = string>(key: string, value: T) => {
-  const existing = await getSetting(key);
-  const now = new Date().getTime();
-
-  if (!existing) {
-    console.info(
-      "[DB][setSetting] no existing result found for key '%s', inserting",
-      key,
-    );
-
-    const builder = sql
-      .insert({
-        key,
-        value,
-        created_at: now,
-        updated_at: now,
-      })
-      .into(SETTINGS_TABLE);
-
-    const q = builder.toSQL();
-    console.info("[DB][setSetting] query ", q);
-
-    const result = await db.execute(q.sql, q.bindings as unknown[]);
-    return result.rowsAffected === 1;
-  }
-
-  console.log(
-    "[DB][setSetting] existing result found for key '%s', updating",
-    key,
-  );
-
+  const now = Date.now();
   const builder = sql
-    .update({
+    .insert({
+      key,
       value,
+      created_at: now,
       updated_at: now,
     })
-    .from(SETTINGS_TABLE)
-    .where("key", key);
+    .into(SETTINGS_TABLE)
+    .onConflict("key")
+    .merge(["value", "updated_at"]);
 
   const q = builder.toSQL().toNative();
   console.info("[DB][setSetting] query ", q);
