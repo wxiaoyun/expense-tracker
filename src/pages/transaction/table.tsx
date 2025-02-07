@@ -216,17 +216,18 @@ const fuzzyFilter = (
 };
 
 export const TransactionTable = () => {
-  const { dateRange } = useDateRange();
   const [sorting, setSorting] = createSignal<SortingState>([]);
+  const { dateRange } = useDateRange();
   const [globalFilter, setGlobalFilter] = useSearchTransactionParams();
   const [selectedCategories] = useTransactionCategoryParams();
   const [verified] = useVerifiedTransactionParams();
-  const verifiedNum = () => {
+
+  const verifiedNum = createMemo(() => {
     if (verified() === "All") {
       return undefined;
     }
     return verified() === "Verified" ? 1 : 0;
-  };
+  });
 
   const queryParam = createMemo(() => {
     const srt = sorting();
@@ -380,11 +381,8 @@ export const TransactionTable = () => {
 
               // Workaround: manually access signals such that Solidjs tracks them as dependency and re-run the effect
               createEffect(() => {
-                sorting();
-                dateRange();
-                globalFilter();
                 //eslint-disable-next-line
-                item.start;
+                item.size;
                 virtualizer.measureElement(tr);
               });
 
