@@ -4,42 +4,12 @@ import { createRecurringTransactionCategoriesQuery } from "@/query/recurring-tra
 import {
   createInfiniteTransactionListQuery,
   createTransactionCategoriesQuery,
-  createTransactionListQuery,
   createTransactionSummarizeByCategoryQuery,
 } from "@/query/transactions";
-import { useSearchParams } from "@solidjs/router";
 import { ChartConfiguration } from "chart.js";
 import { createMemo } from "solid-js";
 import { useDateRange } from "./params";
 import { useCurrency, useResolvedTheme } from "./setting";
-
-export const useTransactionParams = (prefix = "") => {
-  const [searchParams] = useSearchParams();
-
-  const amount = createMemo(
-    () => (searchParams[`${prefix}amount`] as string) || "",
-  );
-  const date = createMemo(() => {
-    const date = searchParams[`${prefix}date`] as string;
-    if (!date) {
-      return new Date();
-    }
-    return new Date(date);
-  });
-  const description = createMemo(
-    () => (searchParams[`${prefix}description`] as string) || "",
-  );
-  const category = createMemo(
-    () => (searchParams[`${prefix}category`] as string) || "",
-  );
-
-  return {
-    amount,
-    date,
-    description,
-    category,
-  };
-};
 
 export const useTransactionCategories = () => {
   const query = createTransactionCategoriesQuery();
@@ -57,17 +27,10 @@ export const useRecurringTransactionCategories = () => {
   return categories;
 };
 
-export const useTransactions = () => {
-  const { dateRange } = useDateRange();
-  return createTransactionListQuery(dateRange);
-};
-
 export const useInfiniteTransactions = (
   dependencies?: () => Parameters<typeof transactions.list>[0],
 ) => {
-  const { dateRange } = useDateRange();
-  const params = () => ({ ...dependencies?.(), ...dateRange() });
-  return createInfiniteTransactionListQuery(params);
+  return createInfiniteTransactionListQuery(dependencies ?? (() => ({})));
 };
 
 export const useTransactionChartConfig = () => {

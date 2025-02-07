@@ -1,5 +1,6 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginBabel } from "@rsbuild/plugin-babel";
+import { pluginNodePolyfill } from "@rsbuild/plugin-node-polyfill";
 import { pluginSolid } from "@rsbuild/plugin-solid";
 import { codes } from "currency-codes";
 import { resolve } from "path";
@@ -75,6 +76,9 @@ export default defineConfig({
         }
       : undefined,
   },
+  output: {
+    polyfill: "usage",
+  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
@@ -91,5 +95,6 @@ export default defineConfig({
       include: /\.(?:jsx|tsx)$/,
     }),
     pluginSolid(),
+    pluginNodePolyfill(),
   ],
 });

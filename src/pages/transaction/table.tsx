@@ -235,6 +235,8 @@ export const TransactionTable = () => {
       ? ["transaction_date", "DESC"]
       : [firstSorting.id, firstSorting.desc ? "DESC" : "ASC"];
     return {
+      start: dateRange().start,
+      end: dateRange().end,
       limit: 50,
       categories: selectedCategories(),
       orderBy: orderBy as [keyof Transaction, "ASC" | "DESC"],

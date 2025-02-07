@@ -1,7 +1,13 @@
 import { validateOccurrence } from "@/libs/date";
 import { parseExpression } from "cron-parser";
 import { z } from "zod";
-import { db, transactions } from ".";
+import {
+  db,
+  RECURRING_TRANSACTIONS_TABLE,
+  sql,
+  transactions,
+  TRANSACTIONS_TABLE,
+} from ".";
 import { Transaction } from "./transactions";
 
 export const RecurringTransactionSchema = z.object({
@@ -22,9 +28,17 @@ export const RecurringTransactionSchema = z.object({
 export type RecurringTransaction = z.infer<typeof RecurringTransactionSchema>;
 
 const getRecurringTransaction = async (id: number) => {
+  const builder = sql
+    .select()
+    .from(RECURRING_TRANSACTIONS_TABLE)
+    .where("id", id);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][getRecurringTransaction] query ", q);
+
   const result: RecurringTransaction[] = await db.select(
-    "SELECT * FROM recurring_transactions WHERE id = $1",
-    [id],
+    q.sql,
+    q.bindings as unknown[],
   );
 
   if (result.length === 0) {
@@ -43,27 +57,26 @@ const listRecurringTransactions = async (query?: {
 }) => {
   const { start, end, categories = [] } = query ?? {};
 
-  const categoryClause =
-    categories.length > 0
-      ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
-      : "";
-
-  console.info(
-    "[DB][listRecurringTransactions] start %s, end %s, categories %o",
-    start,
-    end,
-    categories,
-  );
-
-  const result: RecurringTransaction[] = await db.select(
-    `SELECT * FROM recurring_transactions WHERE start_date BETWEEN $1 AND $2 ${categoryClause} ORDER BY created_at DESC`,
-    [
+  const builder = sql
+    .select()
+    .from(RECURRING_TRANSACTIONS_TABLE)
+    .whereBetween("start_date", [
       start?.getTime() ?? 0,
       end?.getTime() ?? new Date().getTime(),
-      ...categories,
-    ],
-  );
+    ])
+    .orderBy("created_at", "desc");
 
+  if (categories.length > 0) {
+    builder.whereIn("category", categories);
+  }
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listRecurringTransactions] query ", q);
+
+  const result: RecurringTransaction[] = await db.select(
+    q.sql,
+    q.bindings as unknown[],
+  );
   console.info("[DB][listRecurringTransactions] result %o", result);
   return result;
 };
@@ -71,28 +84,26 @@ const listRecurringTransactions = async (query?: {
 const createRecurringTransaction = async (
   transaction: BeforeCreate<RecurringTransaction>,
 ) => {
-  const now = new Date().getTime();
+  const now = Date.now();
+  const builder = sql
+    .insert({
+      amount: transaction.amount,
+      category: transaction.category,
+      description: transaction.description,
+      start_date: transaction.start_date,
+      recurrence_value: transaction.recurrence_value,
+      created_at: now,
+      updated_at: now,
+    })
+    .into(RECURRING_TRANSACTIONS_TABLE);
 
-  const result = await db.execute(
-    "INSERT INTO recurring_transactions (amount, category, description, start_date, recurrence_value, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      transaction.amount,
-      transaction.category,
-      transaction.description,
-      transaction.start_date,
-      transaction.recurrence_value,
-      now,
-      now,
-    ],
-  );
+  const q = builder.toSQL().toNative();
+  console.info("[DB][createRecurringTransaction] query ", q);
 
-  if (!result.lastInsertId) {
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
+
+  if (!result.lastInsertId || result.rowsAffected !== 1) {
     console.warn("[DB][createRecurringTransaction] no result");
-    return null;
-  }
-
-  if (result.rowsAffected === 0) {
-    console.warn("[DB][createRecurringTransaction] no rows affected");
     return null;
   }
 
@@ -100,46 +111,55 @@ const createRecurringTransaction = async (
   return {
     ...transaction,
     id: result.lastInsertId,
+    created_at: now,
+    updated_at: now,
   } as RecurringTransaction;
 };
 
 const updateRecurringTransaction = async (
   transaction: BeforeUpdate<RecurringTransaction>,
 ) => {
-  const now = new Date().getTime();
-  const updatedTransaction = {
-    ...transaction,
-    updated_at: now,
-  } as RecurringTransaction;
-  const result = await db.execute(
-    "UPDATE recurring_transactions SET amount = $1, category = $2, description = $3, start_date = $4, last_charged = $5, recurrence_value = $6, updated_at = $7 WHERE id = $8",
-    [
-      updatedTransaction.amount,
-      updatedTransaction.category,
-      updatedTransaction.description,
-      updatedTransaction.start_date,
-      updatedTransaction.last_charged,
-      updatedTransaction.recurrence_value,
-      updatedTransaction.updated_at,
-      updatedTransaction.id,
-    ],
-  );
+  const now = Date.now();
+  const builder = sql
+    .update({
+      amount: transaction.amount,
+      category: transaction.category,
+      description: transaction.description,
+      start_date: transaction.start_date,
+      last_charged: transaction.last_charged,
+      recurrence_value: transaction.recurrence_value,
+      updated_at: now,
+    })
+    .from(RECURRING_TRANSACTIONS_TABLE)
+    .where("id", transaction.id);
 
-  if (result.rowsAffected === 0) {
+  const q = builder.toSQL().toNative();
+  console.info("[DB][updateRecurringTransaction] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
+
+  if (result.rowsAffected !== 1) {
     console.warn("[DB][updateRecurringTransaction] no rows affected");
     return null;
   }
 
   console.info("[DB][updateRecurringTransaction] result %o", result);
-  return updatedTransaction;
+  return {
+    ...transaction,
+    updated_at: now,
+  } as RecurringTransaction;
 };
 
 const deleteRecurringTransaction = async (id: number) => {
-  const result = await db.execute(
-    "DELETE FROM recurring_transactions WHERE id = $1",
-    [id],
-  );
+  const builder = sql
+    .delete()
+    .from(RECURRING_TRANSACTIONS_TABLE)
+    .where("id", id);
 
+  const q = builder.toSQL().toNative();
+  console.info("[DB][deleteRecurringTransaction] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
   console.info("[DB][deleteRecurringTransaction] result %o", result);
   return result.rowsAffected > 0;
 };
@@ -219,10 +239,15 @@ const incurRecurringTransaction = async (id: number) => {
 };
 
 const listTransactionsByRecurringTransactionId = async (id: number) => {
-  const result = await db.select(
-    "SELECT * FROM transactions WHERE recurring_transaction_id = $1",
-    [id],
-  );
+  const builder = sql
+    .select()
+    .from(TRANSACTIONS_TABLE)
+    .where("recurring_transaction_id", id);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listTransactionsByRecurringTransactionId] query ", q);
+
+  const result = await db.select(q.sql, q.bindings as unknown[]);
   return result as Transaction[];
 };
 
@@ -233,51 +258,49 @@ const batchCreateRecurringTransactions = async (
     return [];
   }
 
-  console.info(
-    "[DB][batchCreateRecurringTransactions] transactions %o",
-    transactions,
-  );
+  const now = Date.now();
+  const builder = sql
+    .insert(
+      transactions.map((transaction) => ({
+        amount: transaction.amount,
+        category: transaction.category,
+        description: transaction.description,
+        start_date: transaction.start_date,
+        recurrence_value: transaction.recurrence_value,
+        created_at: now,
+        updated_at: now,
+      })),
+    )
+    .into(RECURRING_TRANSACTIONS_TABLE);
 
-  const placeholders = transactions
-    .map((_, index) => {
-      const offset = index * 7;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
-    })
-    .join(", ");
+  const q = builder.toSQL().toNative();
+  console.info("[DB][batchCreateRecurringTransactions] query ", q);
 
-  const now = new Date().getTime();
-
-  const values = transactions.flatMap((transaction) => [
-    transaction.amount,
-    transaction.category,
-    transaction.description,
-    transaction.start_date,
-    transaction.recurrence_value,
-    now,
-    now,
-  ]);
-
-  const result = await db.execute(
-    `INSERT INTO recurring_transactions (amount, category, description, start_date, recurrence_value, created_at, updated_at) 
-     VALUES ${placeholders} RETURNING id`,
-    values,
-  );
-
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
   console.info("[DB][batchCreateRecurringTransactions] result %o", result);
   return result.rowsAffected === transactions.length;
 };
 
 const clearRecurringTransactions = async () => {
-  const result = await db.execute("DELETE FROM recurring_transactions");
+  const builder = sql.delete().from(RECURRING_TRANSACTIONS_TABLE);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][clearRecurringTransactions] query ", q);
+
+  const result = await db.execute(q.sql);
   console.info("[DB][clearRecurringTransactions] result %o", result);
   return result.rowsAffected > 0;
 };
 
 const listCategories = async () => {
-  const result: Pick<RecurringTransaction, "category">[] = await db.select(
-    "SELECT DISTINCT category FROM recurring_transactions",
-  );
+  const builder = sql.distinct(["category"]).from(RECURRING_TRANSACTIONS_TABLE);
 
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listCategories] query ", q);
+
+  const result: Pick<RecurringTransaction, "category">[] = await db.select(
+    q.sql,
+  );
   console.log(
     "[DB][listCategories] result found for categories, returning %o",
     result,
