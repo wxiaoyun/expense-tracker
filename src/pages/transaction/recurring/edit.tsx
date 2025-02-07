@@ -39,7 +39,7 @@ import {
   createRecurringTransactionQuery,
   invalidateRecurringTransactionsQueries,
 } from "@/query/recurring-transactions";
-import { useRecurringTransactionCategories } from "@/signals/transactions";
+import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
@@ -75,7 +75,7 @@ const Header = () => {
 const EditForm = () => {
   const params = useParams();
   const navigate = useNavigate();
-  const categories = useRecurringTransactionCategories();
+  const categories = useTransactionCategories();
 
   const query = createRecurringTransactionQuery(() => Number(params.id));
 

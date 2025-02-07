@@ -36,7 +36,7 @@ import {
 import { recurringTransactions } from "@/db";
 import { validateOccurrence } from "@/libs/date";
 import { invalidateRecurringTransactionsQueries } from "@/query/recurring-transactions";
-import { useRecurringTransactionCategories } from "@/signals/transactions";
+import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
@@ -85,7 +85,7 @@ const Header = () => {
 
 const NewForm = () => {
   const navigate = useNavigate();
-  const categories = useRecurringTransactionCategories();
+  const categories = useTransactionCategories();
 
   const defaultValues = createMemo(() => ({
     amount: 0,

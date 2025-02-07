@@ -56,14 +56,13 @@ const listRecurringTransactions = async (query?: {
   categories?: string[];
 }) => {
   const { start, end, categories = [] } = query ?? {};
+  const startDate = start?.getTime() ?? 0;
+  const endDate = end?.getTime() ?? Number.MAX_SAFE_INTEGER;
 
   const builder = sql
     .select()
     .from(RECURRING_TRANSACTIONS_TABLE)
-    .whereBetween("start_date", [
-      start?.getTime() ?? 0,
-      end?.getTime() ?? new Date().getTime(),
-    ])
+    .whereBetween("start_date", [startDate, endDate])
     .orderBy("created_at", "desc");
 
   if (categories.length > 0) {

@@ -12,18 +12,16 @@ import { useDateRange } from "./params";
 import { useCurrency, useResolvedTheme } from "./setting";
 
 export const useTransactionCategories = () => {
-  const query = createTransactionCategoriesQuery();
-  const categories = createMemo(() => {
-    return (query.data ?? []).map((category) => category.category);
-  });
-  return categories;
-};
+  const qt = createTransactionCategoriesQuery();
+  const rtq = createRecurringTransactionCategoriesQuery();
 
-export const useRecurringTransactionCategories = () => {
-  const query = createRecurringTransactionCategoriesQuery();
   const categories = createMemo(() => {
-    return (query.data ?? []).map((category) => category.category);
+    const cat = new Set<string>();
+    (qt.data ?? []).forEach((category) => cat.add(category.category));
+    (rtq.data ?? []).forEach((category) => cat.add(category.category));
+    return Array.from(cat);
   });
+
   return categories;
 };
 
