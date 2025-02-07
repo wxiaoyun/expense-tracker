@@ -1,6 +1,6 @@
 import { chunk } from "lodash";
 import { z } from "zod";
-import { db } from ".";
+import { db, sql, TRANSACTIONS_TABLE } from ".";
 
 export const TransactionSchema = z.object({
   id: z.number().int().positive(),
@@ -26,10 +26,12 @@ const validOrderBy = new Set([
 ]);
 
 const getTransaction = async (id: number) => {
-  const result: Transaction[] = await db.select(
-    "SELECT * FROM transactions WHERE id = $1",
-    [id],
-  );
+  const builder = sql.select().from(TRANSACTIONS_TABLE).where("id", id);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][getTransaction] query ", q);
+
+  const result: Transaction[] = await db.select(q.sql, q.bindings as unknown[]);
 
   if (result.length === 0) {
     console.warn(
@@ -39,12 +41,12 @@ const getTransaction = async (id: number) => {
     return null;
   }
 
-  console.log(
+  console.info(
     "[DB][getTransaction] result found for id %s, returning %o",
     id,
     result[0],
   );
-  return result[0] as Transaction;
+  return result[0];
 };
 
 const listTransactions = async (query?: {
@@ -73,7 +75,6 @@ const listTransactions = async (query?: {
     );
     return {
       items: [],
-      total: 0,
       nextOffset: null,
     };
   }
@@ -81,75 +82,36 @@ const listTransactions = async (query?: {
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
-  const categoryClause =
-    categories.length > 0
-      ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
-      : "";
+  const builder = sql
+    .select()
+    .from(TRANSACTIONS_TABLE)
+    .whereBetween("transaction_date", [startDate, endDate])
+    .orderBy(orderBy[0], orderBy[1])
+    .limit(limit)
+    .offset(offset);
 
-  const verifiedClause =
-    verified !== undefined ? `AND verified = ${verified}` : "";
-
-  console.info(
-    "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o, categories %o",
-    startDate,
-    endDate,
-    limit,
-    offset,
-    orderBy,
-    categories,
-  );
-
-  const countResult: { count: number }[] = await db.select(
-    `SELECT COUNT(*) as count FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}`,
-    [startDate, endDate, ...categories],
-  );
-
-  if (countResult.length === 0) {
-    console.warn(
-      "[DB][listTransactions] no result found for start %s and end %s, returning null",
-      startDate,
-      endDate,
-    );
-    return {
-      items: [],
-      total: 0,
-      nextOffset: null,
-    };
+  if (categories.length > 0) {
+    builder.whereIn("category", categories);
   }
 
-  console.info(
-    "[DB][listTransactions] total transactions count %d for start %s and end %s, orderBy %o",
-    countResult[0].count,
-    startDate,
-    endDate,
-    orderBy,
-  );
+  if (verified !== undefined) {
+    builder.where("verified", verified);
+  }
 
-  const result: Transaction[] = await db.select(
-    `SELECT * FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}
-     ORDER BY ${orderBy[0]} ${orderBy[1]} 
-     LIMIT $${categories.length + 3} OFFSET $${categories.length + 4}`,
-    [startDate, endDate, ...categories, limit, offset],
-  );
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listTransactions] query ", q);
 
-  const nextOffset = result.length === 0 ? null : offset + limit;
+  const result: Transaction[] = await db.select(q.sql, q.bindings as unknown[]);
 
   console.info(
-    "[DB][listTransactions] result found for start %s, end %s, verified %s, limit %s, offset %s, orderBy %o, returning %o",
-    startDate,
-    endDate,
-    verified,
-    limit,
-    offset,
-    orderBy,
+    "[DB][listTransactions] result found for %o, returning %o",
+    q,
     result,
   );
 
+  const nextOffset = result.length === 0 ? null : offset + limit;
   return {
     items: result,
-    total: countResult[0].count,
     nextOffset,
   };
 };
@@ -164,73 +126,71 @@ const summarizeTransactions = async (query?: {
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
-  console.info(
-    "[DB][summarizeTransactions] startDate %s, endDate %s, categories %o",
-    startDate,
-    endDate,
-    categories,
-  );
+  const builder = sql
+    .select(
+      sql.raw("SUM(amount) as balance"),
+      sql.raw("SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income"),
+      sql.raw("SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense"),
+    )
+    .from(TRANSACTIONS_TABLE)
+    .whereBetween("transaction_date", [startDate, endDate]);
 
-  const categoryClause =
-    categories.length > 0
-      ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
-      : "";
+  if (categories.length > 0) {
+    builder.whereIn("category", categories);
+  }
 
-  const verifiedClause =
-    verified !== undefined ? `AND verified = ${verified}` : "";
+  if (verified !== undefined) {
+    builder.where("verified", verified);
+  }
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][summarizeTransactions] query ", q);
 
   const result: {
     balance: number;
     income: number;
     expense: number;
-  }[] = await db.select(
-    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}`,
-    [startDate, endDate, ...categories],
-  );
+  }[] = await db.select(q.sql, q.bindings as unknown[]);
 
   if (result.length === 0) {
     console.warn(
-      "[DB][summarizeTransactions] no result found for start %s and end %s, categories %o, returning null",
-      startDate,
-      endDate,
-      categories,
+      "[DB][summarizeTransactions] no result found for %o, returning null",
+      query,
     );
     return null;
   }
 
   console.info(
-    "[DB][summarizeTransactions] result found for start %s and end %s, categories %o, returning %o",
-    startDate,
-    endDate,
-    categories,
+    "[DB][summarizeTransactions] result found for %o, returning %o",
+    query,
     result[0],
   );
-
   return result[0];
 };
 
 const createTransaction = async (
   transaction: BeforeCreate<Transaction>,
 ): Promise<Option<Transaction>> => {
-  const now = new Date().getTime();
+  const now = Date.now();
+  const builder = sql(TRANSACTIONS_TABLE).insert({
+    amount: transaction.amount,
+    transaction_date: transaction.transaction_date,
+    category: transaction.category,
+    description: transaction.description,
+    recurring_transaction_id: transaction.recurring_transaction_id,
+    verified: transaction.verified ?? 0,
+    created_at: now,
+    updated_at: now,
+  });
 
-  const result = await db.execute(
-    "INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, verified, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-    [
-      transaction.amount,
-      transaction.transaction_date,
-      transaction.category,
-      transaction.description,
-      transaction.recurring_transaction_id,
-      transaction.verified ?? 0,
-      now,
-      now,
-    ],
-  );
+  const q = builder.toSQL().toNative();
+  console.info("[DB][createTransaction] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
 
   if (!result.lastInsertId || result.rowsAffected !== 1) {
     console.warn(
-      "[DB][createTransaction] no result found for transaction %s, returning null",
+      "[DB][createTransaction] failed to create transaction %o, returning null",
       transaction,
     );
     return null;
@@ -252,34 +212,37 @@ const createTransaction = async (
 const updateTransaction = async (
   transaction: BeforeUpdate<Transaction>,
 ): Promise<Option<Transaction>> => {
-  const now = new Date().getTime();
+  const now = Date.now();
+  const builder = sql
+    .update({
+      amount: transaction.amount,
+      transaction_date: transaction.transaction_date,
+      category: transaction.category,
+      description: transaction.description,
+      recurring_transaction_id: transaction.recurring_transaction_id,
+      verified: transaction.verified ?? 0,
+      updated_at: now,
+    })
+    .from(TRANSACTIONS_TABLE)
+    .where("id", transaction.id);
 
-  const result = await db.execute(
-    "UPDATE transactions SET amount = $1, transaction_date = $2, category = $3, description = $4, recurring_transaction_id = $5, verified = $6, updated_at = $7 WHERE id = $8",
-    [
-      transaction.amount,
-      transaction.transaction_date,
-      transaction.category,
-      transaction.description,
-      transaction.recurring_transaction_id,
-      transaction.verified ?? 0,
-      now,
-      transaction.id,
-    ],
-  );
+  const q = builder.toSQL().toNative();
+  console.info("[DB][updateTransaction] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
 
   if (result.rowsAffected !== 1) {
     console.warn(
-      "[DB][updateTransaction] no result found for transaction %s, returning null",
+      "[DB][updateTransaction] no result found for transaction %o, returning null",
       transaction,
     );
     return null;
   }
 
   console.log(
-    "[DB][updateTransaction] result found for transaction %s, returning %o",
+    "[DB][updateTransaction] result found for transaction %o, returning %o",
     transaction,
-    result.lastInsertId,
+    result.rowsAffected,
   );
   return {
     ...transaction,
@@ -288,17 +251,24 @@ const updateTransaction = async (
 };
 
 const deleteTransaction = async (id: number) => {
-  const result = await db.execute("DELETE FROM transactions WHERE id = $1", [
-    id,
-  ]);
+  const builder = sql.delete().from(TRANSACTIONS_TABLE).where("id", id);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][deleteTransaction] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
+
   console.info("[DB][deleteTransaction] result %o", result);
   return result.rowsAffected > 0;
 };
 
 const listCategories = async () => {
-  const result: Pick<Transaction, "category">[] = await db.select(
-    "SELECT DISTINCT category FROM transactions",
-  );
+  const builder = sql.distinct(["category"]).from(TRANSACTIONS_TABLE);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listCategories] query ", q);
+
+  const result: Pick<Transaction, "category">[] = await db.select(q.sql);
 
   console.log(
     "[DB][listCategories] result found for categories, returning %o",
@@ -308,7 +278,12 @@ const listCategories = async () => {
 };
 
 const clearTransactions = async () => {
-  const result = await db.execute("DELETE FROM transactions");
+  const builder = sql.delete().from(TRANSACTIONS_TABLE);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][clearTransactions] query ", q);
+
+  const result = await db.execute(q.sql);
   console.info("[DB][clearTransactions] result %o", result);
 };
 
@@ -336,30 +311,24 @@ const batchCreateTransactions = async (
     return false;
   }
 
-  const placeholders = transactions
-    .map((_, index) => {
-      const offset = index * 8;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
-    })
-    .join(", ");
-
-  const now = new Date().getTime();
-  const values = transactions.flatMap((transaction) => [
-    transaction.amount,
-    transaction.transaction_date,
-    transaction.category,
-    transaction.description,
-    transaction.recurring_transaction_id,
-    transaction.verified ?? 0,
-    now,
-    now,
-  ]);
-
-  const result = await db.execute(
-    `INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, verified, created_at, updated_at) 
-     VALUES ${placeholders} RETURNING id`,
-    values,
+  const now = Date.now();
+  const builder = sql(TRANSACTIONS_TABLE).insert(
+    transactions.map((transaction) => ({
+      amount: transaction.amount,
+      transaction_date: transaction.transaction_date,
+      category: transaction.category,
+      description: transaction.description,
+      recurring_transaction_id: transaction.recurring_transaction_id,
+      verified: transaction.verified ?? 0,
+      created_at: now,
+      updated_at: now,
+    })),
   );
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][batchCreateTransactions] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
 
   return result.rowsAffected === transactions.length;
 };
@@ -369,35 +338,38 @@ const summarizeByCategory = async (query?: { start?: Date; end?: Date }) => {
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
-  console.info(
-    "[DB][summarizeByCategory] startDate %s, endDate %s",
-    startDate,
-    endDate,
-  );
+  const builder = sql
+    .select(
+      "category",
+      sql.raw("SUM(amount) as balance"),
+      sql.raw("SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income"),
+      sql.raw("SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense"),
+    )
+    .from(TRANSACTIONS_TABLE)
+    .whereBetween("transaction_date", [startDate, endDate])
+    .groupBy("category");
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][summarizeByCategory] query ", q);
 
   const result: {
     category: string;
     balance: number;
     income: number;
     expense: number;
-  }[] = await db.select(
-    "SELECT category, SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 GROUP BY category",
-    [startDate, endDate],
-  );
+  }[] = await db.select(q.sql, q.bindings as unknown[]);
 
   if (result.length === 0) {
     console.warn(
-      "[DB][summarizeByCategory] no result found for start %s and end %s, returning null",
-      startDate,
-      endDate,
+      "[DB][summarizeByCategory] no result found for %o, returning null",
+      query,
     );
     return null;
   }
 
   console.info(
-    "[DB][summarizeByCategory] result found for start %s and end %s, returning %o",
-    startDate,
-    endDate,
+    "[DB][summarizeByCategory] result found for %o, returning %o",
+    query,
     result,
   );
 
@@ -405,11 +377,17 @@ const summarizeByCategory = async (query?: { start?: Date; end?: Date }) => {
 };
 
 const setVerification = async (id: number, verified: number) => {
-  const result = await db.execute(
-    "UPDATE transactions SET verified = $1 WHERE id = $2",
-    [verified, id],
-  );
-  console.info("[DB][setVerification] result %o", result);
+  const builder = sql
+    .update({ verified })
+    .from(TRANSACTIONS_TABLE)
+    .where("id", id);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][setVerification] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
+
+  console.info("[DB][setVerification] result ", result);
   return result.rowsAffected > 0;
 };
 

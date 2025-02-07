@@ -1,19 +1,26 @@
-import { db } from ".";
+import { db, SETTINGS_TABLE, sql } from ".";
 
 export type Setting<T = string> = Record<string, T>;
 
 const listSettings = async () => {
-  const result = await db.select("SELECT * FROM settings");
+  const builder = sql.select().from(SETTINGS_TABLE);
 
+  const q = builder.toSQL().toNative();
+  console.info("[DB][listSettings] query ", q);
+
+  const result = await db.select(q.sql, q.bindings as unknown[]);
   console.info("[DB][listSettings] result %o", result);
+
   return result as Setting[];
 };
 
 const getSetting = async (key: string, defaultValue?: string) => {
-  const result: Setting[] = await db.select(
-    "SELECT * FROM settings WHERE key = $1",
-    [key],
-  );
+  const builder = sql.select().from(SETTINGS_TABLE).where("key", key);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][getSetting] query ", q);
+
+  const result: Setting[] = await db.select(q.sql, q.bindings as unknown[]);
 
   if (result.length === 0) {
     console.info(
@@ -33,7 +40,6 @@ const getSetting = async (key: string, defaultValue?: string) => {
 
 const setSetting = async <T = string>(key: string, value: T) => {
   const existing = await getSetting(key);
-
   const now = new Date().getTime();
 
   if (!existing) {
@@ -41,10 +47,20 @@ const setSetting = async <T = string>(key: string, value: T) => {
       "[DB][setSetting] no existing result found for key '%s', inserting",
       key,
     );
-    const result = await db.execute(
-      "INSERT INTO settings (key, value, created_at, updated_at) VALUES ($1, $2, $3, $4)",
-      [key, value, now, now],
-    );
+
+    const builder = sql
+      .insert({
+        key,
+        value,
+        created_at: now,
+        updated_at: now,
+      })
+      .into(SETTINGS_TABLE);
+
+    const q = builder.toSQL();
+    console.info("[DB][setSetting] query ", q);
+
+    const result = await db.execute(q.sql, q.bindings as unknown[]);
     return result.rowsAffected === 1;
   }
 
@@ -52,16 +68,30 @@ const setSetting = async <T = string>(key: string, value: T) => {
     "[DB][setSetting] existing result found for key '%s', updating",
     key,
   );
-  const result = await db.execute(
-    "UPDATE settings SET value = $2, updated_at = $3 WHERE key = $1",
-    [key, value, now],
-  );
+
+  const builder = sql
+    .update({
+      value,
+      updated_at: now,
+    })
+    .from(SETTINGS_TABLE)
+    .where("key", key);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][setSetting] query ", q);
+
+  const result = await db.execute(q.sql, q.bindings as unknown[]);
   console.info("[DB][setSetting] result %o", result);
   return result.rowsAffected === 1;
 };
 
 const clearSettings = async () => {
-  const result = await db.execute("DELETE FROM settings");
+  const builder = sql.delete().from(SETTINGS_TABLE);
+
+  const q = builder.toSQL().toNative();
+  console.info("[DB][clearSettings] query ", q);
+
+  const result = await db.execute(q.sql);
   console.info("[DB][clearSettings] result %o", result);
   return result.rowsAffected > 0;
 };
