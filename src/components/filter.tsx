@@ -1,13 +1,12 @@
-import { createRecurringTransactionCategoriesQuery } from "@/query/recurring-transactions";
-import { createTransactionCategoriesQuery } from "@/query/transactions";
 import {
   useSearchTransactionParams,
   useTransactionCategoryParams,
 } from "@/signals/params";
+import { useTransactionCategories } from "@/signals/transactions";
 import { debounce } from "lodash";
 import { FaSolidFilter } from "solid-icons/fa";
 import { IoClose, IoSearch } from "solid-icons/io";
-import { Component, createMemo, createSignal, For, Show } from "solid-js";
+import { Component, createSignal, For, Show } from "solid-js";
 import { DOMElement } from "solid-js/jsx-runtime";
 import { Badge } from "./ui/badge";
 import {
@@ -33,6 +32,7 @@ export type ParamsFilterProps = {
 };
 
 export const ParamsFilter: Component<ParamsFilterProps> = (props) => {
+  const categories = useTransactionCategories();
   const [currentQuery, setQuery] = useSearchTransactionParams();
   const [localQuery, setLocalQuery] = createSignal(currentQuery());
 
@@ -50,20 +50,6 @@ export const ParamsFilter: Component<ParamsFilterProps> = (props) => {
 
   const [selectedCategories, setSelectedCategories] =
     useTransactionCategoryParams();
-
-  const categoriesQuery = createTransactionCategoriesQuery();
-  const recurringCategoriesQuery = createRecurringTransactionCategoriesQuery();
-
-  const categories = createMemo(() => {
-    const data = (categoriesQuery.data ?? []).map(
-      (category) => category.category,
-    );
-    const recurringData = (recurringCategoriesQuery.data ?? []).map(
-      (category) => category.category,
-    );
-    const uniqueCategories = new Set([...data, ...recurringData]);
-    return Array.from(uniqueCategories);
-  });
 
   return (
     <Sheet>

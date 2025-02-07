@@ -80,7 +80,7 @@ const listTransactions = async (query?: {
   }
 
   const startDate = start?.getTime() ?? 0;
-  const endDate = end?.getTime() ?? new Date().getTime();
+  const endDate = end?.getTime() ?? Number.MAX_SAFE_INTEGER;
 
   const builder = sql
     .select()
@@ -124,7 +124,7 @@ const summarizeTransactions = async (query?: {
 }) => {
   const { start, end, categories = [], verified } = query ?? {};
   const startDate = start?.getTime() ?? 0;
-  const endDate = end?.getTime() ?? new Date().getTime();
+  const endDate = end?.getTime() ?? Number.MAX_SAFE_INTEGER;
 
   const builder = sql
     .select(
