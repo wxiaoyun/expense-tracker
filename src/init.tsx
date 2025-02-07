@@ -10,9 +10,7 @@ export const init = async () => {
   const res = await Promise.allSettled([initDb()]);
 
   if (res.some((r) => r.status === "rejected")) {
-    console.error(
-      "[Init] Failed to initialize paths or incur due recurring transactions",
-    );
+    console.error(res.filter((r) => r.status === "rejected"));
     throw new Error("Failed to initialize app");
   }
 
