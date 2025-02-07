@@ -347,11 +347,7 @@ const NewForm = () => {
           >
             <TextFieldLabel>Category</TextFieldLabel>
             <Combobox
-              value={field().state.value}
-              onInput={(e) => {
-                // @ts-expect-error the field actually exists
-                field().handleChange(e.target.value);
-              }}
+              onInputChange={field().handleChange}
               onChange={(value) => {
                 if (!value) return;
                 field().handleChange(value);

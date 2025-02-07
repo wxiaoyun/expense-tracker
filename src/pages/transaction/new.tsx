@@ -334,11 +334,7 @@ const TransactionForm = () => {
           >
             <TextFieldLabel>Category</TextFieldLabel>
             <Combobox
-              value={field().state.value}
-              onInput={(e) => {
-                // @ts-expect-error the field actually exists
-                field().handleChange(e.target.value);
-              }}
+              onInputChange={field().handleChange}
               onChange={(value) => {
                 if (!value) return;
                 field().handleChange(value);
@@ -351,7 +347,7 @@ const TransactionForm = () => {
               )}
             >
               <ComboboxTrigger>
-                <ComboboxInput value={field().state.value} />
+                <ComboboxInput />
               </ComboboxTrigger>
               <ComboboxContent class="overflow-y-auto max-h-[200px]" />
             </Combobox>
