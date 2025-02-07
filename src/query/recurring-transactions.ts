@@ -1,6 +1,7 @@
 import recurringTransactions from "@/db/recurring_transactions";
 import { createQuery } from "@tanstack/solid-query";
 import { queryClient } from "./query";
+import { CATEGORIES_QUERY_KEY } from "./transactions";
 
 export const RECURRING_TRANSACTIONS_QUERY_KEY = "recurring-transactions";
 export const INCURRED_QUERY_KEY = "incurred";
@@ -33,5 +34,12 @@ export const createIncurredRecurringTransactionListQuery = (
   return createQuery(() => ({
     queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, INCURRED_QUERY_KEY, id()],
     queryFn: async () => recurringTransactions.listTransactions(id()),
+  }));
+};
+
+export const createRecurringTransactionCategoriesQuery = () => {
+  return createQuery(() => ({
+    queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, CATEGORIES_QUERY_KEY],
+    queryFn: async () => recurringTransactions.listCategories(),
   }));
 };

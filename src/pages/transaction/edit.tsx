@@ -97,7 +97,7 @@ const EditTransactionForm = () => {
           ...value,
         });
         invalidateTransactionQueries();
-        navigate("/transactions");
+        navigate("/");
         toastSuccess("Transaction updated successfully");
       } catch (error) {
         console.error("[UI] Error updating transaction", error);

@@ -7,6 +7,7 @@ export const TransactionCsvSchema = z.tuple([
   z.coerce.number().int().positive(),
   z.string(),
   z.string().optional(),
+  z.coerce.number().optional(),
 ]);
 
 export type TransactionCsv = z.infer<typeof TransactionCsvSchema>;
@@ -30,6 +31,7 @@ export const generateCsvContent = async () => {
             item.transaction_date,
             item.category,
             item.description,
+            item.verified,
           ] satisfies TransactionCsv,
       ),
     );
@@ -52,7 +54,6 @@ export const parseCsvContent = (csvContentString: string) => {
   const records = parse(csvContentString, {
     separator: CSV_DELIMITER,
     trimLeadingSpace: true,
-    fieldsPerRecord: 4,
   });
 
   const schema = z.array(TransactionCsvSchema);
@@ -80,6 +81,7 @@ export const parseCsvContent = (csvContentString: string) => {
           transaction_date: d[1],
           category: d[2],
           description: d[3],
+          verified: d[4],
         }) satisfies BeforeCreate<Transaction>,
     ),
   };

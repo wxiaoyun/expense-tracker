@@ -3,7 +3,11 @@ import { ParamsFilter } from "@/components/filter";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/libs/currency";
 import { createTransactionSummarizeQuery } from "@/query/transactions";
-import { useDateRange, useTransactionCategoryParams } from "@/signals/params";
+import {
+  useDateRange,
+  useTransactionCategoryParams,
+  useVerifiedTransactionParams,
+} from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
 import { FaSolidPlus } from "solid-icons/fa";
 import { createMemo } from "solid-js";
@@ -61,10 +65,19 @@ const IntervalSummary = () => {
   const [currency] = useCurrency();
   const { dateRange } = useDateRange();
   const [categories] = useTransactionCategoryParams();
+  const [verified] = useVerifiedTransactionParams();
+  const verifiedStr = () => {
+    if (verified() === "All") {
+      return undefined;
+    }
+    return verified() === "Verified" ? true : false;
+  };
+
   const query = createTransactionSummarizeQuery(() => ({
     start: dateRange().start,
     end: dateRange().end,
     categories: categories(),
+    checked: verifiedStr(),
   }));
 
   const summary = createMemo(() => {

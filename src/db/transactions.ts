@@ -9,6 +9,7 @@ export const TransactionSchema = z.object({
   category: z.string(),
   description: z.string().optional(),
   recurring_transaction_id: z.number().int().positive().optional(),
+  verified: z.number().int().optional(),
   created_at: z.number().int().positive(),
   updated_at: z.number().int().positive(),
 });
@@ -53,6 +54,7 @@ const listTransactions = async (query?: {
   offset?: number;
   orderBy?: [keyof Transaction, "ASC" | "DESC"];
   categories?: string[];
+  verified?: number;
 }) => {
   const {
     start,
@@ -61,6 +63,7 @@ const listTransactions = async (query?: {
     offset = 0,
     orderBy = ["transaction_date", "DESC"],
     categories = [],
+    verified,
   } = query ?? {};
 
   if (!validOrderBy.has(orderBy[0])) {
@@ -83,6 +86,9 @@ const listTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
+  const verifiedClause =
+    verified !== undefined ? `AND verified = ${verified}` : "";
+
   console.info(
     "[DB][listTransactions] startDate %s, endDate %s, limit %s, offset %s, orderBy %o, categories %o",
     startDate,
@@ -95,7 +101,7 @@ const listTransactions = async (query?: {
 
   const countResult: { count: number }[] = await db.select(
     `SELECT COUNT(*) as count FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}`,
     [startDate, endDate, ...categories],
   );
 
@@ -122,7 +128,7 @@ const listTransactions = async (query?: {
 
   const result: Transaction[] = await db.select(
     `SELECT * FROM transactions 
-     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}
+     WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}
      ORDER BY ${orderBy[0]} ${orderBy[1]} 
      LIMIT $${categories.length + 3} OFFSET $${categories.length + 4}`,
     [startDate, endDate, ...categories, limit, offset],
@@ -131,9 +137,10 @@ const listTransactions = async (query?: {
   const nextOffset = result.length === 0 ? null : offset + limit;
 
   console.info(
-    "[DB][listTransactions] result found for start %s, end %s and limit %s, offset %s, orderBy %o, returning %o",
+    "[DB][listTransactions] result found for start %s, end %s, verified %s, limit %s, offset %s, orderBy %o, returning %o",
     startDate,
     endDate,
+    verified,
     limit,
     offset,
     orderBy,
@@ -151,8 +158,9 @@ const summarizeTransactions = async (query?: {
   start?: Date;
   end?: Date;
   categories?: string[];
+  verified?: number;
 }) => {
-  const { start, end, categories = [] } = query ?? {};
+  const { start, end, categories = [], verified } = query ?? {};
   const startDate = start?.getTime() ?? 0;
   const endDate = end?.getTime() ?? new Date().getTime();
 
@@ -168,12 +176,15 @@ const summarizeTransactions = async (query?: {
       ? `AND category IN (${categories.map((_, i) => `$${i + 3}`).join(", ")})`
       : "";
 
+  const verifiedClause =
+    verified !== undefined ? `AND verified = ${verified}` : "";
+
   const result: {
     balance: number;
     income: number;
     expense: number;
   }[] = await db.select(
-    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause}`,
+    `SELECT SUM(amount) as balance, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income, SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) as expense FROM transactions WHERE transaction_date BETWEEN $1 AND $2 ${categoryClause} ${verifiedClause}`,
     [startDate, endDate, ...categories],
   );
 
@@ -204,13 +215,14 @@ const createTransaction = async (
   const now = new Date().getTime();
 
   const result = await db.execute(
-    "INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    "INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, verified, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     [
       transaction.amount,
       transaction.transaction_date,
       transaction.category,
       transaction.description,
       transaction.recurring_transaction_id,
+      transaction.verified ?? 0,
       now,
       now,
     ],
@@ -243,13 +255,14 @@ const updateTransaction = async (
   const now = new Date().getTime();
 
   const result = await db.execute(
-    "UPDATE transactions SET amount = $1, transaction_date = $2, category = $3, description = $4, recurring_transaction_id = $5, updated_at = $6 WHERE id = $7",
+    "UPDATE transactions SET amount = $1, transaction_date = $2, category = $3, description = $4, recurring_transaction_id = $5, verified = $6, updated_at = $7 WHERE id = $8",
     [
       transaction.amount,
       transaction.transaction_date,
       transaction.category,
       transaction.description,
       transaction.recurring_transaction_id,
+      transaction.verified ?? 0,
       now,
       transaction.id,
     ],
@@ -325,8 +338,8 @@ const batchCreateTransactions = async (
 
   const placeholders = transactions
     .map((_, index) => {
-      const offset = index * 7;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+      const offset = index * 8;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
     })
     .join(", ");
 
@@ -337,12 +350,13 @@ const batchCreateTransactions = async (
     transaction.category,
     transaction.description,
     transaction.recurring_transaction_id,
+    transaction.verified ?? 0,
     now,
     now,
   ]);
 
   const result = await db.execute(
-    `INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, created_at, updated_at) 
+    `INSERT INTO transactions (amount, transaction_date, category, description, recurring_transaction_id, verified, created_at, updated_at) 
      VALUES ${placeholders} RETURNING id`,
     values,
   );
@@ -390,6 +404,15 @@ const summarizeByCategory = async (query?: { start?: Date; end?: Date }) => {
   return result;
 };
 
+const setVerification = async (id: number, verified: number) => {
+  const result = await db.execute(
+    "UPDATE transactions SET verified = $1 WHERE id = $2",
+    [verified, id],
+  );
+  console.info("[DB][setVerification] result %o", result);
+  return result.rowsAffected > 0;
+};
+
 export default {
   get: getTransaction,
   list: listTransactions,
@@ -401,4 +424,5 @@ export default {
   batchCreate: batchCreateTransactions,
   summarize: summarizeTransactions,
   summarizeByCategory,
+  setVerification,
 };

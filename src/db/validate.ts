@@ -47,6 +47,7 @@ export const validateDatabase = async (dbPath: string): Promise<boolean> => {
         "description",
         "category",
         "recurring_transaction_id",
+        "verified",
         "created_at",
         "updated_at",
       ],

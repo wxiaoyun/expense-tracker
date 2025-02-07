@@ -24,6 +24,7 @@ pub fn migrations() -> Vec<Migration> {
               description TEXT,
               category TEXT NOT NULL,
               recurring_transaction_id INTEGER,
+              verified INTEGER NOT NULL DEFAULT 0,
               created_at INTEGER NOT NULL,
               updated_at INTEGER NOT NULL
           );

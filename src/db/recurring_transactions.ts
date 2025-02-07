@@ -273,6 +273,18 @@ const clearRecurringTransactions = async () => {
   return result.rowsAffected > 0;
 };
 
+const listCategories = async () => {
+  const result: Pick<RecurringTransaction, "category">[] = await db.select(
+    "SELECT DISTINCT category FROM recurring_transactions",
+  );
+
+  console.log(
+    "[DB][listCategories] result found for categories, returning %o",
+    result,
+  );
+  return result;
+};
+
 export default {
   get: getRecurringTransaction,
   list: listRecurringTransactions,
@@ -283,4 +295,5 @@ export default {
   clear: clearRecurringTransactions,
   incur: incurRecurringTransaction,
   batchCreate: batchCreateRecurringTransactions,
+  listCategories: listCategories,
 };

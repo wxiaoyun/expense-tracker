@@ -73,7 +73,7 @@ export const generateTransactions = async (numTransactions: number) => {
 
   const rts = await recurringTransactions.list();
   const randomRt = () => rts[Math.floor(Math.random() * rts.length)];
-  const randomShouldBeRecurring = () => Math.random() < 0.2 && rts.length > 0;
+  const randomShouldBeRecurring = () => rts.length > 0 && Math.random() < 0.1;
 
   const transactionList: BeforeCreate<Transaction>[] = [];
   for (let i = 0; i < numTransactions; i++) {

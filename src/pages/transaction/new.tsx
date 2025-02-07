@@ -88,7 +88,7 @@ const TransactionForm = () => {
       try {
         await transactions.create(value);
         invalidateTransactionQueries();
-        navigate("/transactions");
+        navigate("/");
         toastSuccess("Transaction created successfully");
       } catch (error) {
         console.error("[UI] Error creating transaction", error);
