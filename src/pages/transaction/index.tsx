@@ -66,18 +66,18 @@ const IntervalSummary = () => {
   const { dateRange } = useDateRange();
   const [categories] = useTransactionCategoryParams();
   const [verified] = useVerifiedTransactionParams();
-  const verifiedStr = () => {
+  const verifiedNum = () => {
     if (verified() === "All") {
       return undefined;
     }
-    return verified() === "Verified" ? true : false;
+    return verified() === "Verified" ? 1 : 0;
   };
 
   const query = createTransactionSummarizeQuery(() => ({
     start: dateRange().start,
     end: dateRange().end,
     categories: categories(),
-    checked: verifiedStr(),
+    verified: verifiedNum(),
   }));
 
   const summary = createMemo(() => {
