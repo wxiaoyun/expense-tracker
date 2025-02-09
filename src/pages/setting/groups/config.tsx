@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Switch, SwitchControl, SwitchThumb } from "@/components/ui/switch";
 import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
@@ -31,10 +32,11 @@ export const ConfigGroup = () => {
   return (
     <SettingGroup title="Settings">
       <div class="flex flex-col gap-4">
+        <ThemeSetting />
         <CurrencySetting />
         <WeekStartSetting />
-        <ThemeSetting />
         <ClipboardExecSetting />
+        <Separator />
         <ClearSettings />
       </div>
     </SettingGroup>
