@@ -47,6 +47,7 @@ const compileTime = {
   DEFAULT_BACKUP_INTERVAL: JSON.stringify("off"),
 
   CLIPBOARD_CMD_PREFIX: JSON.stringify("clipboard-cmd:"),
+  CLIPBOARD_EXEC_SETTING_KEY: JSON.stringify("clipboard_exec"),
 
   CSV_DELIMITER: JSON.stringify(","),
   CSV_FILENAME: JSON.stringify(`${databaseName}.csv`),

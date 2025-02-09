@@ -20,6 +20,7 @@ declare const BACKUP_INTERVAL_OPTIONS: BackupInterval[];
 declare const DEFAULT_BACKUP_INTERVAL: string;
 
 declare const CLIPBOARD_CMD_PREFIX: string;
+declare const CLIPBOARD_EXEC_SETTING_KEY: string;
 
 declare const CSV_DELIMITER: string;
 declare const CSV_FILENAME: string;

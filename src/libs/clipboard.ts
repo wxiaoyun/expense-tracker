@@ -66,7 +66,13 @@ const parseClipboardCmd = (cmd: string) => {
 export const readClipboardAndExecuteCmd = async (): Promise<
   Result<Option<string>, string>
 > => {
-  const clipboardText = await readText();
+  const clipboardText = await readText().catch((e) => {
+    console.error(
+      "[Clipboard][readClipboardAndExecuteCmd] failed to read clipboard text: %o",
+      e,
+    );
+    return "";
+  });
 
   if (!isClipboardCmd(clipboardText)) {
     console.info(

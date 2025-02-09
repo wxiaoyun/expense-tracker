@@ -124,3 +124,22 @@ export const useLastBackup = () => {
 
   return [lastBackup, setLastBackup] as const;
 };
+
+export const useClipboardExec = () => {
+  const [query, setClipboardExec] = useSetting(
+    () => CLIPBOARD_EXEC_SETTING_KEY,
+    "",
+  );
+
+  const clipboardExec = createMemo(() => {
+    const data = query().data;
+    if (!data) return false;
+    return Boolean(data);
+  });
+
+  const setExec = (value: boolean) => {
+    setClipboardExec(value ? "1" : "");
+  };
+
+  return [clipboardExec, setExec] as const;
+};

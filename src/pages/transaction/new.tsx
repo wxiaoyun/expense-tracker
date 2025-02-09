@@ -28,6 +28,15 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import {
+  NumberField,
+  NumberFieldDecrementTrigger,
+  NumberFieldErrorMessage,
+  NumberFieldGroup,
+  NumberFieldIncrementTrigger,
+  NumberFieldInput,
+  NumberFieldLabel,
+} from "@/components/ui/number-field";
+import {
   TextField,
   TextFieldErrorMessage,
   TextFieldLabel,
@@ -36,6 +45,7 @@ import {
 import transactions, { TransactionSchema } from "@/db/transactions";
 import { beforeCreate } from "@/libs/zod";
 import { invalidateTransactionQueries } from "@/query/transactions";
+import { useCurrency } from "@/signals/setting";
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
@@ -74,6 +84,7 @@ const Header = () => {
 const TransactionForm = () => {
   const navigate = useNavigate();
   const categories = useTransactionCategories();
+  const [currency] = useCurrency();
 
   const defaultValues = createMemo(() => ({
     amount: 0,
@@ -113,29 +124,29 @@ const TransactionForm = () => {
       <form.Field
         name="amount"
         validators={{
-          onChange: z
+          onChange: z.coerce
             .number()
             .refine((value) => value !== 0, "Amount must be non-zero"),
         }}
         children={(field) => (
-          <TextFieldRoot
+          <NumberField
+            rawValue={field().state.value}
+            onRawValueChange={field().handleChange}
+            formatOptions={{ style: "currency", currency: currency() }}
             validationState={
               field().state.meta.errors.length ? "invalid" : "valid"
             }
           >
-            <TextFieldLabel>Amount</TextFieldLabel>
-            <TextField
-              placeholder="Amount"
-              value={field().state.value}
-              onInput={(e) =>
-                field().handleChange(Number(e.currentTarget.value))
-              }
-              required
-            />
-            <TextFieldErrorMessage>
+            <NumberFieldLabel>Amount</NumberFieldLabel>
+            <NumberFieldGroup>
+              <NumberFieldDecrementTrigger aria-label="Decrement" />
+              <NumberFieldInput class="text-md" />
+              <NumberFieldIncrementTrigger aria-label="Increment" />
+            </NumberFieldGroup>
+            <NumberFieldErrorMessage>
               {field().state.meta.errors[0]}
-            </TextFieldErrorMessage>
-          </TextFieldRoot>
+            </NumberFieldErrorMessage>
+          </NumberField>
         )}
       />
 
@@ -147,7 +158,7 @@ const TransactionForm = () => {
             () =>
               new CalendarDate(
                 date().getFullYear(),
-                date().getMonth(),
+                date().getMonth() + 1,
                 date().getDate(),
               ),
           );
