@@ -28,6 +28,15 @@ import {
   DatePickerViewTrigger,
 } from "@/components/ui/date-picker";
 import {
+  NumberField,
+  NumberFieldDecrementTrigger,
+  NumberFieldErrorMessage,
+  NumberFieldGroup,
+  NumberFieldIncrementTrigger,
+  NumberFieldInput,
+  NumberFieldLabel,
+} from "@/components/ui/number-field";
+import {
   TextField,
   TextFieldErrorMessage,
   TextFieldLabel,
@@ -39,6 +48,7 @@ import {
   createRecurringTransactionQuery,
   invalidateRecurringTransactionsQueries,
 } from "@/query/recurring-transactions";
+import { useCurrency } from "@/signals/setting";
 import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -76,6 +86,7 @@ const EditForm = () => {
   const params = useParams();
   const navigate = useNavigate();
   const categories = useTransactionCategories();
+  const [currency] = useCurrency();
 
   const query = createRecurringTransactionQuery(() => Number(params.id));
 
@@ -125,29 +136,29 @@ const EditForm = () => {
         <form.Field
           name="amount"
           validators={{
-            onChange: z
+            onChange: z.coerce
               .number()
               .refine((value) => value !== 0, "Amount must be non-zero"),
           }}
           children={(field) => (
-            <TextFieldRoot
+            <NumberField
+              rawValue={field().state.value}
+              onRawValueChange={field().handleChange}
+              formatOptions={{ style: "currency", currency: currency() }}
               validationState={
                 field().state.meta.errors.length ? "invalid" : "valid"
               }
             >
-              <TextFieldLabel>Amount</TextFieldLabel>
-              <TextField
-                placeholder="Amount"
-                value={field().state.value}
-                onInput={(e) =>
-                  field().handleChange(Number(e.currentTarget.value))
-                }
-                required
-              />
-              <TextFieldErrorMessage>
+              <NumberFieldLabel>Amount</NumberFieldLabel>
+              <NumberFieldGroup>
+                <NumberFieldDecrementTrigger aria-label="Decrement" />
+                <NumberFieldInput class="text-md" />
+                <NumberFieldIncrementTrigger aria-label="Increment" />
+              </NumberFieldGroup>
+              <NumberFieldErrorMessage>
                 {field().state.meta.errors[0]}
-              </TextFieldErrorMessage>
-            </TextFieldRoot>
+              </NumberFieldErrorMessage>
+            </NumberField>
           )}
         />
 

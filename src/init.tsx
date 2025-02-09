@@ -1,5 +1,5 @@
 import { toastError, toastSuccess } from "./components/toast";
-import { initDb } from "./db";
+import { initDb, settings } from "./db";
 import { readClipboardAndExecuteCmd } from "./libs/clipboard";
 import { invalidateRecurringTransactionsQueries } from "./query/recurring-transactions";
 import { invalidateTransactionQueries } from "./query/transactions";
@@ -23,6 +23,12 @@ export const init = async () => {
 };
 
 const readClipboardAndExec = async () => {
+  const enabled = Boolean(await settings.get(CLIPBOARD_EXEC_SETTING_KEY));
+  if (!enabled) {
+    console.info("[Init] Clipboard exec is disabled");
+    return;
+  }
+
   const res = await readClipboardAndExecuteCmd();
 
   if (!res.ok) {

@@ -12,10 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch, SwitchControl, SwitchThumb } from "@/components/ui/switch";
 import { settings } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import { invalidateSettingsQuery } from "@/query/settings";
-import { useCurrency, useTheme, useWeekStart } from "@/signals/setting";
+import {
+  useClipboardExec,
+  useCurrency,
+  useTheme,
+  useWeekStart,
+} from "@/signals/setting";
 import { ConfigColorMode, useColorMode } from "@kobalte/core";
 import { FaSolidTrash } from "solid-icons/fa";
 import { createEffect } from "solid-js";
@@ -28,6 +34,7 @@ export const ConfigGroup = () => {
         <CurrencySetting />
         <WeekStartSetting />
         <ThemeSetting />
+        <ClipboardExecSetting />
         <ClearSettings />
       </div>
     </SettingGroup>
@@ -109,6 +116,24 @@ const ThemeSetting = () => {
         </SelectTrigger>
         <SelectContent />
       </Select>
+    </div>
+  );
+};
+
+const ClipboardExecSetting = () => {
+  const [clipboardExec, setClipboardExec] = useClipboardExec();
+
+  return (
+    <div class="flex justify-between items-center">
+      <label>Execute clipboard command</label>
+      <Switch
+        checked={clipboardExec()}
+        onChange={(checked) => setClipboardExec(checked)}
+      >
+        <SwitchControl>
+          <SwitchThumb />
+        </SwitchControl>
+      </Switch>
     </div>
   );
 };
