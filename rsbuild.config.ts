@@ -77,9 +77,6 @@ export default defineConfig({
         }
       : undefined,
   },
-  output: {
-    polyfill: "usage",
-  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
