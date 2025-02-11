@@ -1,6 +1,6 @@
 # Expense Tracker
 
-A desktop application built with Tauri and SolidJS for managing personal finances.
+A mobile application built with Tauri and SolidJS for tracking personal finances.
 
 ## Screenshots
 
