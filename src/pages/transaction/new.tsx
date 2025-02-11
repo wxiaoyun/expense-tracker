@@ -73,7 +73,7 @@ const Header = () => {
     <header class="flex items-center mb-4">
       <TbArrowLeft
         class="cursor-pointer hover:opacity-65 transition-opacity"
-        size={20}
+        size={24}
         onClick={() => navigate(-1)}
       />
       <h1 class="text-lg font-semibold ml-2">New Transaction</h1>
