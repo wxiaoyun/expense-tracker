@@ -35,6 +35,7 @@ export const clearClipboard = async () => {
 
 const parseClipboardCmd = (cmd: string) => {
   const cmdStr = cmd.slice(CLIPBOARD_CMD_PREFIX.length);
+  console.info("[Clipboard][parseClipboardCmd] parsing clipboard command: %s", cmdStr);
 
   let deserialized: object;
   try {
@@ -50,8 +51,8 @@ const parseClipboardCmd = (cmd: string) => {
   const parseResult = clipboardCmdSchema.safeParse(deserialized);
   if (!parseResult.success) {
     console.error(
-      "[Clipboard][parseClipboardCmd] failed to parse clipboard command: %s",
-      cmdStr,
+      "[Clipboard][parseClipboardCmd] failed to parse clipboard command: ",
+      parseResult.error,
     );
     return null;
   }

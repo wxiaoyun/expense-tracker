@@ -51,7 +51,7 @@ import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
 import { TbArrowLeft } from "solid-icons/tb";
-import { createMemo, Index } from "solid-js";
+import { createMemo, createSignal, Index } from "solid-js";
 import { Portal } from "solid-js/web";
 import { z } from "zod";
 
@@ -84,6 +84,8 @@ const Header = () => {
 const TransactionForm = () => {
   const navigate = useNavigate();
   const categories = useTransactionCategories();
+  const [isExpense, setIsExpense] = createSignal(true);
+  const amountSign = createMemo(() => (isExpense() ? -1 : 1));
   const [currency] = useCurrency();
 
   const defaultValues = createMemo(() => ({
@@ -97,6 +99,7 @@ const TransactionForm = () => {
     defaultValues: defaultValues(),
     onSubmit: async ({ value }) => {
       try {
+        value.amount = value.amount * amountSign();
         await transactions.create(value);
         invalidateTransactionQueries();
         navigate("/");
@@ -121,6 +124,21 @@ const TransactionForm = () => {
       }}
       class="flex flex-col gap-4"
     >
+      <div class="w-full grid grid-cols-2 gap-2">
+        <Button
+          variant={isExpense() ? "default" : "outline"}
+          onClick={() => setIsExpense(true)}
+        >
+          Expense
+        </Button>
+        <Button
+          variant={isExpense() ? "outline" : "default"}
+          onClick={() => setIsExpense(false)}
+        >
+          Income
+        </Button>
+      </div>
+
       <form.Field
         name="amount"
         validators={{

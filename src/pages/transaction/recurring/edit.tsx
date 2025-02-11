@@ -54,7 +54,7 @@ import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
 import { TbArrowLeft } from "solid-icons/tb";
-import { createMemo, Index, Show } from "solid-js";
+import { createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { z } from "zod";
 import { NewRecurringTransactionSchema } from "./new";
@@ -86,6 +86,8 @@ const EditForm = () => {
   const params = useParams();
   const navigate = useNavigate();
   const categories = useTransactionCategories();
+  const [isExpense, setIsExpense] = createSignal(true);
+  const amountSign = createMemo(() => (isExpense() ? -1 : 1));
   const [currency] = useCurrency();
 
   const query = createRecurringTransactionQuery(() => Number(params.id));
@@ -104,6 +106,7 @@ const EditForm = () => {
       onSubmit: async ({ value }) => {
         try {
           if (!query.data) return;
+          value.amount = Number(value.amount) * amountSign();
           await recurringTransactions.update({
             ...query.data,
             ...value,
@@ -132,7 +135,22 @@ const EditForm = () => {
           form.handleSubmit();
         }}
         class="flex flex-col gap-4"
-      >
+        >
+        <div class="w-full grid grid-cols-2 gap-2">
+          <Button
+            variant={isExpense() ? "default" : "outline"}
+            onClick={() => setIsExpense(true)}
+          >
+            Expense
+          </Button>
+          <Button
+            variant={isExpense() ? "outline" : "default"}
+            onClick={() => setIsExpense(false)}
+          >
+            Income
+          </Button>
+        </div>
+
         <form.Field
           name="amount"
           validators={{
