@@ -75,6 +75,7 @@ A desktop application built with Tauri and SolidJS for managing personal finance
 2. Install using one of these methods:
 
    #### Option 1: Using Sideloadly
+
    - Download [Sideloadly](https://sideloadly.io/)
    - Connect your iOS device to your computer
    - Drag and drop the IPA file into Sideloadly
@@ -82,6 +83,7 @@ A desktop application built with Tauri and SolidJS for managing personal finance
    - Click "Start" to install
 
    #### Option 2: Using AltStore
+
    - Install [AltStore](https://altstore.io/)
    - Follow AltStore's setup guide
    - Open the IPA file with AltStore on your device
