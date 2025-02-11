@@ -66,7 +66,30 @@ A desktop application built with Tauri and SolidJS for managing personal finance
   - Data backup and restore
   - CSV export/import
 
-## Setup
+## Installation
+
+### iOS
+
+1. Download the IPA file from the [releases page](https://github.com/wxiaoyun/expense-tracker/releases)
+
+2. Install using one of these methods:
+
+   #### Option 1: Using Sideloadly
+   - Download [Sideloadly](https://sideloadly.io/)
+   - Connect your iOS device to your computer
+   - Drag and drop the IPA file into Sideloadly
+   - Sign in with your Apple ID
+   - Click "Start" to install
+
+   #### Option 2: Using AltStore
+   - Install [AltStore](https://altstore.io/)
+   - Follow AltStore's setup guide
+   - Open the IPA file with AltStore on your device
+   - Sign in with your Apple ID to install
+
+   > Note: Both methods require a free Apple ID. Apps installed this way need to be refreshed every 7 days.
+
+## Development Setup
 
 ### Prerequisites
 
