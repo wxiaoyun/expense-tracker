@@ -16,7 +16,7 @@ import { Route, Router } from "@solidjs/router";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { ErrorBoundary } from "solid-js";
 import { AppLauncher } from "./components/launcher";
-import { init } from "./init";
+import { init, onVisibilityChange } from "./init";
 import { AppLayout } from "./layout";
 
 export const App = () => {
@@ -28,7 +28,7 @@ export const App = () => {
           <ToastList />
         </ToastRegion>
         <QueryClientProvider client={queryClient}>
-          <AppLauncher init={init}>
+          <AppLauncher init={init} onVisibilityChange={onVisibilityChange}>
             <Routes />
           </AppLauncher>
         </QueryClientProvider>

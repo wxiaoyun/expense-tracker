@@ -22,10 +22,18 @@ export const init = async () => {
   backupDataIfShouldBackup();
 };
 
+export const onVisibilityChange = () => {
+  if (document.visibilityState === "visible") {
+    readClipboardAndExec();
+  }
+};
+
 const readClipboardAndExec = async () => {
   const enabled = Boolean(await settings.get(CLIPBOARD_EXEC_SETTING_KEY));
   if (!enabled) {
-    console.info("[Init] Clipboard exec is disabled");
+    console.info(
+      "[Clipboard][readClipboardAndExec] Clipboard exec is disabled",
+    );
     return;
   }
 
@@ -33,14 +41,17 @@ const readClipboardAndExec = async () => {
 
   if (!res.ok) {
     console.error(
-      "[Init] Failed to read clipboard and execute command: %s",
+      "[Clipboard][readClipboardAndExec] Failed to read clipboard and execute command: %s",
       res.err,
     );
     toastError(res.err);
     return;
   }
 
-  console.info("[Init] Read clipboard and executed command: %o", res.data);
+  console.info(
+    "[Clipboard][readClipboardAndExec] Read clipboard and executed command: %o",
+    res.data,
+  );
   if (res.data) {
     invalidateTransactionQueries();
     invalidateRecurringTransactionsQueries();

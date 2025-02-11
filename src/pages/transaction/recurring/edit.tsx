@@ -54,7 +54,7 @@ import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
 import { TbArrowLeft } from "solid-icons/tb";
-import { createMemo, createSignal, Index, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { z } from "zod";
 import { NewRecurringTransactionSchema } from "./new";
@@ -92,6 +92,12 @@ const EditForm = () => {
 
   const query = createRecurringTransactionQuery(() => Number(params.id));
 
+  createEffect(() => {
+    if (query.data) {
+      setIsExpense(query.data.amount < 0);
+    }
+  });
+
   const defaultValues = createMemo(() => ({
     amount: query.data?.amount ?? 0,
     start_date: query.data?.start_date ?? Date.now(),
@@ -106,7 +112,7 @@ const EditForm = () => {
       onSubmit: async ({ value }) => {
         try {
           if (!query.data) return;
-          value.amount = Number(value.amount) * amountSign();
+          value.amount = value.amount * amountSign();
           await recurringTransactions.update({
             ...query.data,
             ...value,
