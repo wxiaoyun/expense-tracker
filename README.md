@@ -6,35 +6,33 @@ A desktop application built with Tauri and SolidJS for managing personal finance
 
 <table>
 <tr>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/home_page.png" alt="Home Page" />
     <p align="center"><em>Home Page</em></p>
   </td>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/home_page_filter.png" alt="Transaction Filter" />
     <p align="center"><em>Transaction Filter</em></p>
   </td>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/new_transaction_page.png" alt="Add Transaction" />
     <p align="center"><em>Add Transaction</em></p>
   </td>
 </tr>
-<tr>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/recurring_transaction_page.png" alt="Recurring Transactions" />
     <p align="center"><em>Recurring Transactions</em></p>
   </td>
-  <td width="33%">
+<tr>
+  <td width="25%">
     <img src="./screenshots/edit_recurring_transaction_page.png" alt="Edit Recurring Transaction" />
     <p align="center"><em>Edit Recurring Transaction</em></p>
   </td>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/summary_page.png" alt="Charts and Summaries" />
     <p align="center"><em>Financial Summary</em></p>
   </td>
-</tr>
-<tr>
-  <td width="33%">
+  <td width="25%">
     <img src="./screenshots/settings_page.png" alt="Settings" />
     <p align="center"><em>Settings</em></p>
   </td>
