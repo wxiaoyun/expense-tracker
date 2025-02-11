@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "prepare": "husky"
   },
-  "license": "MIT",
+  "license": "GLWT",
   "dependencies": {
     "@ark-ui/solid": "^4.10.1",
     "@corvu/drawer": "^0.2.3",
