@@ -124,7 +124,7 @@ The application can be configured through the settings menu or by editing the co
 
 ## Clipboard Commands
 
-The application supports automation through clipboard commands. Commands must be prefixed with the clipboard command prefix and contain valid JSON data.
+The application supports automation opening the app with the command in the clipboard. Commands must be prefixed with the clipboard command prefix and contain valid JSON data.
 
 Example command format:
 
