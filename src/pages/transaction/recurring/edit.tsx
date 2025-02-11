@@ -135,7 +135,7 @@ const EditForm = () => {
           form.handleSubmit();
         }}
         class="flex flex-col gap-4"
-        >
+      >
         <div class="w-full grid grid-cols-2 gap-2">
           <Button
             variant={isExpense() ? "default" : "outline"}

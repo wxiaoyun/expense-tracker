@@ -148,7 +148,7 @@ const EditTransactionForm = () => {
             Income
           </Button>
         </div>
-        
+
         <form.Field
           name="amount"
           validators={{

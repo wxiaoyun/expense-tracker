@@ -151,7 +151,7 @@ const NewForm = () => {
           Income
         </Button>
       </div>
-      
+
       <form.Field
         name="amount"
         validators={{
