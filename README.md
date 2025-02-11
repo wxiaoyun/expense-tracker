@@ -142,4 +142,4 @@ clipboard-cmd:{
 
 ## License
 
-MIT
+[GLWT (Good Luck With That) Public License](./LICENSE)
