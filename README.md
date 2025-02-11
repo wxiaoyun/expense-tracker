@@ -18,11 +18,11 @@ A desktop application built with Tauri and SolidJS for managing personal finance
     <img src="./screenshots/new_transaction_page.png" alt="Add Transaction" />
     <p align="center"><em>Add Transaction</em></p>
   </td>
-</tr>
   <td width="25%">
     <img src="./screenshots/recurring_transaction_page.png" alt="Recurring Transactions" />
     <p align="center"><em>Recurring Transactions</em></p>
   </td>
+</tr>
 <tr>
   <td width="25%">
     <img src="./screenshots/edit_recurring_transaction_page.png" alt="Edit Recurring Transaction" />
