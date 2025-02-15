@@ -50,6 +50,7 @@ import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
+import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
 import { createMemo, createSignal, Index } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -88,6 +89,29 @@ const TransactionForm = () => {
   const amountSign = createMemo(() => (isExpense() ? -1 : 1));
   const [currency] = useCurrency();
 
+  const mutation = createMutation(() => ({
+    mutationFn: async (data: NewTransactionForm) => {
+      const valueWithSign = {
+        ...data,
+        amount: data.amount * amountSign(),
+      };
+      return transactions.create(valueWithSign);
+    },
+    onSuccess: () => {
+      invalidateTransactionQueries();
+      navigate("/");
+      toastSuccess("Transaction created successfully");
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error creating transaction", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
+    },
+  }));
+
   const defaultValues = createMemo(() => ({
     amount: 0,
     transaction_date: Date.now(),
@@ -98,20 +122,7 @@ const TransactionForm = () => {
   const form = createForm<NewTransactionForm>(() => ({
     defaultValues: defaultValues(),
     onSubmit: async ({ value }) => {
-      try {
-        value.amount = value.amount * amountSign();
-        await transactions.create(value);
-        invalidateTransactionQueries();
-        navigate("/");
-        toastSuccess("Transaction created successfully");
-      } catch (error) {
-        console.error("[UI] Error creating transaction", error);
-        if (error instanceof Error) {
-          toastError(error.message);
-        } else {
-          toastError("An unknown error occurred");
-        }
-      }
+      mutation.mutate(value);
     },
   }));
 

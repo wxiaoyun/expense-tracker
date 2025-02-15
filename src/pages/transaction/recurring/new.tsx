@@ -50,6 +50,7 @@ import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
+import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
 import { createMemo, createSignal, Index } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -100,6 +101,29 @@ const NewForm = () => {
   const amountSign = createMemo(() => (isExpense() ? -1 : 1));
   const [currency] = useCurrency();
 
+  const mutation = createMutation(() => ({
+    mutationFn: async (data: NewRecurringTransactionForm) => {
+      const valueWithSign = {
+        ...data,
+        amount: data.amount * amountSign(),
+      };
+      return recurringTransactions.create(valueWithSign);
+    },
+    onSuccess: () => {
+      invalidateRecurringTransactionsQueries();
+      toastSuccess("Recurring transaction created successfully");
+      navigate("/transactions/recurring");
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error creating recurring transaction", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
+    },
+  }));
+
   const defaultValues = createMemo(() => ({
     amount: 0,
     start_date: Date.now(),
@@ -111,20 +135,7 @@ const NewForm = () => {
   const form = createForm<NewRecurringTransactionForm>(() => ({
     defaultValues: defaultValues(),
     onSubmit: async ({ value }) => {
-      try {
-        value.amount = Number(value.amount) * amountSign();
-        await recurringTransactions.create(value);
-        invalidateRecurringTransactionsQueries();
-        toastSuccess("Recurring transaction created successfully");
-        navigate("/transactions/recurring");
-      } catch (error) {
-        console.error("[UI] Error creating recurring transaction", error);
-        if (error instanceof Error) {
-          toastError(error.message);
-        } else {
-          toastError("An unknown error occurred");
-        }
-      }
+      mutation.mutate(value);
     },
   }));
 

@@ -52,6 +52,7 @@ import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
+import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
 import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -91,6 +92,31 @@ const EditTransactionForm = () => {
 
   const query = createTransactionQuery(() => Number(params.id));
 
+  const mutation = createMutation(() => ({
+    mutationFn: async (data: NewTransactionForm) => {
+      if (!query.data) throw new Error("No transaction data");
+      const valueWithSign = {
+        ...query.data,
+        ...data,
+        amount: data.amount * amountSign(),
+      };
+      return transactions.update(valueWithSign);
+    },
+    onSuccess: () => {
+      invalidateTransactionQueries();
+      navigate("/");
+      toastSuccess("Transaction updated successfully");
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error updating transaction", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
+    },
+  }));
+
   createEffect(() => {
     if (query.data) {
       setIsExpense(query.data.amount < 0);
@@ -99,7 +125,7 @@ const EditTransactionForm = () => {
 
   const defaultValues = createMemo(() => {
     return {
-      amount: query.data?.amount ?? 0,
+      amount: Math.abs(query.data?.amount ?? 0),
       transaction_date: query.data?.transaction_date ?? Date.now(),
       description: query.data?.description ?? "",
       category: query.data?.category ?? "",
@@ -109,24 +135,7 @@ const EditTransactionForm = () => {
   const form = createForm<NewTransactionForm>(() => ({
     defaultValues: defaultValues(),
     onSubmit: async ({ value }) => {
-      try {
-        if (!query.data) return;
-        value.amount = value.amount * amountSign();
-        await transactions.update({
-          ...query.data,
-          ...value,
-        });
-        invalidateTransactionQueries();
-        navigate("/");
-        toastSuccess("Transaction updated successfully");
-      } catch (error) {
-        console.error("[UI] Error updating transaction", error);
-        if (error instanceof Error) {
-          toastError(error.message);
-        } else {
-          toastError("An unknown error occurred");
-        }
-      }
+      mutation.mutate(value);
     },
   }));
 

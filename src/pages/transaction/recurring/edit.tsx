@@ -53,6 +53,7 @@ import { useTransactionCategories } from "@/signals/transactions";
 import { CalendarDate } from "@internationalized/date";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createForm } from "@tanstack/solid-form";
+import { createMutation } from "@tanstack/solid-query";
 import { TbArrowLeft } from "solid-icons/tb";
 import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -92,6 +93,31 @@ const EditForm = () => {
 
   const query = createRecurringTransactionQuery(() => Number(params.id));
 
+  const mutation = createMutation(() => ({
+    mutationFn: async (data: z.infer<typeof NewRecurringTransactionSchema>) => {
+      if (!query.data) throw new Error("No transaction data");
+      const valueWithSign = {
+        ...query.data,
+        ...data,
+        amount: data.amount * amountSign(),
+      };
+      return recurringTransactions.update(valueWithSign);
+    },
+    onSuccess: () => {
+      invalidateRecurringTransactionsQueries();
+      navigate("/transactions/recurring");
+      toastSuccess("Recurring transaction updated successfully");
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error updating recurring transaction", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
+    },
+  }));
+
   createEffect(() => {
     if (query.data) {
       setIsExpense(query.data.amount < 0);
@@ -99,7 +125,7 @@ const EditForm = () => {
   });
 
   const defaultValues = createMemo(() => ({
-    amount: query.data?.amount ?? 0,
+    amount: Math.abs(query.data?.amount ?? 0),
     start_date: query.data?.start_date ?? Date.now(),
     category: query.data?.category ?? "",
     description: query.data?.description ?? "",
@@ -110,24 +136,7 @@ const EditForm = () => {
     () => ({
       defaultValues: defaultValues(),
       onSubmit: async ({ value }) => {
-        try {
-          if (!query.data) return;
-          value.amount = value.amount * amountSign();
-          await recurringTransactions.update({
-            ...query.data,
-            ...value,
-          });
-          invalidateRecurringTransactionsQueries();
-          navigate("/transactions/recurring");
-          toastSuccess("Recurring transaction updated successfully");
-        } catch (error) {
-          console.error("[UI] Error updating recurring transaction", error);
-          if (error instanceof Error) {
-            toastError(error.message);
-          } else {
-            toastError("An unknown error occurred");
-          }
-        }
+        mutation.mutate(value);
       },
     }),
   );

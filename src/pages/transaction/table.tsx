@@ -1,3 +1,4 @@
+import { toastError } from "@/components/toast";
 import { Checkbox, CheckboxControl } from "@/components/ui/checkbox";
 import {
   Table,
@@ -77,16 +78,31 @@ const AmountCell = (props: CellContext<Transaction, unknown>) => {
 
 const ActionCell = (props: CellContext<Transaction, unknown>) => {
   const navigate = useNavigate();
+
+  const deleteMutation = createMutation(() => ({
+    mutationFn: async () => {
+      await transactions.delete(props.row.original.id);
+    },
+    onSuccess: () => {
+      invalidateTransactionQueries();
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error deleting transaction", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
+    },
+  }));
+
   const handleDelete = confirmationCallback(
     "This action will delete the transaction.",
     {
       title: "Are you sure?",
       okLabel: "Delete",
       cancelLabel: "Cancel",
-      onConfirm: async () => {
-        await transactions.delete(props.row.original.id);
-        invalidateTransactionQueries();
-      },
+      onConfirm: deleteMutation.mutate,
     },
   );
 
@@ -117,6 +133,14 @@ const VerificationCell = (props: CellContext<Transaction, unknown>) => {
     },
     onSuccess: () => {
       invalidateTransactionQueries();
+    },
+    onError: (error: unknown) => {
+      console.error("[UI] Error setting transaction verification", error);
+      if (error instanceof Error) {
+        toastError(error.message);
+      } else {
+        toastError("An unknown error occurred");
+      }
     },
   }));
 
