@@ -36,10 +36,14 @@ export const getDateRange = (
     }
     case "monthly": {
       start.setDate(1);
-      
+
       // Create a new date for the last day of the month
       const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-      end.setFullYear(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      end.setFullYear(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+      );
       end.setHours(23, 59, 59, 999);
       return { start, end };
     }
