@@ -1,5 +1,4 @@
-import { db, reloadDb } from "@/db";
-import transactions from "@/db/transactions";
+import { db, reloadDb, transactions } from "@/db";
 import { validateDatabase } from "@/db/validate";
 import { appDataDir, BaseDirectory, join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -12,7 +11,11 @@ import {
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import { nanoid } from "nanoid";
-import { generateCsvContent, parseCsvContent } from "./csv";
+import {
+  generateCsvContent,
+  generateCsvContentFromDb,
+  parseCsvContent,
+} from "./csv";
 
 // https://tauri.app/plugin/file-system/
 
@@ -221,7 +224,7 @@ export const importCsv = async (
   }
 };
 
-export const exportCsv = async (
+export const exportCsvFromDb = async (
   onSuccess: (msg: string) => void,
   onError: (errMsg: string) => void,
 ) => {
@@ -236,7 +239,7 @@ export const exportCsv = async (
       suggestedDownloadPath,
     );
 
-    const csvContentString = await generateCsvContent();
+    const csvContentString = await generateCsvContentFromDb();
 
     await writeTextFile(suggestedDownloadPath, csvContentString, {
       baseDir: BaseDirectory.Document,
@@ -248,6 +251,48 @@ export const exportCsv = async (
     );
   } catch (error) {
     console.error("[FS][exportCsv] Failed to export data %o", error);
+    onError("Something went wrong, failed to export data");
+  }
+};
+
+export const exportCsvFromTransactions = async (
+  options: {
+    fileName?: string;
+  } & Parameters<typeof transactions.list>[0],
+  onSuccess: (msg: string) => void,
+  onError: (errMsg: string) => void,
+) => {
+  console.info("[FS][exportCsvFromTransactions] options: %o", options);
+
+  const { fileName = CSV_FILENAME, ...rest } = options;
+
+  try {
+    const now = new Date();
+    const formattedDate = now.toISOString().replace(/\s/g, "_");
+    const suggestedDownloadName = `${formattedDate}_${fileName}`;
+    const suggestedDownloadPath = await getExportPath(suggestedDownloadName);
+
+    console.info(
+      "[FS][exportCsvFromTransactions] suggestedDownloadPath: %s",
+      suggestedDownloadPath,
+    );
+
+    const res = await transactions.list(rest);
+    const csvContentString = generateCsvContent(res.items);
+
+    await writeTextFile(suggestedDownloadPath, csvContentString, {
+      baseDir: BaseDirectory.Document,
+    });
+
+    console.info("[FS][exportCsvFromTransactions] Data exported successfully");
+    onSuccess(
+      `Data exported successfully, downloaded to ${suggestedDownloadPath}`,
+    );
+  } catch (error) {
+    console.error(
+      "[FS][exportCsvFromTransactions] Failed to export data %o",
+      error,
+    );
     onError("Something went wrong, failed to export data");
   }
 };

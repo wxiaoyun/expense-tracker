@@ -11,7 +11,7 @@ import { Switch, SwitchControl, SwitchThumb } from "@/components/ui/switch";
 import { recurringTransactions, transactions } from "@/db";
 import { confirmationCallback } from "@/libs/dialog";
 import {
-  exportCsv,
+  exportCsvFromDb,
   exportDatabase,
   importCsv,
   importDatabase,
@@ -92,7 +92,7 @@ export const ImportData = () => {
 };
 
 export const ExportCsv = () => {
-  const handleExportCsv = async () => exportCsv(toastSuccess, toastError);
+  const handleExportCsv = async () => exportCsvFromDb(toastSuccess, toastError);
 
   return (
     <div class="flex justify-between items-center">

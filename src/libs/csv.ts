@@ -1,5 +1,5 @@
 import transactions, { Transaction } from "@/db/transactions";
-import { parse } from "@std/csv";
+import { parse, stringify } from "@std/csv";
 import { z } from "zod";
 
 export const TransactionCsvSchema = z.tuple([
@@ -12,7 +12,7 @@ export const TransactionCsvSchema = z.tuple([
 
 export type TransactionCsv = z.infer<typeof TransactionCsvSchema>;
 
-export const generateCsvContent = async () => {
+export const generateCsvContentFromDb = async () => {
   const csvContent: TransactionCsv[] = [];
   let nextOffset: number | null = 0;
 
@@ -85,4 +85,18 @@ export const parseCsvContent = (csvContentString: string) => {
         }) satisfies BeforeCreate<Transaction>,
     ),
   };
+};
+
+export const generateCsvContent = (transactions: Transaction[]) => {
+  const txs = transactions.map((tx) => ({
+    amount: tx.amount,
+    transaction_date: new Date(tx.transaction_date).toLocaleString(),
+    category: tx.category,
+    description: tx.description,
+  }));
+
+  return stringify(txs, {
+    headers: true,
+    columns: ["amount", "transaction_date", "category", "description"],
+  });
 };

@@ -1,7 +1,9 @@
 import { DateRangeSetter } from "@/components/dateRangeSetter";
 import { ParamsFilter } from "@/components/filter";
+import { toastError, toastSuccess } from "@/components/toast";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/libs/currency";
+import { exportCsvFromTransactions } from "@/libs/fs";
 import { createTransactionSummarizeQuery } from "@/query/transactions";
 import {
   useDateRange,
@@ -9,7 +11,7 @@ import {
   useVerifiedTransactionParams,
 } from "@/signals/params";
 import { useCurrency } from "@/signals/setting";
-import { FaSolidPlus } from "solid-icons/fa";
+import { FaSolidDownload, FaSolidPlus } from "solid-icons/fa";
 import { createMemo } from "solid-js";
 import { TransactionTable } from "./table";
 
@@ -45,6 +47,8 @@ const Header = () => {
         </div>
 
         <div class="flex items-center gap-2">
+          <ExportButton />
+
           <ParamsFilter />
 
           <a href="/transactions/new">
@@ -110,5 +114,41 @@ const IntervalSummary = () => {
         <p class="text-blue-500">{summary().balance}</p>
       </div>
     </section>
+  );
+};
+
+const ExportButton = () => {
+  const { dateRange } = useDateRange();
+  const [selectedCategories] = useTransactionCategoryParams();
+  const [verified] = useVerifiedTransactionParams();
+
+  const verifiedNum = createMemo(() => {
+    if (verified() === "All") {
+      return undefined;
+    }
+    return verified() === "Verified" ? 1 : 0;
+  });
+
+  const exportOptions = createMemo(() => {
+    return {
+      start: dateRange().start,
+      end: dateRange().end,
+      limit: Number.MAX_SAFE_INTEGER,
+      categories: selectedCategories(),
+      orderBy: ["transaction_date", "DESC"],
+      verified: verifiedNum(),
+    } satisfies Parameters<typeof exportCsvFromTransactions>[0];
+  });
+
+  const handleExport = () => {
+    exportCsvFromTransactions(exportOptions(), toastSuccess, toastError);
+  };
+
+  return (
+    <FaSolidDownload
+      class="cursor-pointer hover:opacity-65 transition-opacity"
+      onClick={handleExport}
+      size={24}
+    />
   );
 };
