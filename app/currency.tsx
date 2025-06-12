@@ -30,12 +30,15 @@ export default function Page() {
       <Stack.Screen
         options={{
           title: "Currency Settings",
+          headerBackTitle: "Back",
           headerSearchBarOptions: {
             placeholder: "Search currency",
             onChangeText: (e) => {
               setSearch(e.nativeEvent.text);
             },
           },
+          headerBlurEffect: "regular",
+          headerTransparent: true,
         }}
       />
       <FlashList

@@ -10,7 +10,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SettingGroup, SimpleSettingItem } from "@/components/setting";
 import { ThemedView } from "@/components/ThemedView";
 import { BUY_ME_A_COFFEE_URL, GITHUB_ISSUE_URL, GITHUB_URL } from "@/constants";
-import { useCurrency, useEnableClipboardCommand, useTheme, useWeekStart } from "@/hooks/useKv";
+import {
+  useBackupInterval,
+  useCurrency,
+  useEnableClipboardCommand,
+  useTheme,
+  useWeekStart,
+} from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React from "react";
@@ -18,7 +24,7 @@ import React from "react";
 const DataGroup = () => {
   const iconColor = useThemeColor("icon");
   const destructiveColor = useThemeColor("destructive");
-  const isBackupPeriodicEnabled = false;
+  const [interval] = useBackupInterval();
 
   return (
     <SettingGroup title="Data">
@@ -49,7 +55,7 @@ const DataGroup = () => {
           }
           title="Periodic backup"
           href="/backup"
-          chevronSibling={isBackupPeriodicEnabled ? "Enabled" : "Disabled"}
+          chevronSibling={interval}
         />
         <SimpleSettingItem
           icon={
@@ -96,10 +102,7 @@ const ConfigGroup = () => {
           icon={<Ionicons name="clipboard" size={24} color={iconColor} />}
           title="Clipboard commands"
           chevronSibling={
-            <Switch
-              value={isCmdEnabled}
-              onValueChange={setIsCmdEnabled}
-            />
+            <Switch value={isCmdEnabled} onValueChange={setIsCmdEnabled} />
           }
         />
       </ThemedView>

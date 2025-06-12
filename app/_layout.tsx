@@ -26,11 +26,6 @@ export default function RootLayout() {
           <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="backup" options={{ headerShown: false }} />
-              <Stack.Screen name="dev" options={{ headerShown: false }} />
-              <Stack.Screen name="theme" options={{ headerShown: false }} />
-              <Stack.Screen name="week_start" options={{ headerShown: false }} />
-              <Stack.Screen name="currency" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="auto" animated />
