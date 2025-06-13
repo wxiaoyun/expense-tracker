@@ -7,14 +7,29 @@ import { openURL } from "expo-linking";
 import { ScrollView, StyleSheet, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import {
+  DropdownMenuArrow,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuItemTitle,
+  DropdownMenuLabel,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/DropdownMenu";
 import { SettingGroup, SimpleSettingItem } from "@/components/setting";
+import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { BUY_ME_A_COFFEE_URL, GITHUB_ISSUE_URL, GITHUB_URL } from "@/constants";
+import {
+  BUY_ME_A_COFFEE_URL,
+  GITHUB_ISSUE_URL,
+  GITHUB_URL,
+  WEEK_START_OPTIONS,
+} from "@/constants";
 import {
   useBackupInterval,
   useCurrency,
   useEnableClipboardCommand,
-  useTheme,
   useWeekStart,
 } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -68,36 +83,52 @@ const DataGroup = () => {
   );
 };
 
+const WeekStartSettingItem = () => {
+  const iconColor = useThemeColor("icon");
+  const [weekStart, setWeekStart] = useWeekStart();
+  return (
+    <SimpleSettingItem
+      icon={<FontAwesome5 name="calendar-week" size={24} color={iconColor} />}
+      title="Week start"
+      chevronSibling={
+        <DropdownMenuRoot>
+          <DropdownMenuTrigger>
+            <ThemedText>{weekStart}</ThemedText>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right">
+            {WEEK_START_OPTIONS.map((option) => (
+              <DropdownMenuItem
+                key={option}
+                onSelect={() => setWeekStart(option)}
+              >
+                <DropdownMenuItemTitle>{option}</DropdownMenuItemTitle>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuLabel />
+            <DropdownMenuSeparator />
+            <DropdownMenuArrow />
+          </DropdownMenuContent>
+        </DropdownMenuRoot>
+      }
+    />
+  );
+};
+
 const ConfigGroup = () => {
   const iconColor = useThemeColor("icon");
-  const [theme] = useTheme();
   const [currency] = useCurrency();
-  const [weekStart] = useWeekStart();
   const [isCmdEnabled, setIsCmdEnabled] = useEnableClipboardCommand();
 
   return (
     <SettingGroup title="Configuration">
       <ThemedView style={styles.groupContainer}>
         <SimpleSettingItem
-          icon={<Ionicons name="color-palette" size={24} color={iconColor} />}
-          title="Theme"
-          href="/theme"
-          chevronSibling={theme}
-        />
-        <SimpleSettingItem
           icon={<FontAwesome6 name="coins" size={24} color={iconColor} />}
           title="Currency"
           href="/currency"
           chevronSibling={currency}
         />
-        <SimpleSettingItem
-          icon={
-            <FontAwesome5 name="calendar-week" size={24} color={iconColor} />
-          }
-          title="Week start"
-          href="/week_start"
-          chevronSibling={weekStart}
-        />
+        <WeekStartSettingItem />
         <SimpleSettingItem
           icon={<Ionicons name="clipboard" size={24} color={iconColor} />}
           title="Clipboard commands"
@@ -148,10 +179,7 @@ const MiscGroup = () => {
 
 export default function SettingScreen() {
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.scrollContent}
-    >
+    <ScrollView contentInsetAdjustmentBehavior="automatic">
       <SafeAreaView style={styles.container} edges={["left", "right"]}>
         <DataGroup />
         <ConfigGroup />
@@ -162,9 +190,6 @@ export default function SettingScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     display: "flex",

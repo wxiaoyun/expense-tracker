@@ -1,14 +1,14 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { FlashList } from "@shopify/flash-list";
 import { codes } from "currency-codes";
 import { Stack } from "expo-router";
+import { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCurrency } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useState } from "react";
 
 export default function Page() {
   const [currency, setCurrency] = useCurrency();
@@ -16,20 +16,25 @@ export default function Page() {
 
   const currencyOptions = useMemo(() => {
     const allCodes = codes();
-    if (search.length === 0) {
-      return allCodes;
-    }
+    let filteredCodes = search.length === 0
+      ? allCodes
+      : allCodes.filter((code) =>
+          code.toLowerCase().includes(search.toLowerCase())
+        );
 
-    return allCodes.filter((code) =>
-      code.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [search]);
+    filteredCodes = [
+      ...filteredCodes.filter(code => code === currency),
+      ...filteredCodes.filter(code => code !== currency)
+    ];
 
-  return (
+    return filteredCodes;
+  }, [search, currency]);
+
+    return (
     <View style={styles.viewContainer}>
       <Stack.Screen
         options={{
-          title: "Currency Settings",
+          title: "Currency",
           headerBackTitle: "Back",
           headerSearchBarOptions: {
             placeholder: "Search currency",
@@ -37,8 +42,6 @@ export default function Page() {
               setSearch(e.nativeEvent.text);
             },
           },
-          headerBlurEffect: "regular",
-          headerTransparent: true,
         }}
       />
       <FlashList

@@ -5,16 +5,18 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "d": "expo run:ios -d"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.6",
     "@react-native-community/datetimepicker": "8.3.0",
     "@react-native-community/slider": "^4.5.7",
+    "@react-native-menu/menu": "^1.2.3",
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
@@ -34,6 +36,7 @@
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.2.0",
     "expo-linking": "~7.1.5",
+    "expo-localization": "~16.1.5",
     "expo-router": "~5.0.7",
     "expo-splash-screen": "~0.30.9",
     "expo-sqlite": "~15.2.12",
@@ -45,12 +48,16 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.3",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-ios-context-menu": "3.1.0",
+    "react-native-ios-utilities": "5.1.2",
     "react-native-modals": "^0.22.3",
     "react-native-reanimated": "~3.17.5",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "sonner-native": "^0.21.0",
+    "zeego": "^3.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -1,4 +1,6 @@
+import { ResolvedTheme } from "@/constants";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getLocales } from 'expo-localization';
 import Storage from "expo-sqlite/kv-store";
 import { useCallback, useMemo } from "react";
 import { useColorScheme } from "react-native";
@@ -28,16 +30,15 @@ export const useKy = (key: string, defaultValue?: string) => {
 };
 
 export const useCurrency = () => {
-  return useKy("currency", "SGD");
-};
+  const code  = useMemo(() => {
+    const locales = getLocales();
+    if (locales.length === 0) {
+      return "USD";
+    }
+    return locales[0].currencyCode ?? "USD";
+  }, []);
 
-export const useTheme = () => {
-  return useKy("theme", "system");
-};
-
-export const useResolvedTheme = () => {
-  const theme = useColorScheme() ?? "light";
-  return useKy("theme", theme);
+  return useKy("currency", code);
 };
 
 export const useWeekStart = () => {
