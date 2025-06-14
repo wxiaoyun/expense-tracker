@@ -48,14 +48,14 @@ const EXPECTED_TABLES = {
 /**
  * Validate database structure and basic integrity
  */
-export const validateDatabase = async (databasePath: string): Promise<boolean> => {
+export const validateDatabase = async (databaseName: string): Promise<boolean> => {
   let db: SQLite.SQLiteDatabase | null = null;
   
   try {
-    console.info("[DB][validateDatabase] Starting validation for:", databasePath);
+    console.info("[DB][validateDatabase] Starting validation for:", databaseName);
     
     // Open the database for validation
-    db = SQLite.openDatabaseSync(databasePath);
+    db = SQLite.openDatabaseSync(databaseName);
     const drizzleDb = drizzle(db);
     
     // Check if database is accessible
@@ -265,10 +265,105 @@ export const quickValidateDatabase = async (databasePath: string): Promise<boole
   let db: SQLite.SQLiteDatabase | null = null;
   
   try {
-    db = SQLite.openDatabaseSync(databasePath);
+    console.info("[DB][quickValidateDatabase] Opening database:", databasePath);
+    
+    // Try different approaches to open the database
+    try {
+      db = SQLite.openDatabaseSync(databasePath);
+    } catch (openError) {
+      console.error("[DB][quickValidateDatabase] Failed to open with openDatabaseSync:", openError);
+      
+      // Try alternative opening method
+      try {
+        db = SQLite.openDatabaseSync(databasePath, { enableChangeListener: false });
+      } catch (altOpenError) {
+        console.error("[DB][quickValidateDatabase] Failed to open with alternative method:", altOpenError);
+        return false;
+      }
+    }
+    
     const drizzleDb = drizzle(db);
     
-    // Just check if the main tables exist
+    // Test basic database connectivity
+    try {
+      const testQuery = await drizzleDb.get(sql`SELECT 1 as test`);
+      console.info("[DB][quickValidateDatabase] Basic connectivity test:", testQuery);
+    } catch (connectivityError) {
+      console.error("[DB][quickValidateDatabase] Basic connectivity failed:", connectivityError);
+      return false;
+    }
+    
+    // Check SQLite version and database info
+    try {
+      const version = await drizzleDb.get(sql`SELECT sqlite_version() as version`);
+      console.info("[DB][quickValidateDatabase] SQLite version:", version);
+      
+      const dbInfo = await drizzleDb.all(sql`PRAGMA database_list`);
+      console.info("[DB][quickValidateDatabase] Database info:", dbInfo);
+    } catch (infoError) {
+      console.warn("[DB][quickValidateDatabase] Could not get database info:", infoError);
+    }
+    
+    // List all tables for debugging
+    const allTables = await drizzleDb.all(
+      sql`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`
+    );
+    console.info("[DB][quickValidateDatabase] Found tables:", allTables.map((t: any) => t.name));
+    
+    // Also check all objects in sqlite_master for debugging
+    const allObjects = await drizzleDb.all(
+      sql`SELECT type, name FROM sqlite_master ORDER BY type, name`
+    );
+    console.info("[DB][quickValidateDatabase] All database objects:", allObjects);
+    
+    // Try a different approach to list tables
+    const tablesAlt = await drizzleDb.all(
+      sql`SELECT tbl_name FROM sqlite_master WHERE type='table'`
+    );
+    console.info("[DB][quickValidateDatabase] Tables (alternative query):", tablesAlt);
+    
+    // Try raw SQLite queries without Drizzle
+    try {
+      console.info("[DB][quickValidateDatabase] Trying raw SQLite queries...");
+      const rawTables = db.getAllSync("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+      console.info("[DB][quickValidateDatabase] Raw SQLite tables:", rawTables);
+      
+      const rawObjects = db.getAllSync("SELECT type, name FROM sqlite_master ORDER BY type, name");
+      console.info("[DB][quickValidateDatabase] Raw SQLite objects:", rawObjects);
+      
+      // Check if sqlite_master itself has any content
+      const masterCount = db.getFirstSync("SELECT COUNT(*) as count FROM sqlite_master");
+      console.info("[DB][quickValidateDatabase] sqlite_master row count:", masterCount);
+      
+      // Try to get all content from sqlite_master
+      const allMaster = db.getAllSync("SELECT * FROM sqlite_master");
+      console.info("[DB][quickValidateDatabase] All sqlite_master content:", allMaster);
+      
+      // Check database integrity
+      const integrityCheck = db.getFirstSync("PRAGMA integrity_check");
+      console.info("[DB][quickValidateDatabase] Integrity check:", integrityCheck);
+      
+      // Check if this might be an encrypted database
+      const firstBytes = db.getFirstSync("PRAGMA schema_version");
+      console.info("[DB][quickValidateDatabase] Schema version:", firstBytes);
+      
+      // Check user version (might indicate app version)
+      const userVersion = db.getFirstSync("PRAGMA user_version");
+      console.info("[DB][quickValidateDatabase] User version:", userVersion);
+      
+      // Check page count (should be > 0 for non-empty database)
+      const pageCount = db.getFirstSync("PRAGMA page_count");
+      console.info("[DB][quickValidateDatabase] Page count:", pageCount);
+      
+      // Check page size
+      const pageSize = db.getFirstSync("PRAGMA page_size");
+      console.info("[DB][quickValidateDatabase] Page size:", pageSize);
+      
+    } catch (rawError) {
+      console.error("[DB][quickValidateDatabase] Raw SQLite queries failed:", rawError);
+    }
+    
+    // Check if the main tables exist
     const transactionsTable = await drizzleDb.get(
       sql`SELECT name FROM sqlite_master WHERE type='table' AND name='transactions'`
     );
@@ -277,7 +372,13 @@ export const quickValidateDatabase = async (databasePath: string): Promise<boole
       sql`SELECT name FROM sqlite_master WHERE type='table' AND name='recurring_transactions'`
     );
     
-    return !!(transactionsTable && recurringTransactionsTable);
+    console.info("[DB][quickValidateDatabase] Transactions table found:", !!transactionsTable);
+    console.info("[DB][quickValidateDatabase] Recurring transactions table found:", !!recurringTransactionsTable);
+    
+    const isValid = !!(transactionsTable && recurringTransactionsTable);
+    console.info("[DB][quickValidateDatabase] Validation result:", isValid);
+    
+    return isValid;
     
   } catch (error) {
     console.error("[DB][quickValidateDatabase] Quick validation error:", error);
@@ -286,8 +387,120 @@ export const quickValidateDatabase = async (databasePath: string): Promise<boole
     if (db) {
       try {
         db.closeSync();
+        console.info("[DB][quickValidateDatabase] Database connection closed");
       } catch (closeError) {
         console.warn("[DB][quickValidateDatabase] Error closing database:", closeError);
+      }
+    }
+  }
+};
+
+/**
+ * Very lenient validation - just check if the database is a valid SQLite file
+ * This is useful for databases created by different tools (like Tauri) that might have different schemas
+ */
+export const lenientValidateDatabase = async (databasePath: string): Promise<boolean> => {
+  let db: SQLite.SQLiteDatabase | null = null;
+  
+  try {
+    console.info("[DB][lenientValidateDatabase] Opening database:", databasePath);
+    db = SQLite.openDatabaseSync(databasePath);
+    
+    // Just check if it's a valid SQLite database
+    try {
+      const testQuery = db.getFirstSync("SELECT 1 as test");
+      console.info("[DB][lenientValidateDatabase] Basic connectivity test:", testQuery);
+      
+      // Check if it has any tables at all
+      const tableCount = db.getFirstSync("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table'");
+      console.info("[DB][lenientValidateDatabase] Table count:", tableCount);
+      
+      // If it has tables, it's probably a valid database
+      return (tableCount as any)?.count > 0;
+      
+    } catch (queryError) {
+      console.error("[DB][lenientValidateDatabase] Query failed:", queryError);
+      return false;
+    }
+    
+  } catch (error) {
+    console.error("[DB][lenientValidateDatabase] Validation error:", error);
+    return false;
+  } finally {
+    if (db) {
+      try {
+        db.closeSync();
+        console.info("[DB][lenientValidateDatabase] Database connection closed");
+      } catch (closeError) {
+        console.warn("[DB][lenientValidateDatabase] Error closing database:", closeError);
+      }
+    }
+  }
+};
+
+/**
+ * Raw SQLite validation - bypasses Drizzle entirely for maximum compatibility
+ * This should work with databases created by any tool (Tauri SQLx, etc.)
+ */
+export const rawSqliteValidateDatabase = async (databaseName: string): Promise<boolean> => {
+  let db: SQLite.SQLiteDatabase | null = null;
+  
+  try {
+    console.info("[DB][rawSqliteValidateDatabase] Opening database:", databaseName);
+    db = SQLite.openDatabaseSync(databaseName);
+    
+    // Test basic connectivity with raw SQLite
+    try {
+      const testResult = db.getFirstSync("SELECT 1 as test");
+      console.info("[DB][rawSqliteValidateDatabase] Basic connectivity:", testResult);
+    } catch (connectError) {
+      console.error("[DB][rawSqliteValidateDatabase] Basic connectivity failed:", connectError);
+      return false;
+    }
+    
+    // Get all tables using raw SQLite
+    try {
+      const tables = db.getAllSync("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+      console.info("[DB][rawSqliteValidateDatabase] Found tables:", tables);
+      
+      // Check for our specific tables
+      const tableNames = tables.map((t: any) => t.name);
+      const hasTransactions = tableNames.includes('transactions');
+      const hasRecurringTransactions = tableNames.includes('recurring_transactions');
+      
+      console.info("[DB][rawSqliteValidateDatabase] Has transactions table:", hasTransactions);
+      console.info("[DB][rawSqliteValidateDatabase] Has recurring_transactions table:", hasRecurringTransactions);
+      
+      // If we have both required tables, it's valid
+      if (hasTransactions && hasRecurringTransactions) {
+        console.info("[DB][rawSqliteValidateDatabase] All required tables found - validation passed");
+        return true;
+      }
+      
+      // If we have any tables, it's at least a valid database
+      if (tableNames.length > 0) {
+        console.info("[DB][rawSqliteValidateDatabase] Database has tables but not the expected schema");
+        return true; // Allow import of any valid SQLite database
+      }
+      
+      console.warn("[DB][rawSqliteValidateDatabase] No tables found in database");
+      return false;
+      
+    } catch (queryError) {
+      console.error("[DB][rawSqliteValidateDatabase] Table query failed:", queryError);
+      return false;
+    }
+    
+  } catch (error) {
+    console.error("[DB][rawSqliteValidateDatabase] Validation error:", error);
+    return false;
+  } finally {
+    if (db) {
+      try {
+        db.closeSync();
+        console.info("[DB][rawSqliteValidateDatabase] Database connection closed");
+      } catch (closeError) {
+        console.warn("[DB][rawSqliteValidateDatabase] Error closing database:", closeError);
       }
     }
   }

@@ -33,6 +33,14 @@ import {
   useWeekStart,
 } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { showAlert, showConfirmDialog } from "@/libs/dialog";
+import {
+  backupDatabase,
+  exportCsvFromDb,
+  importCsv,
+  importDatabase,
+  purgeDatabase
+} from "@/libs/fs";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React from "react";
 
@@ -41,28 +49,128 @@ const DataGroup = () => {
   const destructiveColor = useThemeColor("destructive");
   const [interval] = useBackupInterval();
 
+  const handleLocalBackup = async () => {
+    await backupDatabase(
+      (msg) => showAlert("Success", msg),
+      (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+    );
+  };
+
+  const handleImportDatabase = async () => {
+    const confirmed = await showConfirmDialog(
+      "Import Database",
+      "This will replace your current database with the imported one. Make sure you have a backup before proceeding. Continue?",
+      {
+        okLabel: "Import",
+        cancelLabel: "Cancel",
+        kind: "warning"
+      }
+    );
+
+    if (confirmed) {
+      await importDatabase(
+        (msg) => showAlert("Success", msg),
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+      );
+    }
+  };
+
+  const handleExportCsv = async () => {
+    await exportCsvFromDb(
+      (msg) => showAlert("Success", msg),
+      (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+    );
+  };
+
+  const handleImportCsv = async () => {
+    const confirmed = await showConfirmDialog(
+      "Import CSV",
+      "This will add new transactions from the CSV file to your database. Continue?",
+      {
+        okLabel: "Import",
+        cancelLabel: "Cancel",
+        kind: "info"
+      }
+    );
+
+    if (confirmed) {
+      await importCsv(
+        false, // overwrite = false (append mode)
+        (msg) => showAlert("Success", msg),
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+      );
+    }
+  };
+
+  const handleAppendCsv = async () => {
+    const confirmed = await showConfirmDialog(
+      "Append CSV",
+      "This will add new transactions from the CSV file to your existing data. Continue?",
+      {
+        okLabel: "Append",
+        cancelLabel: "Cancel",
+        kind: "info"
+      }
+    );
+
+    if (confirmed) {
+      await importCsv(
+        false, // overwrite = false (append mode)
+        (msg) => showAlert("Success", msg),
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+      );
+    }
+  };
+
+  const handleClearDatabase = async () => {
+    const confirmed = await showConfirmDialog(
+      "Clear Database",
+      "Are you sure you want to clear all transactions? This action cannot be undone.",
+      {
+        okLabel: "Clear",
+        cancelLabel: "Cancel",
+        kind: "error"
+      }
+    );
+
+    if (confirmed) {
+      try {
+        await purgeDatabase();
+        await showAlert("Success", "Database cleared successfully");
+      } catch (error) {
+        console.error("Failed to clear database:", error);
+        await showAlert("Error", "Failed to clear database", { kind: "error" });
+      }
+    }
+  };
+
   return (
     <SettingGroup title="Data">
       <ThemedView style={styles.groupContainer}>
         <SimpleSettingItem
           icon={<FontAwesome name="download" size={24} color={iconColor} />}
           title="Local backup"
+          onPress={handleLocalBackup}
         />
         <SimpleSettingItem
           icon={<FontAwesome name="upload" size={24} color={iconColor} />}
           title="Import database"
+          onPress={handleImportDatabase}
         />
         <SimpleSettingItem
           icon={<FontAwesome6 name="file-csv" size={24} color={iconColor} />}
           title="Export CSV"
+          onPress={handleExportCsv}
         />
         <SimpleSettingItem
           icon={<FontAwesome6 name="file-csv" size={24} color={iconColor} />}
           title="Import CSV"
+          onPress={handleImportCsv}
         />
         <SimpleSettingItem
           icon={<FontAwesome6 name="file-csv" size={24} color={iconColor} />}
           title="Append CSV"
+          onPress={handleAppendCsv}
         />
         <SimpleSettingItem
           icon={
@@ -77,6 +185,7 @@ const DataGroup = () => {
             <FontAwesome5 name="trash" size={24} color={destructiveColor} />
           }
           title="Clear database"
+          onPress={handleClearDatabase}
         />
       </ThemedView>
     </SettingGroup>

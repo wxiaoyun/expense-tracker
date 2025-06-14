@@ -1,112 +1,36 @@
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
-import { BACKUP_DIR, CSV_FILENAME, DATABASE_FILENAME, EXPORT_DIR } from '@/constants';
-import { batchCreateTransactions, clearTransactions, listTransactions } from "@/db/transaction";
-import { validateDatabase } from '@/db/validate';
+import {
+  BACKUP_DIR,
+  CSV_FILENAME,
+  DATABASE_PATH,
+  EXPORT_DIR,
+} from "@/constants";
+import {
+  batchCreateTransactions,
+  clearTransactions,
+  listTransactions,
+} from "@/db/transaction";
 import {
   generateCsvContent,
   generateCsvContentFromDb,
   parseCsvContent,
 } from "./csv";
 
-// Define constants
-
-
-/**
- * Create export directory if it doesn't exist
- */
-const createExportDirIfNotExists = async (): Promise<string> => {
-  const exportDirPath = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
-  
-  try {
-    const dirInfo = await FileSystem.getInfoAsync(exportDirPath);
-    
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(exportDirPath, { intermediates: true });
-      console.info("[FS][createExportDirIfNotExists] export dir created");
-    }
-    
-    return exportDirPath;
-  } catch (error) {
-    console.error("[FS][createExportDirIfNotExists] Error creating export directory:", error);
-    throw error;
-  }
-};
-
-/**
- * Get the path to the export directory, creating it if it doesn't exist
- */
-const getExportPath = async (fileName: string): Promise<string> => {
-  const exportDir = await createExportDirIfNotExists();
-  return `${exportDir}/${fileName}`;
-};
-
-/**
- * Create backup directory if it doesn't exist
- */
-const createBackupDirIfNotExists = async (): Promise<string> => {
-  const backupDirPath = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
-  
-  try {
-    const dirInfo = await FileSystem.getInfoAsync(backupDirPath);
-    
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(backupDirPath, { intermediates: true });
-      console.info("[FS][createBackupDirIfNotExists] backup dir created");
-    }
-    
-    return backupDirPath;
-  } catch (error) {
-    console.error("[FS][createBackupDirIfNotExists] Error creating backup directory:", error);
-    throw error;
-  }
-};
-
-/**
- * Get the path to the backup directory, creating it if it doesn't exist
- */
-const getBackupPath = async (fileName: string): Promise<string> => {
-  const backupDir = await createBackupDirIfNotExists();
-  return `${backupDir}/${fileName}`;
-};
-
-/**
- * Get the database file path
- */
-const getDatabasePath = (): string => {
-  return `${FileSystem.documentDirectory}${DATABASE_FILENAME}`;
-};
-
-/**
- * Check if there's a staged database import waiting
- */
-export const hasStagedImport = async (): Promise<boolean> => {
-  const databasePath = getDatabasePath();
-  const stagedDbPath = `${databasePath}.staged`;
-  
-  try {
-    const stagedInfo = await FileSystem.getInfoAsync(stagedDbPath);
-    return stagedInfo.exists;
-  } catch (error) {
-    console.error("[FS][hasStagedImport] Error checking staged import:", error);
-    return false;
-  }
-};
-
 /**
  * Share a file using the platform's sharing functionality
  * Note: For now, we'll just log the file path since expo-sharing is not installed
  */
-const shareFile = async (fileUri: string, filename: string): Promise<void> => {
+const shareFile = async (fileUri: string): Promise<void> => {
   try {
     console.info(`[FS][shareFile] File saved to: ${fileUri}`);
-    console.info(`[FS][shareFile] Filename: ${filename}`);
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(fileUri, {
-        mimeType: filename.endsWith('.csv') ? 'text/csv' : 'application/octet-stream',
-        dialogTitle: `Share ${filename}`,
+        mimeType: fileUri.endsWith(".csv")
+          ? "text/csv"
+          : "application/octet-stream",
       });
     }
   } catch (error) {
@@ -125,8 +49,8 @@ export const importDatabase = async (
 ): Promise<void> => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*', // Allow all file types, we'll validate the extension
-      copyToCacheDirectory: true,
+      type: "*/*", // Allow all file types, we'll validate the extension
+      copyToCacheDirectory: false, // Let's try without copying first
     });
 
     if (result.canceled) {
@@ -135,7 +59,7 @@ export const importDatabase = async (
     }
 
     const file = result.assets[0];
-    
+
     if (!file.name.endsWith(".db")) {
       console.info("[FS][importDatabase] Invalid database file format");
       onError(
@@ -144,55 +68,30 @@ export const importDatabase = async (
       return;
     }
 
-    // Create a temp db for validation
-    const tmpDbName = `temp_${Date.now()}.db`;
-    const tmpDbPath = `${FileSystem.cacheDirectory}${tmpDbName}`;
-    
-    try {
-      // Copy the selected file to a temporary location
-      await FileSystem.copyAsync({
-        from: file.uri,
-        to: tmpDbPath,
-      });
+    console.info("[FS][importDatabase] Selected file:", {
+      name: file.name,
+      uri: file.uri,
+      size: file.size,
+      mimeType: file.mimeType,
+    });
 
-      // Validate the database structure and integrity
-      console.info("[FS][importDatabase] Validating database structure...");
-      const isValid = await validateDatabase(tmpDbPath);
-      
-      if (!isValid) {
-        console.error("[FS][importDatabase] Database validation failed");
-        onError(
-          "Invalid database file. The file doesn't match the expected database structure or is corrupted."
-        );
-        return;
-      }
+    const fileInfo = await FileSystem.getInfoAsync(file.uri);
+    console.info("[FS][importDatabase] File info:", fileInfo);
 
-      console.info("[FS][importDatabase] Database validation passed");
-
-      // Instead of overwriting the active database, we'll use a staged approach
-      const databasePath = getDatabasePath();
-      const stagedDbPath = `${databasePath}.staged`;
-      
-      // Copy to staged location
-      await FileSystem.copyAsync({
-        from: tmpDbPath,
-        to: stagedDbPath,
-      });
-
-      console.info("[FS][importDatabase] Database staged for import");
-      onSuccess(
-        "Database imported and validated successfully. Please restart the app to complete the import process."
+    if (!fileInfo.exists) {
+      console.error("[FS][importDatabase] Selected file does not exist");
+      onError(
+        "Selected file is not accessible. Please try selecting the file again.",
       );
-      
-      // TODO: Implement app restart mechanism or show restart prompt
-      
-    } finally {
-      try {
-        await FileSystem.deleteAsync(tmpDbPath, { idempotent: true });
-      } catch (cleanupError) {
-        console.warn("[FS][importDatabase] Failed to cleanup temp file:", cleanupError);
-      }
+      return;
     }
+
+    FileSystem.copyAsync({
+      from: file.uri,
+      to: `${FileSystem.documentDirectory}${DATABASE_PATH}`,
+    });
+
+    onSuccess("Database imported successfully");
   } catch (error) {
     console.error("[FS][importDatabase] Failed to import data:", error);
     onError("Something went wrong, failed to import data");
@@ -207,34 +106,27 @@ export const exportDatabase = async (
   onError: (errMsg: string) => void,
 ): Promise<void> => {
   try {
-    const now = new Date();
-    const formattedDate = now.toISOString().replace(/[:.]/g, "_").split('T')[0];
-    const suggestedDownloadName = `${formattedDate}_${DATABASE_FILENAME}`;
-    const exportPath = await getExportPath(suggestedDownloadName);
-
-    const databasePath = getDatabasePath();
-    
-    // Check if database exists
-    const dbInfo = await FileSystem.getInfoAsync(databasePath);
-    if (!dbInfo.exists) {
-      onError("Database file not found");
-      return;
-    }
-
-    // Copy database to export location
-    await FileSystem.copyAsync({
-      from: databasePath,
-      to: exportPath,
-    });
+    const databasePath = `${FileSystem.documentDirectory}${DATABASE_PATH}`;
 
     // Share the exported file
-    await shareFile(exportPath, suggestedDownloadName);
+    await shareFile(databasePath);
 
     console.info("[FS][exportDatabase] Data exported successfully");
     onSuccess("Data exported successfully");
   } catch (error) {
     console.error("[FS][exportDatabase] Failed to export data:", error);
     onError("Something went wrong, failed to export data");
+  }
+};
+
+export const purgeDatabase = async (): Promise<void> => {
+  try {
+    await FileSystem.deleteAsync(
+      `${FileSystem.documentDirectory}${DATABASE_PATH}`,
+      { idempotent: true },
+    );
+  } catch (error) {
+    console.error("[FS][purgeDatabase] Failed to purge database:", error);
   }
 };
 
@@ -249,7 +141,7 @@ export const importCsv = async (
 ): Promise<void> => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'text/csv',
+      type: "text/csv",
       copyToCacheDirectory: true,
     });
 
@@ -259,7 +151,7 @@ export const importCsv = async (
     }
 
     const file = result.assets[0];
-    
+
     if (!file.name.endsWith(".csv")) {
       console.info("[FS][importCsv] Invalid csv file format");
       onError(
@@ -273,7 +165,10 @@ export const importCsv = async (
     const parseResult = parseCsvContent(csvData);
 
     if (!parseResult.ok) {
-      console.error("[FS][importCsv] Failed to parse csv file:", parseResult.err);
+      console.error(
+        "[FS][importCsv] Failed to parse csv file:",
+        parseResult.err,
+      );
       onError(
         "Invalid csv file format. Please ensure you're importing a valid csv file exported from the app.",
       );
@@ -307,19 +202,17 @@ export const exportCsvFromDb = async (
   onError: (errMsg: string) => void,
 ): Promise<void> => {
   try {
-    const now = new Date();
-    const formattedDate = now.toISOString().replace(/[:.]/g, "_").split('T')[0];
-    const suggestedDownloadName = `${formattedDate}_${CSV_FILENAME}`;
-    const exportPath = await getExportPath(suggestedDownloadName);
-
+    const exportDir = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
+    const exportPath = `${exportDir}/tmp.csv`;
     console.info("[FS][exportCsvFromDb] exportPath:", exportPath);
 
     const csvContentString = await generateCsvContentFromDb();
-
+    await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
     await FileSystem.writeAsStringAsync(exportPath, csvContentString);
 
     // Share the exported file
-    await shareFile(exportPath, suggestedDownloadName);
+    await shareFile(exportPath);
+    await FileSystem.deleteAsync(exportPath, { idempotent: true });
 
     console.info("[FS][exportCsvFromDb] Data exported successfully");
     onSuccess("Data exported successfully");
@@ -344,12 +237,13 @@ export const exportCsvFromTransactions = async (
   const { fileName = CSV_FILENAME, ...rest } = options;
 
   try {
-    const now = new Date();
-    const formattedDate = now.toISOString().replace(/[:.]/g, "_").split('T')[0];
-    const suggestedDownloadName = `${formattedDate}_${fileName}`;
-    const exportPath = await getExportPath(suggestedDownloadName);
+    const exportDir = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
+    const exportPath = `${exportDir}/tmp.db`;
 
     console.info("[FS][exportCsvFromTransactions] exportPath:", exportPath);
+
+    // Ensure export directory exists
+    await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
 
     const res = await listTransactions(rest);
     const csvContentString = generateCsvContent(res.items);
@@ -357,12 +251,16 @@ export const exportCsvFromTransactions = async (
     await FileSystem.writeAsStringAsync(exportPath, csvContentString);
 
     // Share the exported file
-    await shareFile(exportPath, suggestedDownloadName);
+    await shareFile(exportPath);
+    await FileSystem.deleteAsync(exportPath, { idempotent: true });
 
     console.info("[FS][exportCsvFromTransactions] Data exported successfully");
     onSuccess("Data exported successfully");
   } catch (error) {
-    console.error("[FS][exportCsvFromTransactions] Failed to export data:", error);
+    console.error(
+      "[FS][exportCsvFromTransactions] Failed to export data:",
+      error,
+    );
     onError("Something went wrong, failed to export data");
   }
 };
@@ -375,13 +273,9 @@ export const backupDatabase = async (
   onError: (errMsg: string) => void,
 ): Promise<boolean> => {
   try {
-    const now = new Date();
-    const formattedDate = now.toISOString().replace(/[:.]/g, "_").split('T')[0];
-    const backupFileName = `${formattedDate}_${DATABASE_FILENAME}`;
-    const backupPath = await getBackupPath(backupFileName);
+    const databasePath = `${FileSystem.documentDirectory}${DATABASE_PATH}`;
+    console.info("[FS][backupDatabase] databasePath:", databasePath);
 
-    const databasePath = getDatabasePath();
-    
     // Check if database exists
     const dbInfo = await FileSystem.getInfoAsync(databasePath);
     if (!dbInfo.exists) {
@@ -389,13 +283,11 @@ export const backupDatabase = async (
       return false;
     }
 
-    await FileSystem.copyAsync({
-      from: databasePath,
-      to: backupPath,
-    });
+    // Share the backup file so user can save it to their preferred location
+    await shareFile(databasePath);
 
     console.info("[FS][backupDatabase] Backup created successfully");
-    onSuccess("Backup created successfully");
+    onSuccess("Backup created successfully and ready to save");
     return true;
   } catch (error) {
     console.error("[FS][backupDatabase] Failed to create backup:", error);
@@ -405,58 +297,41 @@ export const backupDatabase = async (
 };
 
 /**
- * Get information about available storage space
- */
-export const getStorageInfo = async (): Promise<Result<{
-  freeSpace: number;
-  totalSpace: number;
-}, string>> => {
-  try {
-    const freeSpace = await FileSystem.getFreeDiskStorageAsync();
-    const totalSpace = await FileSystem.getTotalDiskCapacityAsync();
-    
-    return {
-      ok: true,
-      data: {
-        freeSpace,
-        totalSpace,
-      },
-    };
-  } catch (error) {
-    console.error("[FS][getStorageInfo] Failed to get storage info:", error);
-    return {
-      ok: false,
-      err: "Failed to get storage information",
-    };
-  }
-};
-
-/**
  * Clean up old backup files (keep only the most recent N backups)
  */
-export const cleanupOldBackups = async (keepCount: number = 5): Promise<void> => {
+export const cleanupOldBackups = async (
+  keepCount: number = 5,
+): Promise<void> => {
   try {
-    const backupDir = await createBackupDirIfNotExists();
+    const backupDir = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
     const files = await FileSystem.readDirectoryAsync(backupDir);
-    
+
     // Filter for database backup files and sort by name (which includes timestamp)
     const backupFiles = files
-      .filter(file => file.endsWith('.db'))
+      .filter((file) => file.endsWith(".db"))
       .sort()
       .reverse(); // Most recent first
 
     // Delete old backups beyond the keep count
     const filesToDelete = backupFiles.slice(keepCount);
-    
+
     for (const file of filesToDelete) {
       const filePath = `${backupDir}/${file}`;
       await FileSystem.deleteAsync(filePath, { idempotent: true });
       console.info(`[FS][cleanupOldBackups] Deleted old backup: ${file}`);
     }
-    
-    console.info(`[FS][cleanupOldBackups] Cleanup complete. Kept ${Math.min(backupFiles.length, keepCount)} backups.`);
+
+    console.info(
+      `[FS][cleanupOldBackups] Cleanup complete. Kept ${Math.min(
+        backupFiles.length,
+        keepCount,
+      )} backups.`,
+    );
   } catch (error) {
-    console.error("[FS][cleanupOldBackups] Failed to cleanup old backups:", error);
+    console.error(
+      "[FS][cleanupOldBackups] Failed to cleanup old backups:",
+      error,
+    );
   }
 };
 
@@ -465,14 +340,14 @@ export const cleanupOldBackups = async (keepCount: number = 5): Promise<void> =>
  */
 export const listBackups = async (): Promise<Result<string[], string>> => {
   try {
-    const backupDir = await createBackupDirIfNotExists();
+    const backupDir = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
     const files = await FileSystem.readDirectoryAsync(backupDir);
-    
+
     const backupFiles = files
-      .filter(file => file.endsWith('.db'))
+      .filter((file) => file.endsWith(".db"))
       .sort()
       .reverse(); // Most recent first
-    
+
     return {
       ok: true,
       data: backupFiles,

@@ -1,5 +1,7 @@
 export const APP_NAME = "expense_tracker";
 export const DATABASE_FILENAME = `${APP_NAME}.db`;
+// SQLite Plugin will create a directory called SQLite and put the database file in it
+export const DATABASE_PATH = `SQLite/${DATABASE_FILENAME}`;
 export const CSV_FILENAME = `${APP_NAME}.csv`;
 
 export const EXPORT_DIR = "exports";
