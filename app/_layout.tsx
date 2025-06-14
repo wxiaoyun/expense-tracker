@@ -1,13 +1,11 @@
-import { APP_NAME } from "@/constants";
-import { queryClient } from "@/hooks/useQuery";
 import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { Stack } from "expo-router";
-import { SQLiteProvider } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import "react-native-reanimated";
@@ -16,11 +14,16 @@ import {
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 
+import { ThemedText } from "@/components/ThemedText";
+import { db } from "@/db";
+import migrations from "@/drizzle/migrations";
+import { queryClient } from "@/hooks/useQuery";
+
 export default function RootLayout() {
   const colorScheme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
 
   return (
-    <SQLiteProvider databaseName={`${APP_NAME}.db`}>
+    <MigrateDatabase>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={colorScheme}>
           <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -32,6 +35,19 @@ export default function RootLayout() {
           </SafeAreaProvider>
         </ThemeProvider>
       </QueryClientProvider>
-    </SQLiteProvider>
+    </MigrateDatabase>
   );
 }
+
+const MigrateDatabase: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const { success, error } = useMigrations(db, migrations);
+  if (error) {
+    throw error;
+  }
+  if (!success) {
+    return <ThemedText>Loading...</ThemedText>;
+  }
+  return <>{children}</>;
+};
