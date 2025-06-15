@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
 
 import { BACKUP_INTERVAL_MAP } from "@/constants";
@@ -8,8 +8,9 @@ import {
 } from "@/db/recurring";
 import { invalidateTransactionQueries } from "@/hooks/useQuery";
 import { backupDatabase, cleanupOldBackups } from "@/libs/fs";
+import { Storage } from "expo-sqlite/kv-store";
 import { Alert } from "react-native";
-import { useBackupInterval, useLastBackup } from "./useKv";
+import { backupIntervalKey, lastBackupKey } from "./useKv";
 
 /**
  * Hook to automatically incur all recurring transactions on app launch
@@ -17,14 +18,23 @@ import { useBackupInterval, useLastBackup } from "./useKv";
  * that have pending transactions to create based on their cron schedules
  */
 export const useRecurringTransactionIncur = () => {
+  const lock = useRef(false);
+
   useEffect(() => {
+    if (lock.current) return;
+    lock.current = true;
+
     console.log(
       "[useRecurringTransactionIncur] Starting automatic incurring process...",
     );
 
     // Run the incurring process
     incurAllRecurringTransactions();
-  }, []); // Empty dependency array means this runs once on mount
+
+    return () => {
+      lock.current = false;
+    };
+  }, []);
 };
 
 const incurAllRecurringTransactions = async () => {
@@ -103,46 +113,25 @@ const incurAllRecurringTransactions = async () => {
 };
 
 export const usePeriodicBackup = () => {
-  const [interval] = useBackupInterval();
-  const [lastBackup, setLastBackup] = useLastBackup();
   const lock = useRef(false);
-
-  const shouldBackup = useMemo(() => {
-    if (interval === "off") return false;
-    if (!lastBackup) return true;
-
-    const now = new Date();
-    const lastBackupDate = new Date(lastBackup * 1000);
-
-    const diffTime = Math.abs(now.getTime() - lastBackupDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // Get the number of days from the interval map
-    const intervalDays =
-      BACKUP_INTERVAL_MAP[interval as keyof typeof BACKUP_INTERVAL_MAP];
-    return diffDays >= intervalDays;
-  }, [interval, lastBackup]);
 
   useEffect(() => {
     if (lock.current) return;
     lock.current = true;
 
-    if (shouldBackup) {
+    performBackup(
+      () => {
+        toast.success("Automatic backup completed");
+      },
+      (errMsg) => {
+        Alert.alert("Error", errMsg);
+      },
+    );
 
-      console.log("[usePeriodicBackup] Starting automatic backup...");
-      performBackup(
-        () => {
-          setLastBackup(Math.floor(Date.now() / 1000));
-        },
-        (errMsg) => {
-          Alert.alert("Error", errMsg);
-        },
-      );
-    }
     return () => {
       lock.current = false;
     };
-  }, [shouldBackup, setLastBackup]);
+  }, []);
 };
 
 const performBackup = async (
@@ -150,6 +139,31 @@ const performBackup = async (
   onError: (errMsg: string) => void,
 ) => {
   try {
+    const backupInterval = await Storage.getItemAsync(backupIntervalKey);
+    if (!backupInterval || backupInterval === "off") {
+      return;
+    }
+
+    const lastBackup = await Storage.getItemAsync(lastBackupKey);
+    if (!lastBackup) {
+      return;
+    }
+
+    const lastBackupDate = new Date(
+      !lastBackup ? 0 : Number(lastBackup) * 1000,
+    );
+    const now = new Date();
+
+    const diffTime = Math.abs(now.getTime() - lastBackupDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const intervalDays =
+      BACKUP_INTERVAL_MAP[backupInterval as keyof typeof BACKUP_INTERVAL_MAP];
+
+    if (diffDays < intervalDays) {
+      return;
+    }
+
     const success = await backupDatabase(
       (msg) => {
         console.log("[usePeriodicBackup] Backup success:", msg);
@@ -162,8 +176,14 @@ const performBackup = async (
     );
 
     if (success) {
+      await Storage.setItemAsync(
+        lastBackupKey,
+        Math.floor(Date.now() / 1000).toString(),
+      );
+
       // Clean up old backups (keep last 5)
       await cleanupOldBackups(5);
+
       // Update last backup timestamp
       onSuccess();
     } else {

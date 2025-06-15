@@ -44,8 +44,9 @@ export const useWeekStart = () => {
   return useKy("weekStart", "monday");
 };
 
+export const backupIntervalKey = "backupInterval";
 export const useBackupInterval = () => {
-  const [interval, setInterval] = useKy("backupInterval", "monthly") ;
+  const [interval, setInterval] = useKy(backupIntervalKey, "monthly") ;
 
   const setBackupInterval = useCallback((interval: BackupInterval) => {
     setInterval(interval);
@@ -54,8 +55,9 @@ export const useBackupInterval = () => {
   return [interval as BackupInterval, setBackupInterval] as const;
 };
 
+export const lastBackupKey = "lastBackup";
 export const useLastBackup = () => {
-  const [lastBackup, setLastBackup] = useKy("lastBackup", "0");
+  const [lastBackup, setLastBackup] = useKy(lastBackupKey, "0");
 
   const lastBackupUnix = useMemo(() => {
     return Number(lastBackup) || 0;
