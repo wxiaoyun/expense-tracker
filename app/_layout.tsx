@@ -22,7 +22,7 @@ import migrations from "@/drizzle/migrations";
 import { queryClient } from "@/hooks/useQuery";
 
 const formSheetOptions = {
-  presentation: "modal",
+  presentation: "formSheet",
   sheetAllowedDetents: "fitToContents",
   sheetGrabberVisible: true,
   sheetExpandsWhenScrolledToEdge: false,
@@ -44,14 +44,14 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="(transactions)/new"
                   options={{
-                    ...formSheetOptions,
+                    presentation: "modal",
                     title: "New Transaction",
                   }}
                 />
                 <Stack.Screen
                   name="(transactions)/edit"
                   options={{
-                    ...formSheetOptions,
+                    presentation: "modal",
                     title: "Edit Transaction",
                   }}
                 />

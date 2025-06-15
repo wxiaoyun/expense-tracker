@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { TransactionList } from "@/components/transactions/list";
 import { deleteTransaction, setVerification } from "@/db/transaction";
-import { useCategoryFilter, useDateRange, useSearch } from "@/hooks/useParams";
+import { useCategoryFilter, useDateRange, useSearch } from "@/hooks/useFilter";
 import {
   invalidateTransactionQueries,
   useInfiniteTransactionListQuery,

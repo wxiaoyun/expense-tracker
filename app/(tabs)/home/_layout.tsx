@@ -1,12 +1,10 @@
 import { format } from "date-fns";
-import { router, Stack } from "expo-router";
-import { debounce } from "lodash";
-import { useCallback } from "react";
+import { Stack } from "expo-router";
 import { View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { TransactionDropdown } from "@/components/transactions/header-drop-down";
-import { UrlFilter, useDateRange } from "@/hooks/useParams";
+import { debouncedSetSearch, useDateRange } from "@/hooks/useFilter";
 
 const HeaderLeft = () => {
   const { dateRange } = useDateRange();
@@ -26,38 +24,26 @@ const HeaderLeft = () => {
 };
 
 export default function Layout() {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSetSearch = useCallback(
-    debounce((text: string) => {
-      router.setParams({
-        search: text,
-      } satisfies UrlFilter);
-    }, 200),
-    [],
-  );
-
   return (
-      <Stack>
-        <Stack.Screen
-          name="index"
-          options={{
-            title: "Transactions",
-            headerShown: true,
-            headerTransparent: true,
-            headerBlurEffect: "regular",
-            headerLeft: () => <HeaderLeft />,
-            headerRight: () => (
-              <TransactionDropdown />
-            ),
-            headerSearchBarOptions: {
-              placeholder: "Search",
-              hideWhenScrolling: true,
-              onChangeText: (e) => {
-                debouncedSetSearch(e.nativeEvent.text);
-              },
+    <Stack>
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Transactions",
+          headerShown: true,
+          headerTransparent: true,
+          headerBlurEffect: "regular",
+          headerLeft: () => <HeaderLeft />,
+          headerRight: () => <TransactionDropdown />,
+          headerSearchBarOptions: {
+            placeholder: "Search",
+            hideWhenScrolling: true,
+            onChangeText: (e) => {
+              debouncedSetSearch(e.nativeEvent.text);
             },
-          }}
-        />
-      </Stack>
+          },
+        }}
+      />
+    </Stack>
   );
 }
