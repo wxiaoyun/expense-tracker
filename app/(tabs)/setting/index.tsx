@@ -53,10 +53,13 @@ const DataGroup = () => {
   const [interval] = useBackupInterval();
 
   const handleExportDatabase = async () => {
-    await exportDatabase(
-      toast.success,
-      (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
-    );
+    const result = await exportDatabase();
+    
+    if (result.ok) {
+      toast.success(result.data);
+    } else {
+      showAlert("Error", result.err, { kind: "error" });
+    }
   };
 
   const handleImportDatabase = async () => {
@@ -71,18 +74,24 @@ const DataGroup = () => {
     );
 
     if (confirmed) {
-      await importDatabase(
-        toast.success,
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
-      );
+      const result = await importDatabase();
+      
+      if (result.ok) {
+        toast.success(result.data);
+      } else {
+        showAlert("Error", result.err, { kind: "error" });
+      }
     }
   };
 
   const handleExportCsv = async () => {
-    await exportCsvFromDb(
-      toast.success,
-      (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
-    );
+    const result = await exportCsvFromDb();
+    
+    if (result.ok) {
+      toast.success(result.data);
+    } else {
+      showAlert("Error", result.err, { kind: "error" });
+    }
   };
 
   const handleImportCsv = async () => {
@@ -97,11 +106,13 @@ const DataGroup = () => {
     );
 
     if (confirmed) {
-      await importCsv(
-        false, // overwrite = false (append mode)
-        toast.success,
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
-      );
+      const result = await importCsv(false); // overwrite = false (append mode)
+      
+      if (result.ok) {
+        toast.success(result.data);
+      } else {
+        showAlert("Error", result.err, { kind: "error" });
+      }
     }
   };
 
@@ -117,11 +128,13 @@ const DataGroup = () => {
     );
 
     if (confirmed) {
-      await importCsv(
-        false, // overwrite = false (append mode)
-        toast.success,
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
-      );
+      const result = await importCsv(false); // overwrite = false (append mode)
+      
+      if (result.ok) {
+        toast.success(result.data);
+      } else {
+        showAlert("Error", result.err, { kind: "error" });
+      }
     }
   };
 
@@ -137,12 +150,12 @@ const DataGroup = () => {
     );
 
     if (confirmed) {
-      try {
-        await purgeDatabase();
+      const result = await purgeDatabase();
+      
+      if (result.ok) {
         toast.success("Database cleared successfully, restart the app to see the changes");
-      } catch (error) {
-        console.error("Failed to clear database:", error);
-        await showAlert("Error", "Failed to clear database", { kind: "error" });
+      } else {
+        showAlert("Error", result.err, { kind: "error" });
       }
     }
   };

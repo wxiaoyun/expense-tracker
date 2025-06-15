@@ -2,10 +2,12 @@ import { useField, useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import Fuse from "fuse.js";
 import React, { useCallback, useMemo, useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import DatePicker from "react-native-date-picker";
+import { ScrollView } from "react-native-gesture-handler";
 import { toast } from "sonner-native";
 import { z } from "zod/v4";
 
@@ -18,8 +20,6 @@ import {
   useCategoriesQuery,
 } from "@/hooks/useQuery";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { useRouter } from "expo-router";
-import { ScrollView } from "react-native-gesture-handler";
 
 // Schema for new transaction form
 export const NewTransactionFormSchema = z.object({

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Alert } from "react-native";
 import { toast } from "sonner-native";
 
 import { BACKUP_INTERVAL_MAP } from "@/constants";
@@ -9,7 +10,6 @@ import {
 import { invalidateTransactionQueries } from "@/hooks/useQuery";
 import { backupDatabase, cleanupOldBackups } from "@/libs/fs";
 import { Storage } from "expo-sqlite/kv-store";
-import { Alert } from "react-native";
 import { backupIntervalKey, lastBackupKey } from "./useKv";
 
 /**
@@ -119,14 +119,7 @@ export const usePeriodicBackup = () => {
     if (lock.current) return;
     lock.current = true;
 
-    performBackup(
-      () => {
-        toast.success("Automatic backup completed");
-      },
-      (errMsg) => {
-        Alert.alert("Error", errMsg);
-      },
-    );
+    performPeriodicBackup();
 
     return () => {
       lock.current = false;
@@ -134,10 +127,7 @@ export const usePeriodicBackup = () => {
   }, []);
 };
 
-const performBackup = async (
-  onSuccess: () => void,
-  onError: (errMsg: string) => void,
-) => {
+const performPeriodicBackup = async () => {
   try {
     const backupInterval = await Storage.getItemAsync(backupIntervalKey);
     if (!backupInterval || backupInterval === "off") {
@@ -164,33 +154,30 @@ const performBackup = async (
       return;
     }
 
-    const success = await backupDatabase(
-      (msg) => {
-        console.log("[usePeriodicBackup] Backup success:", msg);
-        toast.success("Automatic backup completed");
-      },
-      (errMsg) => {
-        console.error("[usePeriodicBackup] Backup error:", errMsg);
-        toast.error("Automatic backup failed");
-      },
-    );
+    // Perform backup using the new Result-based approach
+    const backupResult = await backupDatabase();
+    
+    if (backupResult.ok) {
+      console.log("[usePeriodicBackup] Backup success:", backupResult.data);
+      toast.success("Automatic backup completed");
 
-    if (success) {
+      // Update last backup timestamp
       await Storage.setItemAsync(
         lastBackupKey,
         Math.floor(Date.now() / 1000).toString(),
       );
 
       // Clean up old backups (keep last 5)
-      await cleanupOldBackups(5);
-
-      // Update last backup timestamp
-      onSuccess();
+      const cleanupResult = await cleanupOldBackups(5);
+      if (!cleanupResult.ok) {
+        console.error("[usePeriodicBackup] Cleanup failed:", cleanupResult.err);
+      }
     } else {
-      onError("Failed to backup data");
+      console.error("[usePeriodicBackup] Backup error:", backupResult.err);
+      Alert.alert("Backup Error", backupResult.err);
     }
   } catch (error) {
     console.error("[usePeriodicBackup] Error during backup:", error);
-    onError("Failed to backup data");
+    Alert.alert("Backup Error", "Failed to perform automatic backup");
   }
 };

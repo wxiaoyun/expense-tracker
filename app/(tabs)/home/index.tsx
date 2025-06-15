@@ -82,8 +82,9 @@ export default function HomeScreen() {
 
   const handleToggleVerified = useCallback(
     async (id: number, verified: boolean) => {
+      console.log(`Toggle verification for transaction ${id}: ${verified}`);
+      
       try {
-        console.log(`Toggle verification for transaction ${id}: ${verified}`);
         await setVerification(id, verified ? 1 : 0);
         // Invalidate queries to refresh the data
         invalidateTransactionQueries();
@@ -120,8 +121,9 @@ export default function HomeScreen() {
         return;
       }
 
+      console.log(`Confirmed delete transaction ${id}`);
+      
       try {
-        console.log(`Confirmed delete transaction ${id}`);
         await deleteTransaction(id);
         // Invalidate queries to refresh the data
         invalidateTransactionQueries();

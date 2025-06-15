@@ -1,19 +1,10 @@
 import { atom, getDefaultStore, useAtom } from "jotai";
+import { debounce } from "lodash";
 import { useMemo } from "react";
 
 import { DateRange } from "@/constants";
 import { getDateRange } from "@/libs/date";
-import { debounce } from "lodash";
 import { useWeekStart } from "./useKv";
-
-export type UrlFilter = {
-  search?: string;
-  categories?: string[];
-  verified?: boolean;
-  date?: string;
-  range?: DateRange;
-};
-
 
 export const searchAtom = atom("");
 

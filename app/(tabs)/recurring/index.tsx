@@ -91,8 +91,9 @@ export default function RecurringTransactionsScreen() {
         return;
       }
 
+      console.log(`Confirmed delete recurring transaction ${id}`);
+      
       try {
-        console.log(`Confirmed delete recurring transaction ${id}`);
         await deleteRecurringTransaction(id);
         // Invalidate queries to refresh the data
         invalidateRecurringTransactionsQueries();
@@ -118,8 +119,9 @@ export default function RecurringTransactionsScreen() {
         return;
       }
 
+      console.log(`Incurring recurring transaction ${id}`);
+      
       try {
-        console.log(`Incurring recurring transaction ${id}`);
         const incurredCount = await incurRecurringTransaction(id);
         
         if (incurredCount === null) {

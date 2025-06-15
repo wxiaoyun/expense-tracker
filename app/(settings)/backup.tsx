@@ -1,10 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import * as Sharing from "expo-sharing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,13 +25,12 @@ import { toast } from "sonner-native";
 import { SettingGroup, SimpleSettingItem } from "@/components/setting";
 import { ThemedText } from "@/components/ThemedText";
 import {
-  BACKUP_DIR,
   BACKUP_INTERVAL_OPTIONS,
-  BackupInterval,
+  BackupInterval
 } from "@/constants";
 import { useBackupInterval, useLastBackup } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { backupDatabase, deleteBackup, listBackups } from "@/libs/fs";
+import { backupDatabase, deleteBackup, listBackups, shareBackup } from "@/libs/fs";
 
 type SwipeableBackupProps = {
   filename: string;
@@ -219,20 +216,17 @@ export default function Page() {
 
   const loadBackups = useCallback(async () => {
     setLoading(true);
-    try {
-      const result = await listBackups();
-      if (result.ok) {
-        setBackups(result.data || []);
-      } else {
-        console.error("Failed to load backups:", result.err);
-        setBackups([]);
-      }
-    } catch (error) {
-      console.error("Error loading backups:", error);
+    const result = await listBackups();
+    
+    if (result.ok) {
+      setBackups(result.data || []);
+    } else {
+      console.error("Failed to load backups:", result.err);
       setBackups([]);
-    } finally {
-      setLoading(false);
+      toast.error(result.err);
     }
+    
+    setLoading(false);
   }, []);
 
   const handleDeleteBackup = useCallback(
@@ -250,22 +244,16 @@ export default function Page() {
             text: "Delete",
             style: "destructive",
             onPress: async () => {
-              try {
-                await deleteBackup(
-                  filename,
-                  (msg) => {
-                    toast.success(msg);
-                    loadBackups(); // Refresh the list
-                  },
-                  (errMsg) => {
-                    toast.error(errMsg);
-                  },
-                );
-              } catch (error) {
-                console.error("Error deleting backup:", error);
-              } finally {
-                onTriggered?.();
+              const result = await deleteBackup(filename);
+              
+              if (result.ok) {
+                toast.success(result.data);
+                loadBackups(); // Refresh the list
+              } else {
+                toast.error(result.err);
               }
+              
+              onTriggered?.();
             },
           },
         ],
@@ -276,54 +264,32 @@ export default function Page() {
 
   const handleShareBackup = useCallback(
     async (filename: string, onTriggered?: () => void) => {
-      try {
-        const backupPath = `${FileSystem.documentDirectory}${BACKUP_DIR}/${filename}`;
-
-        // Check if the file exists
-        const fileInfo = await FileSystem.getInfoAsync(backupPath);
-        if (!fileInfo.exists) {
-          toast.error("Backup file not found");
-          onTriggered?.();
-          return;
-        }
-
-        // Share the backup file
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(backupPath, {
-            mimeType: "application/octet-stream",
-            dialogTitle: "Share Backup",
-          });
-          toast.success("Backup shared successfully");
-        } else {
-          toast.error("Sharing is not available on this device");
-        }
-      } catch (error) {
-        console.error("Error sharing backup:", error);
-        toast.error("Failed to share backup");
-      } finally {
-        onTriggered?.();
+      const result = await shareBackup(filename);
+      
+      if (result.ok) {
+        toast.success(result.data);
+      } else {
+        toast.error(result.err);
       }
+      
+      onTriggered?.();
     },
     [],
   );
 
   const handleCreateBackup = useCallback(async () => {
     setRefreshing(true);
-    try {
-      await backupDatabase(
-        (msg) => {
-          toast.success(msg);
-          loadBackups(); // Refresh the list
-        },
-        (errMsg) => {
-          toast.error(errMsg);
-        },
-      );
-    } catch (error) {
-      console.error("Error creating backup:", error);
-    } finally {
-      setRefreshing(false);
+    
+    const result = await backupDatabase();
+    
+    if (result.ok) {
+      toast.success(result.data);
+      loadBackups(); // Refresh the list
+    } else {
+      toast.error(result.err);
     }
+    
+    setRefreshing(false);
   }, [loadBackups]);
 
   useEffect(() => {

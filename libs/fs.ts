@@ -16,9 +16,8 @@ import {
 
 /**
  * Share a file using the platform's sharing functionality
- * Note: For now, we'll just log the file path since expo-sharing is not installed
  */
-const shareFile = async (fileUri: string): Promise<void> => {
+const shareFile = async (fileUri: string): Promise<Result<void, string>> => {
   try {
     console.info(`[FS][shareFile] File saved to: ${fileUri}`);
     if (await Sharing.isAvailableAsync()) {
@@ -27,21 +26,20 @@ const shareFile = async (fileUri: string): Promise<void> => {
           ? "text/csv"
           : "application/octet-stream",
       });
+      return { ok: true, data: undefined };
+    } else {
+      return { ok: false, err: "Sharing is not available on this device" };
     }
   } catch (error) {
     console.error("[FS][shareFile] Error sharing file:", error);
-    throw error;
+    return { ok: false, err: "Failed to share file" };
   }
 };
 
 /**
  * Import database from a selected file
- * Note: Since Expo SQLite doesn't support closing connections, we use a restart-based approach
  */
-export const importDatabase = async (
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<void> => {
+export const importDatabase = async (): Promise<Result<string, string>> => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: "*/*", // Allow all file types, we'll validate the extension
@@ -50,17 +48,17 @@ export const importDatabase = async (
 
     if (result.canceled) {
       console.info("[FS][importDatabase] User cancelled import dialog");
-      return;
+      return { ok: false, err: "Import cancelled by user" };
     }
 
     const file = result.assets[0];
 
     if (!file.name.endsWith(".db")) {
       console.info("[FS][importDatabase] Invalid database file format");
-      onError(
-        "Invalid database file format. Please ensure you're importing a valid backup.",
-      );
-      return;
+      return {
+        ok: false,
+        err: "Invalid database file format. Please ensure you're importing a valid backup.",
+      };
     }
 
     console.info("[FS][importDatabase] Selected file:", {
@@ -75,65 +73,67 @@ export const importDatabase = async (
 
     if (!fileInfo.exists) {
       console.error("[FS][importDatabase] Selected file does not exist");
-      onError(
-        "Selected file is not accessible. Please try selecting the file again.",
-      );
-      return;
+      return {
+        ok: false,
+        err: "Selected file is not accessible. Please try selecting the file again.",
+      };
     }
 
-    FileSystem.copyAsync({
+    await FileSystem.copyAsync({
       from: file.uri,
       to: `${FileSystem.documentDirectory}${DATABASE_PATH}`,
     });
 
-    onSuccess("Database imported successfully, restart the app to see the changes");
+    return {
+      ok: true,
+      data: "Database imported successfully, restart the app to see the changes",
+    };
   } catch (error) {
     console.error("[FS][importDatabase] Failed to import data:", error);
-    onError("Something went wrong, failed to import data");
+    return { ok: false, err: "Something went wrong, failed to import data" };
   }
 };
 
 /**
  * Export database to a file and share it
  */
-export const exportDatabase = async (
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<void> => {
+export const exportDatabase = async (): Promise<Result<string, string>> => {
   try {
     const databasePath = `${FileSystem.documentDirectory}${DATABASE_PATH}`;
 
     // Share the exported file
-    await shareFile(databasePath);
+    const shareResult = await shareFile(databasePath);
+    if (!shareResult.ok) {
+      return shareResult;
+    }
 
     console.info("[FS][exportDatabase] Data exported successfully");
-    onSuccess("Data exported successfully");
+    return { ok: true, data: "Data exported successfully" };
   } catch (error) {
     console.error("[FS][exportDatabase] Failed to export data:", error);
-    onError("Something went wrong, failed to export data");
+    return { ok: false, err: "Something went wrong, failed to export data" };
   }
 };
 
-export const purgeDatabase = async (): Promise<void> => {
+export const purgeDatabase = async (): Promise<Result<void, string>> => {
   try {
     await FileSystem.deleteAsync(
       `${FileSystem.documentDirectory}${DATABASE_PATH}`,
       { idempotent: true },
     );
+    return { ok: true, data: undefined };
   } catch (error) {
     console.error("[FS][purgeDatabase] Failed to purge database:", error);
+    return { ok: false, err: "Failed to purge database" };
   }
 };
 
 /**
  * Import CSV data from a selected file
- * @param overwrite - If true, clears existing transactions before importing
  */
 export const importCsv = async (
   overwrite: boolean,
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<void> => {
+): Promise<Result<string, string>> => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: "text/csv",
@@ -142,17 +142,17 @@ export const importCsv = async (
 
     if (result.canceled) {
       console.info("[FS][importCsv] User cancelled import dialog");
-      return;
+      return { ok: false, err: "Import cancelled by user" };
     }
 
     const file = result.assets[0];
 
     if (!file.name.endsWith(".csv")) {
       console.info("[FS][importCsv] Invalid csv file format");
-      onError(
-        "Invalid csv file format. Please ensure you're importing a valid csv file.",
-      );
-      return;
+      return {
+        ok: false,
+        err: "Invalid csv file format. Please ensure you're importing a valid csv file.",
+      };
     }
 
     // Read the CSV file content
@@ -164,10 +164,10 @@ export const importCsv = async (
         "[FS][importCsv] Failed to parse csv file:",
         parseResult.err,
       );
-      onError(
-        "Invalid csv file format. Please ensure you're importing a valid csv file exported from the app.",
-      );
-      return;
+      return {
+        ok: false,
+        err: "Invalid csv file format. Please ensure you're importing a valid csv file exported from the app.",
+      };
     }
 
     if (overwrite) {
@@ -177,25 +177,24 @@ export const importCsv = async (
     const success = await batchCreateTransactions(parseResult.data ?? []);
     if (!success) {
       console.error("[FS][importCsv] Failed to batch create transactions");
-      onError("Something went wrong, failed to batch create transactions");
-      return;
+      return {
+        ok: false,
+        err: "Something went wrong, failed to batch create transactions",
+      };
     }
 
     console.info("[FS][importCsv] Data imported successfully");
-    onSuccess("Data imported successfully");
+    return { ok: true, data: "Data imported successfully" };
   } catch (error) {
     console.error("[FS][importCsv] Failed to import data:", error);
-    onError("Something went wrong, failed to import data");
+    return { ok: false, err: "Something went wrong, failed to import data" };
   }
 };
 
 /**
  * Export all transactions from database to CSV and share it
  */
-export const exportCsvFromDb = async (
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<void> => {
+export const exportCsvFromDb = async (): Promise<Result<string, string>> => {
   try {
     const exportDir = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
     const exportPath = `${exportDir}/export.csv`;
@@ -206,14 +205,18 @@ export const exportCsvFromDb = async (
     await FileSystem.writeAsStringAsync(exportPath, csvContentString);
 
     // Share the exported file
-    await shareFile(exportPath);
+    const shareResult = await shareFile(exportPath);
     await FileSystem.deleteAsync(exportPath, { idempotent: true });
 
+    if (!shareResult.ok) {
+      return shareResult;
+    }
+
     console.info("[FS][exportCsvFromDb] Data exported successfully");
-    onSuccess("Data exported successfully");
+    return { ok: true, data: "Data exported successfully" };
   } catch (error) {
     console.error("[FS][exportCsvFromDb] Failed to export data:", error);
-    onError("Something went wrong, failed to export data");
+    return { ok: false, err: "Something went wrong, failed to export data" };
   }
 };
 
@@ -222,9 +225,7 @@ export const exportCsvFromDb = async (
  */
 export const exportCsvFromTransactions = async (
   options: Parameters<typeof listTransactions>[0],
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<void> => {
+): Promise<Result<string, string>> => {
   console.info("[FS][exportCsvFromTransactions] options:", options);
 
   try {
@@ -242,27 +243,28 @@ export const exportCsvFromTransactions = async (
     await FileSystem.writeAsStringAsync(exportPath, csvContentString);
 
     // Share the exported file
-    await shareFile(exportPath);
+    const shareResult = await shareFile(exportPath);
     await FileSystem.deleteAsync(exportPath, { idempotent: true });
 
+    if (!shareResult.ok) {
+      return shareResult;
+    }
+
     console.info("[FS][exportCsvFromTransactions] Data exported successfully");
-    onSuccess("Data exported successfully");
+    return { ok: true, data: "Data exported successfully" };
   } catch (error) {
     console.error(
       "[FS][exportCsvFromTransactions] Failed to export data:",
       error,
     );
-    onError("Something went wrong, failed to export data");
+    return { ok: false, err: "Something went wrong, failed to export data" };
   }
 };
 
 /**
  * Create a backup of the database
  */
-export const backupDatabase = async (
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<boolean> => {
+export const backupDatabase = async (): Promise<Result<string, string>> => {
   try {
     const databasePath = `${FileSystem.documentDirectory}${DATABASE_PATH}`;
     console.info("[FS][backupDatabase] databasePath:", databasePath);
@@ -270,8 +272,7 @@ export const backupDatabase = async (
     // Check if database exists
     const dbInfo = await FileSystem.getInfoAsync(databasePath);
     if (!dbInfo.exists) {
-      onError("Database file not found");
-      return false;
+      return { ok: false, err: "Database file not found" };
     }
 
     // Ensure backup directory exists
@@ -286,12 +287,10 @@ export const backupDatabase = async (
     });
 
     console.info("[FS][backupDatabase] Backup created successfully");
-    onSuccess("Backup created successfully");
-    return true;
+    return { ok: true, data: "Backup created successfully" };
   } catch (error) {
     console.error("[FS][backupDatabase] Failed to create backup:", error);
-    onError("Something went wrong, failed to create backup");
-    return false;
+    return { ok: false, err: "Something went wrong, failed to create backup" };
   }
 };
 
@@ -300,7 +299,7 @@ export const backupDatabase = async (
  */
 export const cleanupOldBackups = async (
   keepCount: number = 5,
-): Promise<void> => {
+): Promise<Result<string, string>> => {
   try {
     const backupDir = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
     const files = await FileSystem.readDirectoryAsync(backupDir);
@@ -320,17 +319,21 @@ export const cleanupOldBackups = async (
       console.info(`[FS][cleanupOldBackups] Deleted old backup: ${file}`);
     }
 
+    const keptCount = Math.min(backupFiles.length, keepCount);
     console.info(
-      `[FS][cleanupOldBackups] Cleanup complete. Kept ${Math.min(
-        backupFiles.length,
-        keepCount,
-      )} backups.`,
+      `[FS][cleanupOldBackups] Cleanup complete. Kept ${keptCount} backups.`,
     );
+    
+    return {
+      ok: true,
+      data: `Cleanup complete. Kept ${keptCount} backups.`,
+    };
   } catch (error) {
     console.error(
       "[FS][cleanupOldBackups] Failed to cleanup old backups:",
       error,
     );
+    return { ok: false, err: "Failed to cleanup old backups" };
   }
 };
 
@@ -369,27 +372,53 @@ export const listBackups = async (): Promise<Result<string[], string>> => {
  */
 export const deleteBackup = async (
   filename: string,
-  onSuccess: (msg: string) => void,
-  onError: (errMsg: string) => void,
-): Promise<boolean> => {
+): Promise<Result<string, string>> => {
   try {
     const backupPath = `${FileSystem.documentDirectory}${BACKUP_DIR}/${filename}`;
     
     // Check if backup file exists
     const fileInfo = await FileSystem.getInfoAsync(backupPath);
     if (!fileInfo.exists) {
-      onError("Backup file not found");
-      return false;
+      return { ok: false, err: "Backup file not found" };
     }
 
     await FileSystem.deleteAsync(backupPath, { idempotent: true });
 
     console.info(`[FS][deleteBackup] Deleted backup: ${filename}`);
-    onSuccess("Backup deleted successfully");
-    return true;
+    return { ok: true, data: "Backup deleted successfully" };
   } catch (error) {
     console.error("[FS][deleteBackup] Failed to delete backup:", error);
-    onError("Something went wrong, failed to delete backup");
-    return false;
+    return { ok: false, err: "Something went wrong, failed to delete backup" };
+  }
+};
+
+/**
+ * Share a specific backup file
+ */
+export const shareBackup = async (
+  filename: string,
+): Promise<Result<string, string>> => {
+  try {
+    const backupPath = `${FileSystem.documentDirectory}${BACKUP_DIR}/${filename}`;
+    
+    // Check if the file exists
+    const fileInfo = await FileSystem.getInfoAsync(backupPath);
+    if (!fileInfo.exists) {
+      return { ok: false, err: "Backup file not found" };
+    }
+
+    // Share the backup file
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(backupPath, {
+        mimeType: "application/octet-stream",
+        dialogTitle: "Share Backup",
+      });
+      return { ok: true, data: "Backup shared successfully" };
+    } else {
+      return { ok: false, err: "Sharing is not available on this device" };
+    }
+  } catch (error) {
+    console.error("[FS][shareBackup] Error sharing backup:", error);
+    return { ok: false, err: "Failed to share backup" };
   }
 };
