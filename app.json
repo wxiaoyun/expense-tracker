@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.expo-expense-tracker",
+      "bundleIdentifier": "com.wxiaoyun.expense-tracker",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

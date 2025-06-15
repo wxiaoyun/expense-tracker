@@ -97,6 +97,7 @@ export default function SummaryPage() {
     return processed;
   }, [categorySummary, selectedCategories]);
 
+
   const renderCategoryItem = ({ item }: { item: CategorySummary }) => (
     <ThemedView style={[styles.categoryItem, { borderColor }]}>
       <ThemedView style={styles.categoryHeader}>
@@ -189,7 +190,6 @@ export default function SummaryPage() {
           styles.scrollContent,
           { paddingBottom: bottomTabBarHeight },
         ]}
-        showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
         {/* Overall Summary Cards */}
@@ -269,15 +269,17 @@ export default function SummaryPage() {
           ) : processedCategoryData.length > 0 ? (
             <View style={styles.categoryListContainer}>
               {processedCategoryData.map((item) => (
-                <View key={item.category}>{renderCategoryItem({ item })}</View>
+                <View key={item.category}>
+                  {renderCategoryItem({ item })}
+                </View>
               ))}
             </View>
           ) : (
             renderEmptyState()
           )}
         </ThemedView>
-      </ScrollView>
-    </View>
+              </ScrollView>
+      </View>
   );
 }
 
