@@ -1,11 +1,6 @@
-import { ThemedText } from "@/components/ThemedText";
-import { Transaction } from "@/db/schema";
-import { useThemeColor } from "@/hooks/useThemeColor";
-import { formatDate } from "@/libs/date";
-import { formatCurrency } from "@/libs/intl";
-import Feather from "@expo/vector-icons/Feather";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
+import { format } from "date-fns";
 import { Checkbox } from "expo-checkbox";
 import * as Haptics from "expo-haptics";
 import { useCallback, useMemo } from "react";
@@ -18,6 +13,12 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
+import { ThemedText } from "@/components/ThemedText";
+import { Transaction } from "@/db/schema";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { formatCurrency } from "@/libs/intl";
+import Feather from "@expo/vector-icons/Feather";
+
 
 type ListItem = {
   type: "header" | "transaction";
@@ -26,7 +27,7 @@ type ListItem = {
   id: string;
 };
 
-interface SwipeableTransactionProps {
+type SwipeableTransactionProps = {
   transaction: Transaction;
   onToggleVerified: (id: number, verified: boolean) => void;
   onEdit: (id: number, onTriggered?: () => void) => void;
@@ -48,24 +49,29 @@ const SwipeableTransaction = ({
   const isIncome = transaction.amount > 0;
 
   const handleEditAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onEdit(transaction.id, () => {
       translateX.value = withSpring(0, {
-        damping: 20,
+        damping: 30,
         stiffness: 300,
       });
     });
   }, [onEdit, transaction.id, translateX]);
 
   const handleDeleteAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onDelete(transaction.id, () => {
       translateX.value = withSpring(0, {
-        damping: 20,
+        damping: 30,
         stiffness: 300,
       });
     });
   }, [onDelete, transaction.id, translateX]);
+
+  const handleToggleVerifiedAction = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onToggleVerified(transaction.id, !isVerified);
+  }, [onToggleVerified, transaction.id, isVerified]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
@@ -88,21 +94,21 @@ const SwipeableTransaction = ({
         if (event.translationX > 0) {
           // Swipe right - Edit
           translateX.value = withSpring(120, {
-            damping: 20,
+            damping: 30,
             stiffness: 300,
           });
           runOnJS(handleEditAction)();
         } else {
           // Swipe left - Delete
           translateX.value = withSpring(-120, {
-            damping: 20,
+            damping: 30,
             stiffness: 300,
           });
           runOnJS(handleDeleteAction)();
         }
       } else {
         translateX.value = withSpring(0, {
-          damping: 20,
+          damping: 30,
           stiffness: 300,
         });
       }
@@ -149,7 +155,7 @@ const SwipeableTransaction = ({
         >
           <Checkbox
             value={isVerified}
-            onValueChange={(value) => onToggleVerified(transaction.id, value)}
+            onValueChange={handleToggleVerifiedAction}
             style={styles.checkbox}
             color={isVerified ? "#007AFF" : undefined}
           />
@@ -179,7 +185,7 @@ const SwipeableTransaction = ({
   );
 };
 
-interface TransactionHeaderProps {
+type TransactionHeaderProps = {
   date: string;
 }
 
@@ -218,7 +224,7 @@ export const TransactionList = ({
 
   const groupedData = useMemo(() => {
     const grouped = transactions.reduce((acc, transaction) => {
-      const dateKey = formatDate(transaction.transactionDate);
+      const dateKey = format(new Date(transaction.transactionDate), "iii, MMM dd");
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }

@@ -3,8 +3,12 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
 import { openURL } from "expo-linking";
-import { ScrollView, StyleSheet, Switch } from "react-native";
+import React from "react";
+import { ScrollView, StyleSheet, Switch, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -39,10 +43,8 @@ import {
   exportCsvFromDb,
   importCsv,
   importDatabase,
-  purgeDatabase
+  purgeDatabase,
 } from "@/libs/fs";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React from "react";
 
 const DataGroup = () => {
   const iconColor = useThemeColor("icon");
@@ -52,7 +54,7 @@ const DataGroup = () => {
   const handleLocalBackup = async () => {
     await backupDatabase(
       (msg) => showAlert("Success", msg),
-      (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+      (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
     );
   };
 
@@ -63,14 +65,14 @@ const DataGroup = () => {
       {
         okLabel: "Import",
         cancelLabel: "Cancel",
-        kind: "warning"
-      }
+        kind: "warning",
+      },
     );
 
     if (confirmed) {
       await importDatabase(
         (msg) => showAlert("Success", msg),
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
   };
@@ -78,7 +80,7 @@ const DataGroup = () => {
   const handleExportCsv = async () => {
     await exportCsvFromDb(
       (msg) => showAlert("Success", msg),
-      (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+      (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
     );
   };
 
@@ -89,15 +91,15 @@ const DataGroup = () => {
       {
         okLabel: "Import",
         cancelLabel: "Cancel",
-        kind: "info"
-      }
+        kind: "info",
+      },
     );
 
     if (confirmed) {
       await importCsv(
         false, // overwrite = false (append mode)
         (msg) => showAlert("Success", msg),
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
   };
@@ -109,15 +111,15 @@ const DataGroup = () => {
       {
         okLabel: "Append",
         cancelLabel: "Cancel",
-        kind: "info"
-      }
+        kind: "info",
+      },
     );
 
     if (confirmed) {
       await importCsv(
         false, // overwrite = false (append mode)
         (msg) => showAlert("Success", msg),
-        (errMsg) => showAlert("Error", errMsg, { kind: "error" })
+        (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
   };
@@ -129,8 +131,8 @@ const DataGroup = () => {
       {
         okLabel: "Clear",
         cancelLabel: "Cancel",
-        kind: "error"
-      }
+        kind: "error",
+      },
     );
 
     if (confirmed) {
@@ -202,7 +204,13 @@ const WeekStartSettingItem = () => {
       chevronSibling={
         <DropdownMenuRoot>
           <DropdownMenuTrigger>
-            <ThemedText>{weekStart}</ThemedText>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <ThemedText>{weekStart}</ThemedText>
+            </TouchableOpacity>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right">
             {WEEK_START_OPTIONS.map((option) => (
@@ -287,9 +295,13 @@ const MiscGroup = () => {
 };
 
 export default function SettingScreen() {
+  const bottomTabBarHeight = useBottomTabBarHeight();
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic">
-      <SafeAreaView style={styles.container} edges={["left", "right"]}>
+      <SafeAreaView
+        style={[styles.container, { paddingBottom: bottomTabBarHeight }]}
+        edges={["left", "right"]}
+      >
         <DataGroup />
         <ConfigGroup />
         <MiscGroup />

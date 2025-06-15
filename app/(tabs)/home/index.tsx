@@ -1,4 +1,5 @@
-import Fuse from 'fuse.js';
+import { useRouter } from "expo-router";
+import Fuse from "fuse.js";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, Alert, View } from "react-native";
 
@@ -11,8 +12,10 @@ import {
   useInfiniteTransactionListQuery,
 } from "@/hooks/useQuery";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { showConfirmDialog } from "@/libs/dialog";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const backgroundColor = useThemeColor("background");
   const textColor = useThemeColor("text");
 
@@ -46,13 +49,13 @@ export default function HomeScreen() {
     const fuseOptions = {
       keys: [
         {
-          name: 'description',
+          name: "description",
           weight: 0.7,
         },
         {
-          name: 'category',
+          name: "category",
           weight: 0.3,
-        }
+        },
       ],
       threshold: 0.4,
       distance: 100,
@@ -64,15 +67,17 @@ export default function HomeScreen() {
 
   // Filter transactions based on search query using fuzzy search
   const transactions = useMemo(() => {
-    if (!search || search.trim() === '') {
+    if (!search || search.trim() === "") {
       return allTransactions;
     }
 
     const searchResults = fuse.search(search.trim());
-    console.log(`Fuzzy search for "${search}" returned ${searchResults.length} results`);
-    
+    console.log(
+      `Fuzzy search for "${search}" returned ${searchResults.length} results`,
+    );
+
     // Extract the transaction objects from Fuse.js results
-    return searchResults.map(result => result.item);
+    return searchResults.map((result) => result.item);
   }, [allTransactions, fuse, search]);
 
   const handleToggleVerified = useCallback(
@@ -90,45 +95,46 @@ export default function HomeScreen() {
     [],
   );
 
-  const handleEdit = useCallback((id: number, onTriggered?: () => void) => {
-    console.log(`Edit transaction ${id}`);
-    Alert.alert("Edit Transaction", `Edit transaction with ID: ${id}`);
-    // Call the callback to reset the swipe position
-    onTriggered?.();
-  }, []);
+  const handleEdit = useCallback(
+    (id: number, onComplete?: () => void) => {
+      console.log(`Edit transaction ${id}`);
+      router.push({
+        pathname: "/(transactions)/edit",
+        params: { id },
+      });
+      // Call the callback to reset the swipe position
+      onComplete?.();
+    },
+    [router],
+  );
 
   const handleDelete = useCallback(
-    async (id: number, onTriggered?: () => void) => {
-      console.log(`Delete transaction ${id}`);
-      Alert.alert(
+    async (id: number, onComplete?: () => void) => {
+      const confirmed = await showConfirmDialog(
         "Delete Transaction",
         "Are you sure you want to delete this transaction?",
-        [
-          { text: "Cancel", style: "cancel", onPress: () => onTriggered?.() },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                console.log(`Confirmed delete transaction ${id}`);
-                await deleteTransaction(id);
-                // Invalidate queries to refresh the data
-                invalidateTransactionQueries();
-                onTriggered?.();
-              } catch (error) {
-                console.error("Failed to delete transaction:", error);
-                Alert.alert("Error", "Failed to delete transaction");
-                onTriggered?.();
-              }
-            },
-          },
-        ],
       );
+
+      if (!confirmed) {
+        onComplete?.();
+        return;
+      }
+
+      try {
+        console.log(`Confirmed delete transaction ${id}`);
+        await deleteTransaction(id);
+        // Invalidate queries to refresh the data
+        invalidateTransactionQueries();
+      } catch (error) {
+        console.error("Failed to delete transaction:", error);
+        Alert.alert("Error", "Failed to delete transaction");
+      } finally {
+        onComplete?.();
+      }
     },
     [],
   );
 
-  // Handle loading and error states
   if (isLoading) {
     return (
       <View

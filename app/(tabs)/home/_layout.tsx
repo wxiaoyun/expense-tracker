@@ -1,15 +1,12 @@
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { format } from "date-fns";
 import { router, Stack } from "expo-router";
 import { debounce } from "lodash";
-import { useCallback, useMemo, useRef } from "react";
-import { StyleSheet, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useCallback } from "react";
+import { View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
-import { TransactionOperations } from "@/components/transactions/create-modal";
-import { TransactionFilter } from "@/components/transactions/filter";
+import { TransactionDropdown } from "@/components/transactions/header-drop-down";
 import { UrlFilter, useDateRange } from "@/hooks/useParams";
-import { formatDate } from "@/libs/date";
 
 const HeaderLeft = () => {
   const { dateRange } = useDateRange();
@@ -19,22 +16,17 @@ const HeaderLeft = () => {
       style={{ flexDirection: "column", alignItems: "flex-start", gap: -4 }}
     >
       <ThemedText style={{ fontSize: 12, lineHeight: 16 }}>
-        {`From ${formatDate(dateRange.start)}`}
+        {`From ${format(dateRange.start, "iii, MMM dd")}`}
       </ThemedText>
       <ThemedText style={{ fontSize: 12, lineHeight: 16 }}>
-        {`To ${formatDate(dateRange.end)}`}
+        {`To ${format(dateRange.end, "iii, MMM dd")}`}
       </ThemedText>
     </View>
   );
 };
 
 export default function Layout() {
-  const snapPoints = useMemo(() => ["25%", "50%"], []);
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const handleOpenBottomSheet = useCallback(() => {
-    bottomSheetRef.current?.expand();
-  }, []);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSetSearch = useCallback(
     debounce((text: string) => {
       router.setParams({
@@ -45,18 +37,17 @@ export default function Layout() {
   );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack>
         <Stack.Screen
           name="index"
           options={{
             title: "Transactions",
+            headerShown: true,
             headerTransparent: true,
             headerBlurEffect: "regular",
-            headerLargeTitle: true,
             headerLeft: () => <HeaderLeft />,
             headerRight: () => (
-              <TransactionOperations onOpenFilter={handleOpenBottomSheet} />
+              <TransactionDropdown />
             ),
             headerSearchBarOptions: {
               placeholder: "Search",
@@ -68,24 +59,5 @@ export default function Layout() {
           }}
         />
       </Stack>
-
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        snapPoints={snapPoints}
-        enablePanDownToClose={true}
-      >
-        <BottomSheetView style={styles.bottomSheetContent}>
-          <TransactionFilter />
-        </BottomSheetView>
-      </BottomSheet>
-    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  bottomSheetContent: {
-    flex: 1,
-    padding: 24,
-  },
-});

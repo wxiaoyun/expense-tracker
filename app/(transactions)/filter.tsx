@@ -1,18 +1,18 @@
+import { ThemedText } from "@/components/ThemedText";
+
 import { StyleSheet } from "react-native";
-import { ThemedText } from "../ThemedText";
-import { ThemedView } from "../ThemedView";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-
-export const TransactionFilter = () => {
+export default function TransactionFilter() {
   return (
-    <ThemedView>
+    <SafeAreaView>
       <ThemedText style={styles.bottomSheetTitle}>
         Filter Transactions
       </ThemedText>
       <ThemedText>Filter options will go here...</ThemedText>
-    </ThemedView>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   bottomSheetTitle: {
