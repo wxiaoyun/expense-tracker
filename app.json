@@ -12,6 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.wxiaoyun.expense-tracker",
       "infoPlist": {
+        "UISupportsDocumentBrowser": true,
+        "UIFileSharingEnabled": true,
         "ITSAppUsesNonExemptEncryption": false
       }
     },

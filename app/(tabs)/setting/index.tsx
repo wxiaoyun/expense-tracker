@@ -39,21 +39,22 @@ import {
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { showAlert, showConfirmDialog } from "@/libs/dialog";
 import {
-  backupDatabase,
   exportCsvFromDb,
+  exportDatabase,
   importCsv,
   importDatabase,
   purgeDatabase,
 } from "@/libs/fs";
+import { toast } from "sonner-native";
 
 const DataGroup = () => {
   const iconColor = useThemeColor("icon");
   const destructiveColor = useThemeColor("destructive");
   const [interval] = useBackupInterval();
 
-  const handleLocalBackup = async () => {
-    await backupDatabase(
-      (msg) => showAlert("Success", msg),
+  const handleExportDatabase = async () => {
+    await exportDatabase(
+      toast.success,
       (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
     );
   };
@@ -71,7 +72,7 @@ const DataGroup = () => {
 
     if (confirmed) {
       await importDatabase(
-        (msg) => showAlert("Success", msg),
+        toast.success,
         (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
@@ -79,7 +80,7 @@ const DataGroup = () => {
 
   const handleExportCsv = async () => {
     await exportCsvFromDb(
-      (msg) => showAlert("Success", msg),
+      toast.success,
       (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
     );
   };
@@ -98,7 +99,7 @@ const DataGroup = () => {
     if (confirmed) {
       await importCsv(
         false, // overwrite = false (append mode)
-        (msg) => showAlert("Success", msg),
+        toast.success,
         (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
@@ -118,7 +119,7 @@ const DataGroup = () => {
     if (confirmed) {
       await importCsv(
         false, // overwrite = false (append mode)
-        (msg) => showAlert("Success", msg),
+        toast.success,
         (errMsg) => showAlert("Error", errMsg, { kind: "error" }),
       );
     }
@@ -138,7 +139,7 @@ const DataGroup = () => {
     if (confirmed) {
       try {
         await purgeDatabase();
-        await showAlert("Success", "Database cleared successfully");
+        toast.success("Database cleared successfully, restart the app to see the changes");
       } catch (error) {
         console.error("Failed to clear database:", error);
         await showAlert("Error", "Failed to clear database", { kind: "error" });
@@ -150,12 +151,12 @@ const DataGroup = () => {
     <SettingGroup title="Data">
       <ThemedView style={styles.groupContainer}>
         <SimpleSettingItem
-          icon={<FontAwesome name="download" size={24} color={iconColor} />}
-          title="Local backup"
-          onPress={handleLocalBackup}
+          icon={<FontAwesome name="upload" size={24} color={iconColor} />}
+          title="Export database"
+          onPress={handleExportDatabase}
         />
         <SimpleSettingItem
-          icon={<FontAwesome name="upload" size={24} color={iconColor} />}
+          icon={<FontAwesome name="download" size={24} color={iconColor} />}
           title="Import database"
           onPress={handleImportDatabase}
         />

@@ -19,6 +19,12 @@ export const BACKUP_INTERVAL_OPTIONS = [
   "weekly",
   "monthly",
 ] as const;
+export const BACKUP_INTERVAL_MAP = {
+  daily: 1,
+  weekly: 7,
+  monthly: 31,
+} as const;
+
 export type BackupInterval = (typeof BACKUP_INTERVAL_OPTIONS)[number];
 
 export const THEME_OPTIONS = ["system", "light", "dark"] as const;

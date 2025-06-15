@@ -2,12 +2,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
-import {
-  BACKUP_DIR,
-  CSV_FILENAME,
-  DATABASE_PATH,
-  EXPORT_DIR,
-} from "@/constants";
+import { BACKUP_DIR, DATABASE_PATH, EXPORT_DIR } from "@/constants";
 import {
   batchCreateTransactions,
   clearTransactions,
@@ -50,7 +45,7 @@ export const importDatabase = async (
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: "*/*", // Allow all file types, we'll validate the extension
-      copyToCacheDirectory: false, // Let's try without copying first
+      copyToCacheDirectory: false,
     });
 
     if (result.canceled) {
@@ -91,7 +86,7 @@ export const importDatabase = async (
       to: `${FileSystem.documentDirectory}${DATABASE_PATH}`,
     });
 
-    onSuccess("Database imported successfully");
+    onSuccess("Database imported successfully, restart the app to see the changes");
   } catch (error) {
     console.error("[FS][importDatabase] Failed to import data:", error);
     onError("Something went wrong, failed to import data");
@@ -203,7 +198,7 @@ export const exportCsvFromDb = async (
 ): Promise<void> => {
   try {
     const exportDir = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
-    const exportPath = `${exportDir}/tmp.csv`;
+    const exportPath = `${exportDir}/export.csv`;
     console.info("[FS][exportCsvFromDb] exportPath:", exportPath);
 
     const csvContentString = await generateCsvContentFromDb();
@@ -226,26 +221,22 @@ export const exportCsvFromDb = async (
  * Export specific transactions to CSV and share it
  */
 export const exportCsvFromTransactions = async (
-  options: {
-    fileName?: string;
-  } & Parameters<typeof listTransactions>[0],
+  options: Parameters<typeof listTransactions>[0],
   onSuccess: (msg: string) => void,
   onError: (errMsg: string) => void,
 ): Promise<void> => {
   console.info("[FS][exportCsvFromTransactions] options:", options);
 
-  const { fileName = CSV_FILENAME, ...rest } = options;
-
   try {
     const exportDir = `${FileSystem.documentDirectory}${EXPORT_DIR}`;
-    const exportPath = `${exportDir}/tmp.db`;
+    const exportPath = `${exportDir}/export.csv`;
 
     console.info("[FS][exportCsvFromTransactions] exportPath:", exportPath);
 
     // Ensure export directory exists
     await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
 
-    const res = await listTransactions(rest);
+    const res = await listTransactions(options);
     const csvContentString = generateCsvContent(res.items);
 
     await FileSystem.writeAsStringAsync(exportPath, csvContentString);
@@ -283,11 +274,19 @@ export const backupDatabase = async (
       return false;
     }
 
-    // Share the backup file so user can save it to their preferred location
-    await shareFile(databasePath);
+    // Ensure backup directory exists
+    const backupDir = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
+    await FileSystem.makeDirectoryAsync(backupDir, { intermediates: true });
+
+    const backupFilename = `${new Date().toISOString()}.db`;
+    const backupPath = `${backupDir}/${backupFilename}`;
+    await FileSystem.copyAsync({
+      from: databasePath,
+      to: backupPath,
+    });
 
     console.info("[FS][backupDatabase] Backup created successfully");
-    onSuccess("Backup created successfully and ready to save");
+    onSuccess("Backup created successfully");
     return true;
   } catch (error) {
     console.error("[FS][backupDatabase] Failed to create backup:", error);
@@ -341,6 +340,10 @@ export const cleanupOldBackups = async (
 export const listBackups = async (): Promise<Result<string[], string>> => {
   try {
     const backupDir = `${FileSystem.documentDirectory}${BACKUP_DIR}`;
+    
+    // Ensure backup directory exists
+    await FileSystem.makeDirectoryAsync(backupDir, { intermediates: true });
+    
     const files = await FileSystem.readDirectoryAsync(backupDir);
 
     const backupFiles = files
@@ -358,5 +361,35 @@ export const listBackups = async (): Promise<Result<string[], string>> => {
       ok: false,
       err: "Failed to list backup files",
     };
+  }
+};
+
+/**
+ * Delete a specific backup file
+ */
+export const deleteBackup = async (
+  filename: string,
+  onSuccess: (msg: string) => void,
+  onError: (errMsg: string) => void,
+): Promise<boolean> => {
+  try {
+    const backupPath = `${FileSystem.documentDirectory}${BACKUP_DIR}/${filename}`;
+    
+    // Check if backup file exists
+    const fileInfo = await FileSystem.getInfoAsync(backupPath);
+    if (!fileInfo.exists) {
+      onError("Backup file not found");
+      return false;
+    }
+
+    await FileSystem.deleteAsync(backupPath, { idempotent: true });
+
+    console.info(`[FS][deleteBackup] Deleted backup: ${filename}`);
+    onSuccess("Backup deleted successfully");
+    return true;
+  } catch (error) {
+    console.error("[FS][deleteBackup] Failed to delete backup:", error);
+    onError("Something went wrong, failed to delete backup");
+    return false;
   }
 };

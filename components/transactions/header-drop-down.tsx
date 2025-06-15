@@ -3,8 +3,12 @@ import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
 import { TouchableOpacity } from "react-native";
 
+import { useCategoryFilter, useDateRange, useVerifiedFilter } from "@/hooks/useFilter";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { showAlert } from "@/libs/dialog";
+import { exportCsvFromTransactions } from "@/libs/fs";
 import { useRouter } from "expo-router";
+import { toast } from "sonner-native";
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -14,10 +18,14 @@ import {
   DropdownMenuTrigger,
 } from "../DropdownMenu";
 
-
 export const TransactionDropdown = () => {
   const router = useRouter();
   const textColor = useThemeColor("text");
+
+  // Get current filter states
+  const { dateRange } = useDateRange();
+  const [selectedCategories] = useCategoryFilter();
+  const [verifiedFilter] = useVerifiedFilter();
 
   const handleClickTrigger = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -33,11 +41,38 @@ export const TransactionDropdown = () => {
     router.push("/(transactions)/filter");
   }, [router]);
 
-  // TODO
-  const onClickDownload = useCallback(() => {
+  const onClickDownload = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    console.log("Downloading transactions...");
-  }, []);
+    
+    try {
+      console.log("Downloading filtered transactions...");
+      
+      // Prepare filter options for CSV export
+      const exportOptions = {
+        start: dateRange.start,
+        end: dateRange.end,
+        categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+        verified: verifiedFilter !== null ? (verifiedFilter ? 1 : 0) : undefined,
+      };
+
+      console.log("Export options:", exportOptions);
+
+      await exportCsvFromTransactions(
+        exportOptions,
+        (msg) => {
+          console.log("CSV export success:", msg);
+          toast.success(msg);
+        },
+        (errMsg) => {
+          console.error("CSV export error:", errMsg);
+          showAlert("Error", errMsg, { kind: "error" });
+        }
+      );
+    } catch (error) {
+      console.error("Failed to download transactions:", error);
+      showAlert("Error", "Failed to download transactions", { kind: "error" });
+    }
+  }, [dateRange, selectedCategories, verifiedFilter]);
 
   return (
     <DropdownMenuRoot>

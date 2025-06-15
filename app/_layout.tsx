@@ -20,6 +20,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { db } from "@/db";
 import migrations from "@/drizzle/migrations";
 import { queryClient } from "@/hooks/useQuery";
+import { usePeriodicBackup, useRecurringTransactionIncur } from "@/hooks/useRecurring";
 
 const formSheetOptions = {
   presentation: "formSheet",
@@ -30,62 +31,74 @@ const formSheetOptions = {
 } as const;
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
-
   return (
     <MigrateDatabase>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={colorScheme}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-              <Toaster />
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="(transactions)/new"
-                  options={{
-                    presentation: "modal",
-                    title: "New Transaction",
-                  }}
-                />
-                <Stack.Screen
-                  name="(transactions)/edit"
-                  options={{
-                    presentation: "modal",
-                    title: "Edit Transaction",
-                  }}
-                />
-                <Stack.Screen
-                  name="(transactions)/filter"
-                  options={{
-                    ...formSheetOptions,
-                    title: "Filter Transactions",
-                  }}
-                />
-                <Stack.Screen
-                  name="(recurring)/new"
-                  options={{
-                    presentation: "modal",
-                    title: "New Recurring Transaction",
-                  }}
-                />
-                <Stack.Screen
-                  name="(recurring)/edit"
-                  options={{
-                    presentation: "modal",
-                    title: "Edit Recurring Transaction",
-                  }}
-                />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" animated />
-            </SafeAreaProvider>
-          </GestureHandlerRootView>
-        </ThemeProvider>
+        <AppContent />
       </QueryClientProvider>
     </MigrateDatabase>
   );
 }
+
+const AppContent = () => {
+  const colorScheme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
+
+  // Initialize recurring transaction incurring on app launch
+  useRecurringTransactionIncur();
+  
+  // Initialize periodic backup functionality
+  usePeriodicBackup();
+
+  return (
+    <ThemeProvider value={colorScheme}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <Toaster />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="(transactions)/new"
+              options={{
+                presentation: "modal",
+                title: "New Transaction",
+              }}
+            />
+            <Stack.Screen
+              name="(transactions)/edit"
+              options={{
+                presentation: "modal",
+                title: "Edit Transaction",
+              }}
+            />
+            <Stack.Screen
+              name="(transactions)/filter"
+              options={{
+                ...formSheetOptions,
+                title: "Filter Transactions",
+              }}
+            />
+            <Stack.Screen
+              name="(recurring)/new"
+              options={{
+                presentation: "modal",
+                title: "New Recurring Transaction",
+              }}
+            />
+            <Stack.Screen
+              name="(recurring)/edit"
+              options={{
+                presentation: "modal",
+                title: "Edit Recurring Transaction",
+              }}
+            />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" animated />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
+  );
+};
 
 const MigrateDatabase: React.FC<{
   children: React.ReactNode;

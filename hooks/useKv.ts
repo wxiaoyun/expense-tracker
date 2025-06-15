@@ -1,9 +1,8 @@
-import { ResolvedTheme } from "@/constants";
+import { BackupInterval } from "@/constants";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLocales } from 'expo-localization';
 import Storage from "expo-sqlite/kv-store";
 import { useCallback, useMemo } from "react";
-import { useColorScheme } from "react-native";
 
 export const useKy = (key: string, defaultValue?: string) => {
   const defaultData = defaultValue ?? "";
@@ -46,7 +45,13 @@ export const useWeekStart = () => {
 };
 
 export const useBackupInterval = () => {
-  return useKy("backupInterval", "monthly");
+  const [interval, setInterval] = useKy("backupInterval", "monthly") ;
+
+  const setBackupInterval = useCallback((interval: BackupInterval) => {
+    setInterval(interval);
+  }, [setInterval]);
+
+  return [interval as BackupInterval, setBackupInterval] as const;
 };
 
 export const useLastBackup = () => {
