@@ -15,7 +15,7 @@ import { createTransaction } from "@/db/transaction";
 import { useCurrency } from "@/hooks/useKv";
 import {
   TRANSACTIONS_QUERY_KEY,
-  useTransactionCategoriesQuery,
+  useCategoriesQuery,
 } from "@/hooks/useQuery";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useRouter } from "expo-router";
@@ -87,7 +87,7 @@ export default function Page() {
     },
   });
 
-  const { data: categories = [] } = useTransactionCategoriesQuery();
+  const { data: categories = [] } = useCategoriesQuery();
   const fuse = useMemo(() => {
     return new Fuse(categories, {
       includeScore: true,

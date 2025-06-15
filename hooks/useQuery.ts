@@ -12,6 +12,7 @@ import {
   summarizeTransactions,
 } from "@/db/transaction";
 import { QueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export const queryClient = new QueryClient();
 
@@ -154,4 +155,28 @@ export const useRecurringTransactionCategoriesQuery = () => {
     queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, CATEGORIES_QUERY_KEY],
     queryFn: async () => listRecurringCategories(),
   });
+};
+
+export const useCategoriesQuery = () => {
+  const tQuery = useTransactionCategoriesQuery();
+  const rQuery = useRecurringTransactionCategoriesQuery();
+
+  const data = useMemo(() => {
+    const cat = new Set<string>([...(tQuery.data ?? []), ...(rQuery.data ?? [])]);
+    return Array.from(cat);
+  }, [tQuery.data, rQuery.data]);
+
+  const isLoading = useMemo(() => {
+    return tQuery.isLoading || rQuery.isLoading;
+  }, [tQuery.isLoading, rQuery.isLoading]);
+
+  const isError = useMemo(() => {
+    return tQuery.error || rQuery.error;
+  }, [tQuery.error, rQuery.error]);
+
+  return {
+    data,
+    isLoading,
+    isError,
+  };
 };

@@ -14,7 +14,7 @@ import { updateTransaction } from "@/db/transaction";
 import { useCurrency } from "@/hooks/useKv";
 import {
   TRANSACTIONS_QUERY_KEY,
-  useTransactionCategoriesQuery,
+  useCategoriesQuery,
   useTransactionQuery,
 } from "@/hooks/useQuery";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -38,6 +38,7 @@ export default function Page() {
   const backgroundColor = useThemeColor("background");
   const textColor = useThemeColor("text");
   const borderColor = useThemeColor("text") + "20";
+  const destructiveColor = useThemeColor("destructive");
   const [currency] = useCurrency();
 
   // UI state (not form data)
@@ -107,7 +108,7 @@ export default function Page() {
     }
   }, [transaction, form]);
 
-  const { data: categories = [] } = useTransactionCategoriesQuery();
+  const { data: categories = [] } = useCategoriesQuery();
   const fuse = useMemo(() => {
     return new Fuse(categories, {
       includeScore: true,
@@ -207,7 +208,9 @@ export default function Page() {
             </ThemedView>
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={styles.errorText}>
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
                   {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>
@@ -231,7 +234,9 @@ export default function Page() {
             />
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={styles.errorText}>
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
                   {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>
@@ -252,7 +257,9 @@ export default function Page() {
             />
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={styles.errorText}>
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
                   {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>
@@ -405,7 +412,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: "#ef4444",
   },
   submitContainer: {
     padding: 16,

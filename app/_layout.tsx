@@ -62,6 +62,20 @@ export default function RootLayout() {
                     title: "Filter Transactions",
                   }}
                 />
+                <Stack.Screen
+                  name="(recurring)/new"
+                  options={{
+                    presentation: "modal",
+                    title: "New Recurring Transaction",
+                  }}
+                />
+                <Stack.Screen
+                  name="(recurring)/edit"
+                  options={{
+                    presentation: "modal",
+                    title: "Edit Recurring Transaction",
+                  }}
+                />
                 <Stack.Screen name="+not-found" />
               </Stack>
               <StatusBar style="auto" animated />

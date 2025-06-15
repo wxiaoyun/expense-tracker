@@ -10,7 +10,7 @@ export const TransactionCsvSchema = z.tuple([
   z.coerce.number(),
   z.coerce.number().int().positive(),
   z.string(),
-  z.string().optional(),
+  z.string(),
   z.coerce.number().optional(),
 ]);
 
