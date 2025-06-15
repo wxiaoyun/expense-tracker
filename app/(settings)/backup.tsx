@@ -26,7 +26,11 @@ import { toast } from "sonner-native";
 
 import { SettingGroup, SimpleSettingItem } from "@/components/setting";
 import { ThemedText } from "@/components/ThemedText";
-import { BACKUP_DIR, BACKUP_INTERVAL_OPTIONS, BackupInterval } from "@/constants";
+import {
+  BACKUP_DIR,
+  BACKUP_INTERVAL_OPTIONS,
+  BackupInterval,
+} from "@/constants";
 import { useBackupInterval, useLastBackup } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { backupDatabase, deleteBackup, listBackups } from "@/libs/fs";
@@ -37,7 +41,11 @@ type SwipeableBackupProps = {
   onShare: (filename: string, onTriggered?: () => void) => void;
 };
 
-const SwipeableBackup = ({ filename, onDelete, onShare }: SwipeableBackupProps) => {
+const SwipeableBackup = ({
+  filename,
+  onDelete,
+  onShare,
+}: SwipeableBackupProps) => {
   const textColor = useThemeColor("text");
   const borderColor = useThemeColor("text") + "20";
   const backgroundColor = useThemeColor("background");
@@ -73,7 +81,10 @@ const SwipeableBackup = ({ filename, onDelete, onShare }: SwipeableBackupProps) 
       "worklet";
       const maxSwipe = 120;
       // Allow both left and right swipe
-      translateX.value = Math.max(-maxSwipe, Math.min(maxSwipe, event.translationX));
+      translateX.value = Math.max(
+        -maxSwipe,
+        Math.min(maxSwipe, event.translationX),
+      );
     })
     .onEnd((event) => {
       "worklet";
@@ -167,12 +178,7 @@ const SwipeableBackup = ({ filename, onDelete, onShare }: SwipeableBackupProps) 
               style={styles.backupIcon}
             />
             <View style={styles.backupTextContainer}>
-              <ThemedText style={styles.backupDate}>{formattedDate}</ThemedText>
-              <ThemedText
-                style={[styles.backupFilename, { color: textColor + "80" }]}
-              >
-                {filename}
-              </ThemedText>
+              <ThemedText>{formattedDate}</ThemedText>
             </View>
           </View>
         </Animated.View>
@@ -272,7 +278,7 @@ export default function Page() {
     async (filename: string, onTriggered?: () => void) => {
       try {
         const backupPath = `${FileSystem.documentDirectory}${BACKUP_DIR}/${filename}`;
-        
+
         // Check if the file exists
         const fileInfo = await FileSystem.getInfoAsync(backupPath);
         if (!fileInfo.exists) {
@@ -325,7 +331,7 @@ export default function Page() {
   }, [loadBackups]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right"]}>
+    <SafeAreaView style={styles.flex} edges={["left", "right"]}>
       <Stack.Screen
         options={{
           title: "Periodic Backup",
@@ -333,88 +339,90 @@ export default function Page() {
         }}
       />
 
-      <ScrollView style={styles.scrollContent}>
-        <SettingGroup>
-          <SimpleSettingItem
-            icon={
-              refreshing ? (
-                <ActivityIndicator size={24} color={iconColor} />
-              ) : (
-                <MaterialIcons name="backup" size={24} color={iconColor} />
-              )
-            }
-            title="Create Backup Now"
-            onPress={refreshing ? undefined : handleCreateBackup}
-          />
+      <ScrollView style={styles.flex}>
+        <View style={styles.container}>
+          <SettingGroup>
+            <SimpleSettingItem
+              icon={
+                refreshing ? (
+                  <ActivityIndicator size={24} color={iconColor} />
+                ) : (
+                  <MaterialIcons name="backup" size={24} color={iconColor} />
+                )
+              }
+              title="Create Backup Now"
+              onPress={refreshing ? undefined : handleCreateBackup}
+            />
 
-          <SimpleSettingItem
-            icon={
-              <MaterialIcons name="event-repeat" size={24} color={iconColor} />
-            }
-            title="Auto Backup"
-            chevronSibling={
-              <Switch value={isEnabled} onValueChange={setEnable} />
-            }
-          />
+            <SimpleSettingItem
+              icon={
+                <MaterialIcons
+                  name="event-repeat"
+                  size={24}
+                  color={iconColor}
+                />
+              }
+              title="Auto Backup"
+              chevronSibling={
+                <Switch value={isEnabled} onValueChange={setEnable} />
+              }
+            />
 
-          {isEnabled &&
-            BACKUP_INTERVAL_OPTIONS.map((option) => (
-              <SimpleSettingItem
-                key={option}
-                icon={
-                  option === interval ? (
-                    <Ionicons name="checkmark" size={24} color={iconColor} />
-                  ) : (
-                    <View />
-                  )
-                }
-                title={option}
-                onPress={() => setInterval(option)}
-              />
-            ))}
-        </SettingGroup>
-
-        <ThemedText type="defaultSmall" style={styles.subText}>
-          {`Last backed up: ${lastBackupDate}`}
-        </ThemedText>
-
-        {/* Backup Files List */}
-        <View style={styles.backupListContainer}>
-          <ThemedText type="subtitle" style={styles.backupListTitle}>
-            Available Backups
-          </ThemedText>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={textColor} />
-              <ThemedText style={styles.loadingText}>
-                Loading backups...
-              </ThemedText>
-            </View>
-          ) : backups.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Feather name="database" size={48} color={textColor + "40"} />
-              <ThemedText style={[styles.emptyTitle, { color: textColor }]}>
-                No backups found
-              </ThemedText>
-              <ThemedText
-                style={[styles.emptySubtitle, { color: textColor + "80" }]}
-              >
-                Create your first backup to get started
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.backupList}>
-              {backups.map((filename) => (
-                <SwipeableBackup
-                  key={filename}
-                  filename={filename}
-                  onDelete={handleDeleteBackup}
-                  onShare={handleShareBackup}
+            {isEnabled &&
+              BACKUP_INTERVAL_OPTIONS.map((option) => (
+                <SimpleSettingItem
+                  key={option}
+                  icon={
+                    option === interval ? (
+                      <Ionicons name="checkmark" size={24} color={iconColor} />
+                    ) : (
+                      <View />
+                    )
+                  }
+                  title={option}
+                  onPress={() => setInterval(option)}
                 />
               ))}
-            </View>
-          )}
+          </SettingGroup>
+
+          <ThemedText type="defaultSmall" style={styles.subText}>
+            {`Last backed up: ${lastBackupDate}`}
+          </ThemedText>
+
+          {/* Backup Files List */}
+          <SettingGroup title="Available Backups">
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={textColor} />
+                <ThemedText style={styles.loadingText}>
+                  Loading backups...
+                </ThemedText>
+              </View>
+            ) : backups.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Feather name="database" size={48} color={textColor + "40"} />
+                <ThemedText style={[styles.emptyTitle, { color: textColor }]}>
+                  No backups found
+                </ThemedText>
+                <ThemedText
+                  style={[styles.emptySubtitle, { color: textColor + "80" }]}
+                >
+                  Create your first backup to get started
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.backupList}>
+                {backups.map((filename) => (
+                  <SwipeableBackup
+                    key={filename}
+                    filename={filename}
+                    onDelete={handleDeleteBackup}
+                    onShare={handleShareBackup}
+                  />
+                ))}
+              </View>
+            )}
+          </SettingGroup>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -426,22 +434,14 @@ const styles = StyleSheet.create({
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    borderRadius: 8,
-    padding: 16,
     gap: 16,
+    padding: 16,
   },
-  scrollContent: {
+  flex: {
     flex: 1,
   },
   subText: {
     paddingHorizontal: 16,
-  },
-  backupListContainer: {
-    marginTop: 24,
-  },
-  backupListTitle: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
   },
   backupList: {
     borderRadius: 12,
@@ -494,10 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     marginBottom: 2,
-  },
-  backupFilename: {
-    fontSize: 12,
-    opacity: 0.7,
   },
   loadingContainer: {
     flexDirection: "row",

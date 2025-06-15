@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner-native";
 
 import { BACKUP_INTERVAL_MAP } from "@/constants";
@@ -105,6 +105,7 @@ const incurAllRecurringTransactions = async () => {
 export const usePeriodicBackup = () => {
   const [interval] = useBackupInterval();
   const [lastBackup, setLastBackup] = useLastBackup();
+  const lock = useRef(false);
 
   const shouldBackup = useMemo(() => {
     if (interval === "off") return false;
@@ -123,27 +124,25 @@ export const usePeriodicBackup = () => {
   }, [interval, lastBackup]);
 
   useEffect(() => {
+    if (lock.current) return;
+    lock.current = true;
+
     if (shouldBackup) {
+
       console.log("[usePeriodicBackup] Starting automatic backup...");
       performBackup(
         () => {
-          setLastBackup(Date.now());
+          setLastBackup(Math.floor(Date.now() / 1000));
         },
         (errMsg) => {
           Alert.alert("Error", errMsg);
         },
       );
     }
+    return () => {
+      lock.current = false;
+    };
   }, [shouldBackup, setLastBackup]);
-
-  useEffect(() => {
-    if (lastBackup) {
-      console.log(
-        "[usePeriodicBackup] Last backup:",
-        new Date(lastBackup * 1000).toISOString(),
-      );
-    }
-  }, [lastBackup]);
 };
 
 const performBackup = async (
