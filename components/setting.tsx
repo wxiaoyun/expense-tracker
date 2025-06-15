@@ -6,7 +6,6 @@ import { ThemedView } from "@/components/ThemedView";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Href, useRouter } from "expo-router";
 import React, { useCallback } from "react";
-import Animated, { AnimateProps } from "react-native-reanimated";
 
 type SettingGroupProps = {
   title?: string;
@@ -63,45 +62,6 @@ export const SimpleSettingItem: React.FC<SimpleSettingItemProps> = (props) => {
           </ThemedView>
         </ThemedView>
       </ThemedView>
-    </TouchableOpacity>
-  );
-};
-
-type AnimatedSettingItemProps = SimpleSettingItemProps & AnimateProps<object>
-
-export const AnimatedSettingItem: React.FC<AnimatedSettingItemProps> = (props) => {
-  const { icon: Icon, title, onPress, chevronSibling, href, ...rest } = props;
-
-  const router = useRouter();
-  const iconColor = useThemeColor("icon");
-
-  const handlePress = useCallback(() => {
-    if (href) {
-      router.push(href);
-    }
-    onPress?.();
-  }, [href, onPress, router]);
-
-  return (
-    <TouchableOpacity onPress={handlePress}>
-      <Animated.View style={styles.row} {...rest}>
-        <ThemedView style={styles.settingIcon}>{Icon}</ThemedView>
-        <ThemedView style={styles.settingItem}>
-          <ThemedText type="default">{title}</ThemedText>
-
-          <ThemedView style={[styles.row, { gap: 12 }]}>
-            {!chevronSibling ? null : typeof chevronSibling === "string" ? (
-              <ThemedText type="defaultSmall">{chevronSibling}</ThemedText>
-            ) : (
-              chevronSibling
-            )}
-
-            {href && (
-              <Ionicons name="chevron-forward" size={16} color={iconColor} />
-            )}
-          </ThemedView>
-        </ThemedView>
-      </Animated.View>
     </TouchableOpacity>
   );
 };
