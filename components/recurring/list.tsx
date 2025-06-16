@@ -2,17 +2,28 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { format } from "date-fns";
 import * as Haptics from "expo-haptics";
-import { useCallback, useMemo } from "react";
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
+import { useCallback, useMemo, useRef } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import ReanimatedSwipeable, {
+  SwipeableMethods,
+} from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  Easing,
   runOnJS,
+  SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/ThemedText";
+import { Colors } from "@/constants/Colors";
 import { RecurringTransaction } from "@/db/schema";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { occurrenceToText } from "@/libs/date";
@@ -28,9 +39,91 @@ type ListItem = {
 
 type SwipeableRecurringTransactionProps = {
   recurringTransaction: RecurringTransaction;
-  onEdit: (id: number, onTriggered?: () => void) => void;
-  onDelete: (id: number, onTriggered?: () => void) => void;
-  onIncur: (id: number, onTriggered?: () => void) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number, animateDelete: () => Promise<unknown>) => void;
+  onIncur: (id: number) => void;
+};
+
+function LeftAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 80 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 80 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    },
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 80) {
+      return {
+        backgroundColor: Colors.light.info,
+      };
+    }
+    return {
+      backgroundColor: Colors.dark.info,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.leftAction, animatedStyle]}>
+        <Feather name="edit-2" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
+}
+
+function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 80 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 80 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    },
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 80) {
+      return {
+        backgroundColor: Colors.dark.destructive,
+      };
+    }
+    return {
+      backgroundColor: Colors.light.destructive,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.rightAction, animatedStyle]}>
+        <Feather name="trash-2" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
 }
 
 const SwipeableRecurringTransaction = ({
@@ -43,121 +136,83 @@ const SwipeableRecurringTransaction = ({
   const backgroundColor = useThemeColor("background");
   const borderColor = useThemeColor("text") + "20";
 
-  const translateX = useSharedValue(0);
+  const reanimatedRef = useRef<SwipeableMethods>(null);
+  const heightAnim = useSharedValue(80);
+  const opacityAnim = useSharedValue(1);
   const isIncome = recurringTransaction.amount > 0;
 
-  const handleEditAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onEdit(recurringTransaction.id, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onEdit, recurringTransaction.id, translateX]);
-
-  const handleDeleteAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDelete(recurringTransaction.id, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onDelete, recurringTransaction.id, translateX]);
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: heightAnim.value,
+      opacity: opacityAnim.value,
+    };
+  });
 
   const handleIncurAction = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onIncur(recurringTransaction.id, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
+    onIncur(recurringTransaction.id);
+  }, [onIncur, recurringTransaction.id]);
+
+  const animateDelete = useCallback(() => {
+    return new Promise((resolve) => {
+      // Animate out before deletion
+      heightAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
       });
+      opacityAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
+
+      setTimeout(() => {
+        resolve(true);
+      }, 300);
     });
-  }, [onIncur, recurringTransaction.id, translateX]);
+  }, [heightAnim, opacityAnim]);
 
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-5, 5])
-    .minDistance(10)
-    .onUpdate((event) => {
-      "worklet";
-      // Limit swipe distance to prevent infinite swiping
-      const maxSwipe = 180;
-      translateX.value = Math.max(
-        -maxSwipe,
-        Math.min(maxSwipe, event.translationX),
-      );
-    })
-    .onEnd((event) => {
-      "worklet";
-      const shouldReveal = Math.abs(event.translationX) > 80;
+  const onSwipeableLeftOpen = () => {
+    reanimatedRef.current?.close();
+    // Left swipe exposes right action (delete)
+    onDelete(recurringTransaction.id, animateDelete);
+  };
 
-      if (shouldReveal) {
-        if (event.translationX > 0) {
-          // Swipe right - Edit
-          translateX.value = withSpring(120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleEditAction)();
-        } else {
-          // Swipe left - Delete
-          translateX.value = withSpring(-120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleDeleteAction)();
-        }
-      } else {
-        translateX.value = withSpring(0, {
-          damping: 30,
-          stiffness: 300,
-        });
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  }, []);
-
-  const leftActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value > 0 ? 1 : 0,
-    };
-  }, []);
-
-  const rightActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value < 0 ? 1 : 0,
-    };
-  }, []);
+  const onSwipeableRightOpen = () => {
+    reanimatedRef.current?.close();
+    // Right swipe exposes left action (edit)
+    onEdit(recurringTransaction.id);
+  };
 
   return (
-    <View style={styles.swipeContainer}>
-      <Animated.View style={[styles.leftAction, leftActionStyle]}>
-        <Feather name="edit-2" size={20} color="white" />
-      </Animated.View>
-
-      <Animated.View style={[styles.rightAction, rightActionStyle]}>
-        <Feather name="trash-2" size={20} color="white" />
-      </Animated.View>
-
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
+    <Reanimated.View style={animatedStyle}>
+      <ReanimatedSwipeable
+        ref={reanimatedRef}
+        containerStyle={[styles.swipeableContainer, { backgroundColor }]}
+        friction={2}
+        enableTrackpadTwoFingerGesture
+        leftThreshold={40}
+        rightThreshold={40}
+        renderLeftActions={LeftAction}
+        renderRightActions={RightAction}
+        onSwipeableWillOpen={(direction) => {
+          if (direction === "left") {
+            onSwipeableLeftOpen();
+          } else {
+            onSwipeableRightOpen();
+          }
+        }}
+      >
+        <View
           style={[
             styles.recurringTransactionItem,
             { backgroundColor, borderBottomColor: borderColor },
-            animatedStyle,
           ]}
         >
           {/* Incur button - tap to create transactions */}
-          <TouchableOpacity style={styles.incurButtonContainer} onPress={handleIncurAction}>
+          <TouchableOpacity
+            style={styles.incurButtonContainer}
+            onPress={handleIncurAction}
+          >
             <Feather
               name="play"
               size={16}
@@ -174,7 +229,7 @@ const SwipeableRecurringTransaction = ({
               <ThemedText
                 style={[
                   styles.amount,
-                  { color: isIncome ? "#34C759" : textColor },
+                  { color: isIncome ? Colors.light.success : textColor },
                 ]}
               >
                 {formatCurrency(recurringTransaction.amount)}
@@ -182,31 +237,43 @@ const SwipeableRecurringTransaction = ({
             </View>
 
             <View style={styles.recurringTransactionDetails}>
-              <ThemedText style={[styles.category, { color: textColor + "80" }]}>
+              <ThemedText
+                style={[styles.category, { color: textColor + "80" }]}
+              >
                 {recurringTransaction.category}
               </ThemedText>
-              <ThemedText style={[styles.recurrence, { color: textColor + "60" }]}>
+              <ThemedText
+                style={[styles.recurrence, { color: textColor + "60" }]}
+              >
                 {occurrenceToText(recurringTransaction.recurrenceValue)}
               </ThemedText>
             </View>
 
             {recurringTransaction.lastCharged && (
-              <ThemedText style={[styles.lastCharged, { color: textColor + "60" }]}>
-                Last: {format(new Date(recurringTransaction.lastCharged), "MMM dd, yyyy")}
+              <ThemedText
+                style={[styles.lastCharged, { color: textColor + "60" }]}
+              >
+                Last:{" "}
+                {format(
+                  new Date(recurringTransaction.lastCharged),
+                  "MMM dd, yyyy",
+                )}
               </ThemedText>
             )}
           </View>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+        </View>
+      </ReanimatedSwipeable>
+    </Reanimated.View>
   );
 };
 
 type RecurringTransactionHeaderProps = {
   date: string;
-}
+};
 
-const RecurringTransactionHeader = ({ date }: RecurringTransactionHeaderProps) => {
+const RecurringTransactionHeader = ({
+  date,
+}: RecurringTransactionHeaderProps) => {
   const textColor = useThemeColor("text");
 
   return (
@@ -220,9 +287,9 @@ const RecurringTransactionHeader = ({ date }: RecurringTransactionHeaderProps) =
 
 type RecurringTransactionListProps = {
   recurringTransactions: RecurringTransaction[];
-  onEdit: (id: number, onTriggered?: () => void) => void;
-  onDelete: (id: number, onTriggered?: () => void) => void;
-  onIncur: (id: number, onTriggered?: () => void) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number, animateDelete: () => Promise<unknown>) => void;
+  onIncur: (id: number) => void;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
 };
@@ -240,14 +307,20 @@ export const RecurringTransactionList = ({
   const textColor = useThemeColor("text");
 
   const groupedData = useMemo(() => {
-    const grouped = recurringTransactions.reduce((acc, recurringTransaction) => {
-      const dateKey = format(new Date(recurringTransaction.startDate), "iii, MMM dd");
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(recurringTransaction);
-      return acc;
-    }, {} as Record<string, RecurringTransaction[]>);
+    const grouped = recurringTransactions.reduce(
+      (acc, recurringTransaction) => {
+        const dateKey = format(
+          new Date(recurringTransaction.startDate),
+          "iii, MMM dd",
+        );
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(recurringTransaction);
+        return acc;
+      },
+      {} as Record<string, RecurringTransaction[]>,
+    );
 
     const flatData: ListItem[] = [];
     Object.entries(grouped).forEach(([date, recurringTransactions]) => {
@@ -301,7 +374,7 @@ export const RecurringTransactionList = ({
 
   const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;
-    
+
     return (
       <View style={styles.footerContainer}>
         <ActivityIndicator size="small" color={textColor} />
@@ -325,7 +398,12 @@ export const RecurringTransactionList = ({
   }, [textColor]);
 
   return (
-    <View style={[styles.container, { backgroundColor, paddingBottom: bottomTabBarHeight }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor, paddingBottom: bottomTabBarHeight },
+      ]}
+    >
       <FlashList
         contentInsetAdjustmentBehavior="automatic"
         data={groupedData}
@@ -355,38 +433,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  swipeContainer: {
-    position: "relative",
+  swipeableContainer: {
+    backgroundColor: "transparent",
   },
   leftAction: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
-    backgroundColor: "#007AFF",
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    flex: 1,
   },
   rightAction: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
-    backgroundColor: "#FF3B30",
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    flex: 1,
   },
   recurringTransactionItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    zIndex: 2,
+    minHeight: 80,
   },
   incurButtonContainer: {
     marginRight: 12,

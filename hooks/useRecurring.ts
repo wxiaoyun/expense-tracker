@@ -17,11 +17,11 @@ import { backupIntervalKey, lastBackupKey } from "./useKv";
  * This runs once when the app starts and processes all recurring transactions
  * that have pending transactions to create based on their cron schedules
  */
-export const useRecurringTransactionIncur = () => {
+export const useRecurringTransactionIncur = (enabled: boolean) => {
   const lock = useRef(false);
 
   useEffect(() => {
-    if (lock.current) return;
+    if (lock.current || !enabled) return;
     lock.current = true;
 
     console.log(
@@ -34,7 +34,7 @@ export const useRecurringTransactionIncur = () => {
     return () => {
       lock.current = false;
     };
-  }, []);
+  }, [enabled]);
 };
 
 const incurAllRecurringTransactions = async () => {

@@ -5,7 +5,10 @@ import { ActivityIndicator, Alert, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { RecurringTransactionList } from "@/components/recurring/list";
-import { deleteRecurringTransaction, incurRecurringTransaction } from "@/db/recurring";
+import {
+  deleteRecurringTransaction,
+  incurRecurringTransaction,
+} from "@/db/recurring";
 import { useCategoryFilter, useSearch } from "@/hooks/useFilter";
 import {
   invalidateRecurringTransactionsQueries,
@@ -67,32 +70,33 @@ export default function RecurringTransactionsScreen() {
   }, [recurringTransactions, fuse, search]);
 
   const handleEdit = useCallback(
-    (id: number, onComplete?: () => void) => {
+    (id: number) => {
       console.log(`Edit recurring transaction ${id}`);
       router.push({
         pathname: "/(recurring)/edit",
         params: { id },
       });
-      // Call the callback to reset the swipe position
-      onComplete?.();
     },
     [router],
   );
 
   const handleDelete = useCallback(
-    async (id: number, onComplete?: () => void) => {
+    async (id: number, animateDelete: () => Promise<unknown>) => {
       const confirmed = await showConfirmDialog(
         "Delete Recurring Transaction",
         "Are you sure you want to delete this recurring transaction? This will not affect transactions that have already been created from it.",
       );
 
       if (!confirmed) {
-        onComplete?.();
         return;
       }
 
       console.log(`Confirmed delete recurring transaction ${id}`);
-      
+
+      // Start the delete animation
+      await animateDelete();
+
+      // Wait for animation to complete before actually deleting
       try {
         await deleteRecurringTransaction(id);
         // Invalidate queries to refresh the data
@@ -100,49 +104,45 @@ export default function RecurringTransactionsScreen() {
       } catch (error) {
         console.error("Failed to delete recurring transaction:", error);
         Alert.alert("Error", "Failed to delete recurring transaction");
-      } finally {
-        onComplete?.();
       }
     },
     [],
   );
 
-  const handleIncur = useCallback(
-    async (id: number, onComplete?: () => void) => {
-      const confirmed = await showConfirmDialog(
-        "Create Transactions",
-        "This will create all pending transactions for this recurring entry. Continue?",
-      );
+  const handleIncur = useCallback(async (id: number) => {
+    const confirmed = await showConfirmDialog(
+      "Create Transactions",
+      "This will create all pending transactions for this recurring entry. Continue?",
+    );
 
-      if (!confirmed) {
-        onComplete?.();
-        return;
-      }
+    if (!confirmed) {
+      return;
+    }
 
-      console.log(`Incurring recurring transaction ${id}`);
-      
-      try {
-        const incurredCount = await incurRecurringTransaction(id);
-        
-        if (incurredCount === null) {
-          Alert.alert("Error", "Failed to create transactions");
-        } else if (incurredCount === 0) {
-          toast.info("No new transactions to create");
-        } else {
-          toast.success(`Created ${incurredCount} transaction${incurredCount === 1 ? '' : 's'}`);
-        }
-        
-        // Invalidate queries to refresh the data
-        invalidateRecurringTransactionsQueries();
-      } catch (error) {
-        console.error("Failed to incur recurring transaction:", error);
+    console.log(`Incurring recurring transaction ${id}`);
+
+    try {
+      const incurredCount = await incurRecurringTransaction(id);
+
+      if (incurredCount === null) {
         Alert.alert("Error", "Failed to create transactions");
-      } finally {
-        onComplete?.();
+      } else if (incurredCount === 0) {
+        toast.info("No new transactions to create");
+      } else {
+        toast.success(
+          `Created ${incurredCount} transaction${
+            incurredCount === 1 ? "" : "s"
+          }`,
+        );
       }
-    },
-    [],
-  );
+
+      // Invalidate queries to refresh the data
+      invalidateRecurringTransactionsQueries();
+    } catch (error) {
+      console.error("Failed to incur recurring transaction:", error);
+      Alert.alert("Error", "Failed to create transactions");
+    }
+  }, []);
 
   if (isLoading) {
     return (

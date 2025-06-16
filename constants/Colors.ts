@@ -5,6 +5,11 @@
 
 const tintColorLight = '#0a9396';
 const tintColorDark = '#d7e3fc';
+export const Success = "#34C759";
+export const InfoDark = "#007AFF"
+export const InfoLight = "#007AFF"
+export const CriticalDark = "#e63946"
+export const CriticalLight = "#c1121f"
 
 export const Colors = {
   light: {
@@ -14,7 +19,9 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
-    destructive: '#e63946',
+    destructive: CriticalLight,
+    success: Success,
+    info: InfoLight,
   },
   dark: {
     text: '#ECEDEE',
@@ -23,6 +30,8 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
-    destructive: '#c1121f',
+    destructive: CriticalDark,
+    success: Success,
+    info: InfoDark,
   },
 };

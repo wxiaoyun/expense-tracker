@@ -20,7 +20,10 @@ import { ThemedText } from "@/components/ThemedText";
 import { db } from "@/db";
 import migrations from "@/drizzle/migrations";
 import { queryClient } from "@/hooks/useQuery";
-import { usePeriodicBackup, useRecurringTransactionIncur } from "@/hooks/useRecurring";
+import {
+  usePeriodicBackup,
+  useRecurringTransactionIncur,
+} from "@/hooks/useRecurring";
 
 const formSheetOptions = {
   presentation: "formSheet",
@@ -30,85 +33,76 @@ const formSheetOptions = {
   sheetCornerRadius: 10,
 } as const;
 
-export default function RootLayout() {
-  return (
-    <MigrateDatabase>
-      <QueryClientProvider client={queryClient}>
-        <AppContent />
-      </QueryClientProvider>
-    </MigrateDatabase>
-  );
-}
-
-const AppContent = () => {
+export default function App() {
   const colorScheme = useColorScheme() === "dark" ? DarkTheme : DefaultTheme;
+  const { success, error } = useMigrations(db, migrations);
 
-  // Initialize recurring transaction incurring on app launch
-  useRecurringTransactionIncur();
-  
-  // Initialize periodic backup functionality
+  useRecurringTransactionIncur(success);
   usePeriodicBackup();
 
-  return (
-    <ThemeProvider value={colorScheme}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          <Toaster />
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="(transactions)/new"
-              options={{
-                presentation: "modal",
-                title: "New Transaction",
-              }}
-            />
-            <Stack.Screen
-              name="(transactions)/edit"
-              options={{
-                presentation: "modal",
-                title: "Edit Transaction",
-              }}
-            />
-            <Stack.Screen
-              name="(transactions)/filter"
-              options={{
-                ...formSheetOptions,
-                title: "Filter Transactions",
-              }}
-            />
-            <Stack.Screen
-              name="(recurring)/new"
-              options={{
-                presentation: "modal",
-                title: "New Recurring Transaction",
-              }}
-            />
-            <Stack.Screen
-              name="(recurring)/edit"
-              options={{
-                presentation: "modal",
-                title: "Edit Recurring Transaction",
-              }}
-            />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" animated />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </ThemeProvider>
-  );
-};
-
-const MigrateDatabase: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => {
-  const { success, error } = useMigrations(db, migrations);
   if (error) {
-    throw error;
+    return <ThemedText>Error: {error.message}</ThemedText>;
   }
+
   if (!success) {
     return <ThemedText>Loading...</ThemedText>;
   }
-  return <>{children}</>;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <Toaster />
+            <AppLayout />
+            <StatusBar style="auto" animated />
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+const AppLayout = () => {
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="(transactions)/new"
+        options={{
+          presentation: "modal",
+          title: "New Transaction",
+        }}
+      />
+      <Stack.Screen
+        name="(transactions)/edit"
+        options={{
+          presentation: "modal",
+          title: "Edit Transaction",
+        }}
+      />
+      <Stack.Screen
+        name="(transactions)/filter"
+        options={{
+          ...formSheetOptions,
+          title: "Filter Options",
+        }}
+      />
+      <Stack.Screen
+        name="(recurring)/new"
+        options={{
+          presentation: "modal",
+          title: "New Recurring Transaction",
+        }}
+      />
+      <Stack.Screen
+        name="(recurring)/edit"
+        options={{
+          presentation: "modal",
+          title: "Edit Recurring Transaction",
+        }}
+      />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
 };

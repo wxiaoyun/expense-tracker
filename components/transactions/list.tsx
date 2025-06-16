@@ -3,14 +3,19 @@ import { FlashList } from "@shopify/flash-list";
 import { format } from "date-fns";
 import { Checkbox } from "expo-checkbox";
 import * as Haptics from "expo-haptics";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
+import ReanimatedSwipeable, {
+  SwipeableMethods,
+} from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  Easing,
   runOnJS,
+  SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -18,7 +23,7 @@ import { Transaction } from "@/db/schema";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { formatCurrency } from "@/libs/intl";
 import Feather from "@expo/vector-icons/Feather";
-
+import { Colors } from "@/constants/Colors";
 
 type ListItem = {
   type: "header" | "transaction";
@@ -30,8 +35,90 @@ type ListItem = {
 type SwipeableTransactionProps = {
   transaction: Transaction;
   onToggleVerified: (id: number, verified: boolean) => void;
-  onEdit: (id: number, onTriggered?: () => void) => void;
-  onDelete: (id: number, onTriggered?: () => void) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number, animateDelete: () => Promise<unknown>) => void;
+}
+
+function LeftAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 80 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 80 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    }
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 80) {
+      return {
+        backgroundColor: Colors.light.info,
+      };
+    }
+    return {
+      backgroundColor: Colors.dark.info,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.leftAction, animatedStyle]}>
+        <Feather name="edit-2" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
+}
+
+function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 80 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 80 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    }
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 80) {
+      return {
+        backgroundColor: Colors.dark.destructive,
+      };
+    }
+    return {
+      backgroundColor: Colors.light.destructive,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.rightAction, animatedStyle]}>
+        <Feather name="trash-2" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
 }
 
 const SwipeableTransaction = ({
@@ -42,122 +129,86 @@ const SwipeableTransaction = ({
 }: SwipeableTransactionProps) => {
   const textColor = useThemeColor("text");
   const backgroundColor = useThemeColor("background");
-  const borderColor = useThemeColor("text") + "20"; // Use text color with opacity for border
+  const borderColor = useThemeColor("text") + "20";
 
-  const translateX = useSharedValue(0);
+  const reanimatedRef = useRef<SwipeableMethods>(null);
+  const heightAnim = useSharedValue(70);
+  const opacityAnim = useSharedValue(1);
   const isVerified = transaction.verified === 1;
   const isIncome = transaction.amount > 0;
 
-  const handleEditAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onEdit(transaction.id, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onEdit, transaction.id, translateX]);
-
-  const handleDeleteAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDelete(transaction.id, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onDelete, transaction.id, translateX]);
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: heightAnim.value,
+      opacity: opacityAnim.value,
+    };
+  });
 
   const handleToggleVerifiedAction = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onToggleVerified(transaction.id, !isVerified);
   }, [onToggleVerified, transaction.id, isVerified]);
 
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-5, 5])
-    .minDistance(10)
-    .onUpdate((event) => {
-      "worklet";
-      // Limit swipe distance to prevent infinite swiping
-      const maxSwipe = 150;
-      translateX.value = Math.max(
-        -maxSwipe,
-        Math.min(maxSwipe, event.translationX),
-      );
+  const animateDelete = useCallback(() => {
+    return new Promise((resolve) => {
+      // Animate out before deletion
+      heightAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
+      opacityAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
+
+      setTimeout(() => {
+        resolve(true);
+      }, 300);
     })
-    .onEnd((event) => {
-      "worklet";
-      const shouldReveal = Math.abs(event.translationX) > 80;
+  }, [heightAnim, opacityAnim]);
 
-      if (shouldReveal) {
-        if (event.translationX > 0) {
-          // Swipe right - Edit
-          translateX.value = withSpring(120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleEditAction)();
-        } else {
-          // Swipe left - Delete
-          translateX.value = withSpring(-120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleDeleteAction)();
-        }
-      } else {
-        translateX.value = withSpring(0, {
-          damping: 30,
-          stiffness: 300,
-        });
-      }
-    });
+  const onSwipeableLeftOpen = () => {
+    reanimatedRef.current?.close();
+    // Left swipe exposes right action (delete)
+    onDelete(transaction.id, animateDelete);
+  };
 
-  const animatedStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  }, []);
-
-  const leftActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value > 0 ? 1 : 0,
-    };
-  }, []);
-
-  const rightActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value < 0 ? 1 : 0,
-    };
-  }, []);
+  const onSwipeableRightOpen = () => {
+    reanimatedRef.current?.close();
+    // Right swipe exposes left action (edit)
+    onEdit(transaction.id);
+  };
 
   return (
-    <View style={styles.swipeContainer}>
-      <Animated.View style={[styles.leftAction, leftActionStyle]}>
-        <Feather name="edit-2" size={20} color="white" />
-      </Animated.View>
-
-      <Animated.View style={[styles.rightAction, rightActionStyle]}>
-        <Feather name="trash-2" size={20} color="white" />
-      </Animated.View>
-
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
+    <Reanimated.View style={animatedStyle}>
+      <ReanimatedSwipeable
+        ref={reanimatedRef}
+        containerStyle={[styles.swipeableContainer, { backgroundColor }]}
+        friction={2}
+        enableTrackpadTwoFingerGesture
+        leftThreshold={40}
+        rightThreshold={40}
+        renderLeftActions={LeftAction}
+        renderRightActions={RightAction}
+        onSwipeableWillOpen={(direction) => {
+          if (direction === 'left') {
+            onSwipeableLeftOpen();
+          } else {
+            onSwipeableRightOpen();
+          }
+        }}
+      >
+        <View
           style={[
             styles.transactionItem,
             { backgroundColor, borderBottomColor: borderColor },
-            animatedStyle,
           ]}
         >
           <Checkbox
             value={isVerified}
             onValueChange={handleToggleVerifiedAction}
             style={styles.checkbox}
-            color={isVerified ? "#007AFF" : undefined}
+            color={isVerified ? Colors.dark.info : undefined}
           />
 
           <View style={styles.transactionContent}>
@@ -168,7 +219,7 @@ const SwipeableTransaction = ({
               <ThemedText
                 style={[
                   styles.amount,
-                  { color: isIncome ? "#34C759" : textColor },
+                  { color: isIncome ? Colors.light.success : textColor },
                 ]}
               >
                 {formatCurrency(transaction.amount)}
@@ -179,9 +230,9 @@ const SwipeableTransaction = ({
               {transaction.category}
             </ThemedText>
           </View>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+        </View>
+      </ReanimatedSwipeable>
+    </Reanimated.View>
   );
 };
 
@@ -203,8 +254,8 @@ const TransactionHeader = ({ date }: TransactionHeaderProps) => {
 
 type TransactionListProps = {
   transactions: Transaction[];
-  onEdit: (id: number, onTriggered?: () => void) => void;
-  onDelete: (id: number, onTriggered?: () => void) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number, animateDelete: () => Promise<unknown>) => void;
   onToggleVerified: (id: number, verified: boolean) => void;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
@@ -315,7 +366,7 @@ export const TransactionList = ({
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemType={getItemType}
-        estimatedItemSize={60}
+        estimatedItemSize={70}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
@@ -338,38 +389,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  swipeContainer: {
-    position: "relative",
+  swipeableContainer: {
+    backgroundColor: "transparent",
   },
   leftAction: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
-    backgroundColor: "#007AFF",
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    flex: 1,
   },
   rightAction: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
-    backgroundColor: "#FF3B30",
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    flex: 1,
   },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    zIndex: 2,
+    minHeight: 70,
   },
   checkbox: {
     marginRight: 12,

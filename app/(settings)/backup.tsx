@@ -3,7 +3,7 @@ import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,31 +12,122 @@ import {
   Switch,
   View,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
+import ReanimatedSwipeable, {
+  SwipeableMethods,
+} from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  Easing,
   runOnJS,
+  SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { toast } from "sonner-native";
 
 import { SettingGroup, SimpleSettingItem } from "@/components/setting";
 import { ThemedText } from "@/components/ThemedText";
-import {
-  BACKUP_INTERVAL_OPTIONS,
-  BackupInterval
-} from "@/constants";
+import { ThemedView } from "@/components/ThemedView";
+import { BACKUP_INTERVAL_OPTIONS, BackupInterval } from "@/constants";
+import { Colors } from "@/constants/Colors";
 import { useBackupInterval, useLastBackup } from "@/hooks/useKv";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { backupDatabase, deleteBackup, listBackups, shareBackup } from "@/libs/fs";
+import {
+  backupDatabase,
+  deleteBackup,
+  listBackups,
+  shareBackup,
+} from "@/libs/fs";
 
 type SwipeableBackupProps = {
   filename: string;
-  onDelete: (filename: string, onTriggered?: () => void) => void;
-  onShare: (filename: string, onTriggered?: () => void) => void;
+  onDelete: (filename: string, animateDelete: () => Promise<unknown>) => void;
+  onShare: (filename: string) => void;
 };
+
+function LeftAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 60 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 60 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    },
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 60) {
+      return {
+        backgroundColor: Colors.light.info,
+      };
+    }
+    return {
+      backgroundColor: Colors.dark.info,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.leftAction, animatedStyle]}>
+        <Feather name="share" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
+}
+
+function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
+  const hasReachedThresholdUp = useSharedValue(false);
+  const hasReachedThresholdDown = useSharedValue(false);
+
+  useAnimatedReaction(
+    () => {
+      return drag.value;
+    },
+    (dragValue) => {
+      if (Math.abs(dragValue) > 60 && !hasReachedThresholdUp.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        hasReachedThresholdUp.value = true;
+        hasReachedThresholdDown.value = false;
+      } else if (Math.abs(dragValue) < 60 && !hasReachedThresholdDown.value) {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        hasReachedThresholdDown.value = true;
+        hasReachedThresholdUp.value = false;
+      }
+    },
+  );
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Math.abs(drag.value) > 60) {
+      return {
+        backgroundColor: Colors.dark.destructive,
+      };
+    }
+    return {
+      backgroundColor: Colors.light.destructive,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[{ flex: 1 }]}>
+      <Reanimated.View style={[styles.rightAction, animatedStyle]}>
+        <Feather name="trash-2" size={20} color="white" />
+      </Reanimated.View>
+    </Reanimated.View>
+  );
+}
 
 const SwipeableBackup = ({
   filename,
@@ -46,91 +137,47 @@ const SwipeableBackup = ({
   const textColor = useThemeColor("text");
   const borderColor = useThemeColor("text") + "20";
   const backgroundColor = useThemeColor("background");
-  const destructiveColor = useThemeColor("destructive");
 
-  const translateX = useSharedValue(0);
-
-  const handleDeleteAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDelete(filename, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onDelete, filename, translateX]);
-
-  const handleShareAction = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onShare(filename, () => {
-      translateX.value = withSpring(0, {
-        damping: 30,
-        stiffness: 300,
-      });
-    });
-  }, [onShare, filename, translateX]);
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-5, 5])
-    .minDistance(10)
-    .onUpdate((event) => {
-      "worklet";
-      const maxSwipe = 120;
-      // Allow both left and right swipe
-      translateX.value = Math.max(
-        -maxSwipe,
-        Math.min(maxSwipe, event.translationX),
-      );
-    })
-    .onEnd((event) => {
-      "worklet";
-      const shouldReveal = Math.abs(event.translationX) > 60;
-
-      if (shouldReveal) {
-        if (event.translationX > 0) {
-          // Swipe right - Share
-          translateX.value = withSpring(120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleShareAction)();
-        } else {
-          // Swipe left - Delete
-          translateX.value = withSpring(-120, {
-            damping: 30,
-            stiffness: 300,
-          });
-          runOnJS(handleDeleteAction)();
-        }
-      } else {
-        translateX.value = withSpring(0, {
-          damping: 30,
-          stiffness: 300,
-        });
-      }
-    });
+  const reanimatedRef = useRef<SwipeableMethods>(null);
+  const heightAnim = useSharedValue(60);
+  const opacityAnim = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => {
-    "worklet";
     return {
-      transform: [{ translateX: translateX.value }],
+      height: heightAnim.value,
+      opacity: opacityAnim.value,
     };
-  }, []);
+  });
 
-  const leftActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value > 0 ? 1 : 0,
-    };
-  }, []);
+  const animateDelete = useCallback(() => {
+    // Animate out before deletion
+    return new Promise((resolve) => {
+      heightAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
+      opacityAnim.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
 
-  const rightActionStyle = useAnimatedStyle(() => {
-    "worklet";
-    return {
-      opacity: translateX.value < 0 ? 1 : 0,
-    };
-  }, []);
+      setTimeout(() => {
+        resolve(true);
+      }, 300);
+    });
+  }, [heightAnim, opacityAnim]);
+
+  const onSwipeableLeftOpen = () => {
+    reanimatedRef.current?.close();
+    // Left swipe exposes right action (delete)
+    onDelete(filename, animateDelete);
+  };
+
+  const onSwipeableRightOpen = () => {
+    reanimatedRef.current?.close();
+    // Right swipe exposes left action (share)
+    onShare(filename);
+  };
 
   // Format the filename to show date
   const formattedDate = useMemo(() => {
@@ -144,27 +191,28 @@ const SwipeableBackup = ({
   }, [filename]);
 
   return (
-    <View style={styles.swipeContainer}>
-      <Animated.View style={[styles.leftAction, leftActionStyle]}>
-        <Feather name="share" size={20} color="white" />
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.rightAction,
-          rightActionStyle,
-          { backgroundColor: destructiveColor },
-        ]}
+    <Reanimated.View style={animatedStyle}>
+      <ReanimatedSwipeable
+        ref={reanimatedRef}
+        containerStyle={[styles.swipeableContainer, { backgroundColor }]}
+        friction={2}
+        enableTrackpadTwoFingerGesture
+        leftThreshold={40}
+        rightThreshold={40}
+        renderLeftActions={LeftAction}
+        renderRightActions={RightAction}
+        onSwipeableWillOpen={(direction) => {
+          if (direction === "left") {
+            onSwipeableLeftOpen();
+          } else {
+            onSwipeableRightOpen();
+          }
+        }}
       >
-        <Feather name="trash-2" size={20} color="white" />
-      </Animated.View>
-
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
+        <View
           style={[
             styles.backupItem,
             { backgroundColor, borderBottomColor: borderColor },
-            animatedStyle,
           ]}
         >
           <View style={styles.backupContent}>
@@ -178,9 +226,9 @@ const SwipeableBackup = ({
               <ThemedText>{formattedDate}</ThemedText>
             </View>
           </View>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+        </View>
+      </ReanimatedSwipeable>
+    </Reanimated.View>
   );
 };
 
@@ -217,7 +265,7 @@ export default function Page() {
   const loadBackups = useCallback(async () => {
     setLoading(true);
     const result = await listBackups();
-    
+
     if (result.ok) {
       setBackups(result.data || []);
     } else {
@@ -225,12 +273,12 @@ export default function Page() {
       setBackups([]);
       toast.error(result.err);
     }
-    
+
     setLoading(false);
   }, []);
 
   const handleDeleteBackup = useCallback(
-    (filename: string, onTriggered?: () => void) => {
+    (filename: string, animateDelete: () => Promise<unknown>) => {
       Alert.alert(
         "Delete Backup",
         `Are you sure you want to delete this backup?\n\n${filename}`,
@@ -238,22 +286,23 @@ export default function Page() {
           {
             text: "Cancel",
             style: "cancel",
-            onPress: onTriggered,
           },
           {
             text: "Delete",
             style: "destructive",
             onPress: async () => {
+              // Start the delete animation
+              await animateDelete();
+
+              // Wait for animation to complete before actually deleting
               const result = await deleteBackup(filename);
-              
+
               if (result.ok) {
                 toast.success(result.data);
                 loadBackups(); // Refresh the list
               } else {
                 toast.error(result.err);
               }
-              
-              onTriggered?.();
             },
           },
         ],
@@ -262,33 +311,28 @@ export default function Page() {
     [loadBackups],
   );
 
-  const handleShareBackup = useCallback(
-    async (filename: string, onTriggered?: () => void) => {
-      const result = await shareBackup(filename);
-      
-      if (result.ok) {
-        toast.success(result.data);
-      } else {
-        toast.error(result.err);
-      }
-      
-      onTriggered?.();
-    },
-    [],
-  );
+  const handleShareBackup = useCallback(async (filename: string) => {
+    const result = await shareBackup(filename);
+
+    if (result.ok) {
+      toast.success(result.data);
+    } else {
+      toast.error(result.err);
+    }
+  }, []);
 
   const handleCreateBackup = useCallback(async () => {
     setRefreshing(true);
-    
+
     const result = await backupDatabase();
-    
+
     if (result.ok) {
       toast.success(result.data);
       loadBackups(); // Refresh the list
     } else {
       toast.error(result.err);
     }
-    
+
     setRefreshing(false);
   }, [loadBackups]);
 
@@ -356,7 +400,10 @@ export default function Page() {
           </ThemedText>
 
           {/* Backup Files List */}
-          <SettingGroup title="Available Backups">
+          <ThemedView style={styles.backupListContainer}>
+            <ThemedText type="defaultSemiBold" style={styles.backupListTitle}>
+              Available Backups
+            </ThemedText>
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={textColor} />
@@ -388,7 +435,7 @@ export default function Page() {
                 ))}
               </View>
             )}
-          </SettingGroup>
+          </ThemedView>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -410,32 +457,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   backupList: {
-    borderRadius: 12,
     overflow: "hidden",
   },
-  swipeContainer: {
-    position: "relative",
+  swipeableContainer: {
+    backgroundColor: "transparent",
   },
   leftAction: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
-    backgroundColor: "#007AFF",
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    flex: 1,
   },
   rightAction: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 120,
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    flex: 1,
+  },
+  backupListContainer: {
+    borderRadius: 12,
+    paddingVertical: 4,
+  },
+  backupListTitle: {
+    paddingHorizontal: 16,
   },
   backupItem: {
     flexDirection: "row",
@@ -443,7 +487,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    zIndex: 2,
+    minHeight: 60,
   },
   backupContent: {
     flex: 1,

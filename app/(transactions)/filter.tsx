@@ -5,7 +5,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import DatePicker from "react-native-date-picker";
 import { ScrollView } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -90,9 +89,8 @@ export default function TransactionFilter() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor }]}
         keyboardShouldPersistTaps="always"
       >
         {/* Date Range Section */}
@@ -291,7 +289,6 @@ export default function TransactionFilter() {
             )}
         </ThemedView>
       </ScrollView>
-    </SafeAreaView>
   );
 }
 
@@ -300,7 +297,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 24,
   },
   header: {
@@ -374,13 +372,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   searchInput: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
-    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    textAlignVertical: "center",
-    includeFontPadding: false,
   },
   categoryButton: {
     borderWidth: StyleSheet.hairlineWidth,

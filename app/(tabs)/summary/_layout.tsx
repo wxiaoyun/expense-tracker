@@ -32,7 +32,7 @@ export default function SummaryLayout() {
 
   const onPressFilter = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push("/summary/filter");
+    router.push("/(transactions)/filter");
   };
 
   return (

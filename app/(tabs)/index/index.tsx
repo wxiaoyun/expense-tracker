@@ -83,7 +83,7 @@ export default function HomeScreen() {
   const handleToggleVerified = useCallback(
     async (id: number, verified: boolean) => {
       console.log(`Toggle verification for transaction ${id}: ${verified}`);
-      
+
       try {
         await setVerification(id, verified ? 1 : 0);
         // Invalidate queries to refresh the data
@@ -97,32 +97,33 @@ export default function HomeScreen() {
   );
 
   const handleEdit = useCallback(
-    (id: number, onComplete?: () => void) => {
+    (id: number) => {
       console.log(`Edit transaction ${id}`);
       router.push({
         pathname: "/(transactions)/edit",
         params: { id },
       });
-      // Call the callback to reset the swipe position
-      onComplete?.();
     },
     [router],
   );
 
   const handleDelete = useCallback(
-    async (id: number, onComplete?: () => void) => {
+    async (id: number, animateDelete: () => Promise<unknown>) => {
       const confirmed = await showConfirmDialog(
         "Delete Transaction",
         "Are you sure you want to delete this transaction?",
       );
 
       if (!confirmed) {
-        onComplete?.();
         return;
       }
 
       console.log(`Confirmed delete transaction ${id}`);
-      
+
+      // Start the delete animation
+      await animateDelete();
+
+      // Wait for animation to complete before actually deleting
       try {
         await deleteTransaction(id);
         // Invalidate queries to refresh the data
@@ -130,8 +131,6 @@ export default function HomeScreen() {
       } catch (error) {
         console.error("Failed to delete transaction:", error);
         Alert.alert("Error", "Failed to delete transaction");
-      } finally {
-        onComplete?.();
       }
     },
     [],

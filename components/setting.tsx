@@ -1,5 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import {
+  StyleProp,
+  StyleSheet,
+  TextStyle,
+  TouchableOpacity,
+  ViewStyle,
+} from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -10,12 +16,23 @@ import React, { useCallback } from "react";
 type SettingGroupProps = {
   title?: string;
   children: React.ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
+  titleStyle?: StyleProp<TextStyle>;
 };
 
-export const SettingGroup = ({ title, children }: SettingGroupProps) => {
+export const SettingGroup = ({
+  title,
+  children,
+  containerStyle,
+  titleStyle,
+}: SettingGroupProps) => {
   return (
-    <ThemedView style={styles.innerContainer}>
-      {title && <ThemedText type="defaultSemiBold">{title}</ThemedText>}
+    <ThemedView style={[styles.innerContainer, containerStyle]}>
+      {title && (
+        <ThemedText type="defaultSemiBold" style={titleStyle}>
+          {title}
+        </ThemedText>
+      )}
       {children}
     </ThemedView>
   );
