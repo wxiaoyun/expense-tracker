@@ -476,7 +476,8 @@ const styles = StyleSheet.create({
   },
   backupListContainer: {
     borderRadius: 12,
-    paddingVertical: 4,
+    paddingTop: 4,
+    paddingBottom:12,
   },
   backupListTitle: {
     paddingHorizontal: 16,
@@ -486,7 +487,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     minHeight: 60,
   },
   backupContent: {

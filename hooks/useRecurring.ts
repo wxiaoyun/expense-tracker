@@ -119,6 +119,7 @@ export const usePeriodicBackup = () => {
     if (lock.current) return;
     lock.current = true;
 
+    console.log("[usePeriodicBackup] Starting periodic backup");
     performPeriodicBackup();
 
     return () => {
@@ -131,17 +132,23 @@ const performPeriodicBackup = async () => {
   try {
     const backupInterval = await Storage.getItemAsync(backupIntervalKey);
     if (!backupInterval || backupInterval === "off") {
+      console.log("[usePeriodicBackup] Backup interval is off", backupInterval);
       return;
     }
 
     const lastBackup = await Storage.getItemAsync(lastBackupKey);
-    if (!lastBackup) {
-      return;
+    let lastBackupNum = Number(lastBackup);
+    if (isNaN(lastBackupNum)) {
+      console.log(
+        "[usePeriodicBackup] Last backup is not a number",
+        lastBackup,
+      );
+
+      await Storage.setItemAsync(lastBackupKey, "0");
+      lastBackupNum = 0;
     }
 
-    const lastBackupDate = new Date(
-      !lastBackup ? 0 : Number(lastBackup) * 1000,
-    );
+    const lastBackupDate = new Date(lastBackupNum * 1000);
     const now = new Date();
 
     const diffTime = Math.abs(now.getTime() - lastBackupDate.getTime());
@@ -151,12 +158,15 @@ const performPeriodicBackup = async () => {
       BACKUP_INTERVAL_MAP[backupInterval as keyof typeof BACKUP_INTERVAL_MAP];
 
     if (diffDays < intervalDays) {
+      console.log(
+        `[usePeriodicBackup] Last backup was ${diffDays} days ago, skipping backup`,
+      );
       return;
     }
 
     // Perform backup using the new Result-based approach
     const backupResult = await backupDatabase();
-    
+
     if (backupResult.ok) {
       console.log("[usePeriodicBackup] Backup success:", backupResult.data);
       toast.success("Automatic backup completed");

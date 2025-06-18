@@ -46,7 +46,7 @@ export const useWeekStart = () => {
 
 export const backupIntervalKey = "backupInterval";
 export const useBackupInterval = () => {
-  const [interval, setInterval] = useKy(backupIntervalKey, "monthly") ;
+  const [interval, setInterval] = useKy(backupIntervalKey, "off") ;
 
   const setBackupInterval = useCallback((interval: BackupInterval) => {
     setInterval(interval);
