@@ -24,7 +24,10 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 
 // Schema for edit transaction form
 export const EditTransactionFormSchema = z.object({
-  amount: z.number(),
+  amount: z.string().min(1, "Amount is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be a valid positive number"),
   transactionDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -60,7 +63,7 @@ export default function Page() {
       if (!transaction) throw new Error("Transaction not found");
       const valueWithSign = {
         ...data,
-        amount: data.amount * (isExpense ? -1 : 1),
+        amount: parseFloat(data.amount) * (isExpense ? -1 : 1),
       };
       return updateTransaction({
         ...transaction,
@@ -82,7 +85,7 @@ export default function Page() {
 
   const form = useForm({
     defaultValues: {
-      amount: Math.abs(transaction?.amount || 0),
+      amount: Math.abs(transaction?.amount || 0).toString(),
       transactionDate: transaction?.transactionDate || Date.now(),
       category: transaction?.category || "",
       description: transaction?.description || "",
@@ -100,7 +103,7 @@ export default function Page() {
   React.useEffect(() => {
     if (transaction) {
       setIsExpense(transaction.amount < 0);
-      form.setFieldValue("amount", Math.abs(transaction.amount));
+      form.setFieldValue("amount", Math.abs(transaction.amount).toString());
       form.setFieldValue("transactionDate", transaction.transactionDate);
       form.setFieldValue("category", transaction.category);
       form.setFieldValue("description", transaction.description);
@@ -177,14 +180,12 @@ export default function Page() {
                 style={[styles.amountInput, { color: textColor }]}
                 placeholder="0.00"
                 placeholderTextColor={textColor + "80"}
-                value={
-                  field.state.value === 0
-                    ? ""
-                    : Math.abs(field.state.value).toString()
-                }
+                value={field.state.value === "0" ? "" : field.state.value}
                 onChangeText={(text) => {
-                  const numValue = parseFloat(text) || 0;
-                  field.handleChange(numValue);
+                  // Allow empty string, digits, and one decimal point
+                  if (text === "" || /^\d*\.?\d*$/.test(text)) {
+                    field.handleChange(text || "0");
+                  }
                 }}
                 keyboardType="numeric"
               />

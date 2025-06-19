@@ -25,7 +25,10 @@ import { validateOccurrence } from "@/libs/date";
 
 // Schema for new recurring transaction form
 export const NewRecurringTransactionFormSchema = z.object({
-  amount: z.number(),
+  amount: z.string().min(1, "Amount is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be a valid positive number"),
   startDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -69,7 +72,7 @@ export default function Page() {
     mutationFn: async (data: NewRecurringTransactionForm) => {
       const valueWithSign = {
         ...data,
-        amount: data.amount * (isExpense ? -1 : 1),
+        amount: parseFloat(data.amount) * (isExpense ? -1 : 1),
       };
       return createRecurringTransaction(valueWithSign);
     },
@@ -89,7 +92,7 @@ export default function Page() {
 
   const form = useForm({
     defaultValues: {
-      amount: 0,
+      amount: "0",
       startDate: Date.now(),
       category: "",
       description: "",
@@ -160,14 +163,12 @@ export default function Page() {
                   style={[styles.amountInput, { color: textColor }]}
                   placeholder="0.00"
                   placeholderTextColor={textColor + "80"}
-                  value={
-                    field.state.value === 0
-                      ? ""
-                      : Math.abs(field.state.value).toString()
-                  }
+                  value={field.state.value === "0" ? "" : field.state.value}
                   onChangeText={(text) => {
-                    const numValue = parseFloat(text) || 0;
-                    field.handleChange(numValue);
+                    // Allow empty string, digits, and one decimal point
+                    if (text === "" || /^\d*\.?\d*$/.test(text)) {
+                      field.handleChange(text || "0");
+                    }
                   }}
                   keyboardType="numeric"
                 />

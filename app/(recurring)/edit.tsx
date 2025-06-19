@@ -32,7 +32,10 @@ import { ScrollView } from "react-native-gesture-handler";
 
 // Schema for edit recurring transaction form
 export const EditRecurringTransactionFormSchema = z.object({
-  amount: z.number(),
+  amount: z.string().min(1, "Amount is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be a valid positive number"),
   startDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -89,7 +92,7 @@ export default function Page() {
         throw new Error("Recurring transaction not found");
       const valueWithSign = {
         ...data,
-        amount: data.amount * (isExpense ? -1 : 1),
+        amount: parseFloat(data.amount) * (isExpense ? -1 : 1),
       };
       return updateRecurringTransaction({
         ...recurringTransaction,
@@ -115,7 +118,7 @@ export default function Page() {
 
   const form = useForm({
     defaultValues: {
-      amount: Math.abs(recurringTransaction?.amount || 0),
+      amount: Math.abs(recurringTransaction?.amount || 0).toString(),
       startDate: recurringTransaction?.startDate || Date.now(),
       category: recurringTransaction?.category || "",
       description: recurringTransaction?.description || "",
@@ -133,7 +136,7 @@ export default function Page() {
   React.useEffect(() => {
     if (recurringTransaction) {
       setIsExpense(recurringTransaction.amount < 0);
-      form.setFieldValue("amount", Math.abs(recurringTransaction.amount));
+      form.setFieldValue("amount", Math.abs(recurringTransaction.amount).toString());
       form.setFieldValue("startDate", recurringTransaction.startDate);
       form.setFieldValue("category", recurringTransaction.category);
       form.setFieldValue("description", recurringTransaction.description);
@@ -218,14 +221,12 @@ export default function Page() {
                   style={[styles.amountInput, { color: textColor }]}
                   placeholder="0.00"
                   placeholderTextColor={textColor + "80"}
-                  value={
-                    field.state.value === 0
-                      ? ""
-                      : Math.abs(field.state.value).toString()
-                  }
+                  value={field.state.value === "0" ? "" : field.state.value}
                   onChangeText={(text) => {
-                    const numValue = parseFloat(text) || 0;
-                    field.handleChange(numValue);
+                    // Allow empty string, digits, and one decimal point
+                    if (text === "" || /^\d*\.?\d*$/.test(text)) {
+                      field.handleChange(text || "0");
+                    }
                   }}
                   keyboardType="numeric"
                 />

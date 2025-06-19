@@ -23,7 +23,10 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 
 // Schema for new transaction form
 export const NewTransactionFormSchema = z.object({
-  amount: z.number(),
+  amount: z.string().min(1, "Amount is required").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be a valid positive number"),
   transactionDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -53,7 +56,7 @@ export default function Page() {
     mutationFn: async (data: NewTransactionForm) => {
       const valueWithSign = {
         ...data,
-        amount: data.amount * (isExpense ? -1 : 1),
+        amount: parseFloat(data.amount) * (isExpense ? -1 : 1),
       };
       return createTransaction(valueWithSign);
     },
@@ -73,7 +76,7 @@ export default function Page() {
 
   const form = useForm({
     defaultValues: {
-      amount: 0,
+      amount: "0",
       transactionDate: Date.now(),
       category: "",
       description: "",
@@ -139,14 +142,12 @@ export default function Page() {
                 style={[styles.amountInput, { color: textColor }]}
                 placeholder="0.00"
                 placeholderTextColor={textColor + "80"}
-                value={
-                  field.state.value === 0
-                    ? ""
-                    : Math.abs(field.state.value).toString()
-                }
+                value={field.state.value === "0" ? "" : field.state.value}
                 onChangeText={(text) => {
-                  const numValue = parseFloat(text) || 0;
-                  field.handleChange(numValue);
+                  // Allow empty string, digits, and one decimal point
+                  if (text === "" || /^\d*\.?\d*$/.test(text)) {
+                    field.handleChange(text || "0");
+                  }
                 }}
                 keyboardType="numeric"
               />
