@@ -163,8 +163,11 @@ export default function Page() {
               mode="date"
               open={isDatePickerOpen}
               onCancel={() => setIsDatePickerOpen(false)}
+              onConfirm={(date) => {
+                setIsDatePickerOpen(false);
+                field.handleChange(date.getTime());
+              }}
               date={new Date(field.state.value)}
-              onDateChange={(date) => field.handleChange(date.getTime())}
             />
           </>
         )}
