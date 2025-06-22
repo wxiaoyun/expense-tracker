@@ -44,6 +44,7 @@
       "expo-localization"
     ],
     "experiments": {
+      "reactCompiler": true,
       "typedRoutes": true
     },
     "extra": {
