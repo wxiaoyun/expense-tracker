@@ -22,7 +22,6 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { COMMON_RECURRENCES } from "@/constants";
 import { createRecurringTransaction } from "@/db/recurring";
-import { useCurrency } from "@/hooks/useKv";
 import {
   RECURRING_TRANSACTIONS_QUERY_KEY,
   useCategoriesQuery,
@@ -60,7 +59,6 @@ export default function Page() {
   const textColor = useThemeColor("text");
   const borderColor = useThemeColor("text") + "20";
   const destructiveColor = useThemeColor("destructive");
-  const [currency] = useCurrency();
   const insets = useSafeAreaInsets();
 
   // UI state (not form data)
@@ -179,9 +177,6 @@ export default function Page() {
                   onChangeText={field.handleChange}
                   keyboardType="decimal-pad"
                 />
-                <ThemedText style={styles.currencySymbol}>
-                  {currency}
-                </ThemedText>
                 <TouchableOpacity
                   style={[
                     styles.toggleButton,
@@ -423,12 +418,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
   },
-  currencySymbol: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "600",
-  },
   amountInput: {
+    flex: 1,
     fontSize: 24,
     fontWeight: "600",
     lineHeight: 32,
