@@ -17,6 +17,7 @@ import { z } from "zod/v4";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { COMMON_RECURRENCES } from "@/constants";
 import { updateRecurringTransaction } from "@/db/recurring";
 import { useCurrency } from "@/hooks/useKv";
 import {
@@ -32,10 +33,13 @@ import { ScrollView } from "react-native-gesture-handler";
 
 // Schema for edit recurring transaction form
 export const EditRecurringTransactionFormSchema = z.object({
-  amount: z.string().min(1, "Amount is required").refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num > 0;
-  }, "Amount must be a valid positive number"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, "Amount must be a valid positive number"),
   startDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -51,16 +55,6 @@ export const EditRecurringTransactionFormSchema = z.object({
 export type EditRecurringTransactionForm = z.infer<
   typeof EditRecurringTransactionFormSchema
 >;
-
-// Common cron expressions for recurring transactions
-const COMMON_RECURRENCES = [
-  { label: "Daily", value: "0 0 * * *" },
-  { label: "Weekly", value: "0 0 * * 0" },
-  { label: "Bi-weekly", value: "0 0 */14 * *" },
-  { label: "Monthly", value: "0 0 1 * *" },
-  { label: "Quarterly", value: "0 0 1 */3 *" },
-  { label: "Yearly", value: "0 0 1 1 *" },
-];
 
 export default function Page() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -136,7 +130,10 @@ export default function Page() {
   React.useEffect(() => {
     if (recurringTransaction) {
       setIsExpense(recurringTransaction.amount < 0);
-      form.setFieldValue("amount", Math.abs(recurringTransaction.amount).toString());
+      form.setFieldValue(
+        "amount",
+        Math.abs(recurringTransaction.amount).toString(),
+      );
       form.setFieldValue("startDate", recurringTransaction.startDate);
       form.setFieldValue("category", recurringTransaction.category);
       form.setFieldValue("description", recurringTransaction.description);
@@ -203,12 +200,12 @@ export default function Page() {
                 modal
                 mode="date"
                 open={isDatePickerOpen}
+                date={new Date(field.state.value)}
                 onCancel={() => setIsDatePickerOpen(false)}
                 onConfirm={(date) => {
                   setIsDatePickerOpen(false);
                   field.handleChange(date.getTime());
                 }}
-                date={new Date(field.state.value)}
               />
             </>
           )}
@@ -220,18 +217,12 @@ export default function Page() {
             <ThemedView style={styles.amountContainer}>
               <ThemedView style={styles.amountInputRow}>
                 <TextInput
-                  autoFocus
                   style={[styles.amountInput, { color: textColor }]}
                   placeholder="0.00"
                   placeholderTextColor={textColor + "80"}
-                  value={field.state.value === "0" ? "" : field.state.value}
-                  onChangeText={(text) => {
-                    // Allow empty string, digits, and one decimal point
-                    if (text === "" || /^\d*\.?\d*$/.test(text)) {
-                      field.handleChange(text || "0");
-                    }
-                  }}
-                  keyboardType="numeric"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  keyboardType="decimal-pad"
                 />
                 <ThemedText style={styles.currencySymbol}>
                   {currency}

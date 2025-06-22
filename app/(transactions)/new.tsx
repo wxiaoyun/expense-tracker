@@ -15,18 +15,18 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { createTransaction } from "@/db/transaction";
 import { useCurrency } from "@/hooks/useKv";
-import {
-  TRANSACTIONS_QUERY_KEY,
-  useCategoriesQuery,
-} from "@/hooks/useQuery";
+import { TRANSACTIONS_QUERY_KEY, useCategoriesQuery } from "@/hooks/useQuery";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
 // Schema for new transaction form
 export const NewTransactionFormSchema = z.object({
-  amount: z.string().min(1, "Amount is required").refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num > 0;
-  }, "Amount must be a valid positive number"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, "Amount must be a valid positive number"),
   transactionDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -125,12 +125,12 @@ export default function Page() {
               modal
               mode="date"
               open={isDatePickerOpen}
+              date={new Date(field.state.value)}
               onCancel={() => setIsDatePickerOpen(false)}
               onConfirm={(date) => {
                 setIsDatePickerOpen(false);
                 field.handleChange(date.getTime());
               }}
-              date={new Date(field.state.value)}
             />
           </>
         )}
@@ -141,18 +141,13 @@ export default function Page() {
         {(field) => (
           <ThemedView style={styles.amountContainer}>
             <ThemedView style={styles.amountInputRow}>
-              <TextInput
+                              <TextInput
                 style={[styles.amountInput, { color: textColor }]}
                 placeholder="0.00"
                 placeholderTextColor={textColor + "80"}
-                value={field.state.value === "0" ? "" : field.state.value}
-                onChangeText={(text) => {
-                  // Allow empty string, digits, and one decimal point
-                  if (text === "" || /^\d*\.?\d*$/.test(text)) {
-                    field.handleChange(text || "0");
-                  }
-                }}
-                keyboardType="numeric"
+                value={field.state.value}
+                onChangeText={field.handleChange}
+                keyboardType="decimal-pad"
               />
               <ThemedText style={styles.currencySymbol}>{currency}</ThemedText>
               <TouchableOpacity
@@ -174,7 +169,9 @@ export default function Page() {
             </ThemedView>
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
                   {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>
@@ -198,8 +195,10 @@ export default function Page() {
             />
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
-                {field.state.meta.errors[0]?.message}
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
+                  {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>
             )}
@@ -219,7 +218,9 @@ export default function Page() {
             />
             {field.state.meta.errors.length > 0 && (
               <ThemedView style={styles.errorContainer}>
-                <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
+                <ThemedText
+                  style={[styles.errorText, { color: destructiveColor }]}
+                >
                   {field.state.meta.errors[0]?.message}
                 </ThemedText>
               </ThemedView>

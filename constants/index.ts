@@ -43,3 +43,12 @@ export const dateRangeOptions = [
   "all",
 ] as const;
 export type DateRange = (typeof dateRangeOptions)[number];
+
+export const COMMON_RECURRENCES = [
+  { label: "Daily", value: "0 0 * * *" },
+  { label: "Weekly", value: "0 0 * * 0" },
+  { label: "Bi-weekly", value: "0 0 */14 * *" },
+  { label: "Monthly", value: "0 0 1 * *" },
+  { label: "Quarterly", value: "0 0 1 */3 *" },
+  { label: "Yearly", value: "0 0 1 1 *" },
+];

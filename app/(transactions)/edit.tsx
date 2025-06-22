@@ -24,10 +24,13 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 
 // Schema for edit transaction form
 export const EditTransactionFormSchema = z.object({
-  amount: z.string().min(1, "Amount is required").refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num > 0;
-  }, "Amount must be a valid positive number"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, "Amount must be a valid positive number"),
   transactionDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
@@ -162,12 +165,12 @@ export default function Page() {
               modal
               mode="date"
               open={isDatePickerOpen}
+              date={new Date(field.state.value)}
               onCancel={() => setIsDatePickerOpen(false)}
               onConfirm={(date) => {
                 setIsDatePickerOpen(false);
                 field.handleChange(date.getTime());
               }}
-              date={new Date(field.state.value)}
             />
           </>
         )}
@@ -179,18 +182,12 @@ export default function Page() {
           <ThemedView style={styles.amountContainer}>
             <ThemedView style={styles.amountInputRow}>
               <TextInput
-                autoFocus
                 style={[styles.amountInput, { color: textColor }]}
                 placeholder="0.00"
                 placeholderTextColor={textColor + "80"}
-                value={field.state.value === "0" ? "" : field.state.value}
-                onChangeText={(text) => {
-                  // Allow empty string, digits, and one decimal point
-                  if (text === "" || /^\d*\.?\d*$/.test(text)) {
-                    field.handleChange(text || "0");
-                  }
-                }}
-                keyboardType="numeric"
+                value={field.state.value}
+                onChangeText={field.handleChange}
+                keyboardType="decimal-pad"
               />
               <ThemedText style={styles.currencySymbol}>{currency}</ThemedText>
               <TouchableOpacity

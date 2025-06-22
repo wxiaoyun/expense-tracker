@@ -5,7 +5,13 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import Fuse from "fuse.js";
 import React, { useCallback, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
 import DatePicker from "react-native-date-picker";
 import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,6 +20,7 @@ import { z } from "zod/v4";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { COMMON_RECURRENCES } from "@/constants";
 import { createRecurringTransaction } from "@/db/recurring";
 import { useCurrency } from "@/hooks/useKv";
 import {
@@ -25,30 +32,28 @@ import { validateOccurrence } from "@/libs/date";
 
 // Schema for new recurring transaction form
 export const NewRecurringTransactionFormSchema = z.object({
-  amount: z.string().min(1, "Amount is required").refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num > 0;
-  }, "Amount must be a valid positive number"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, "Amount must be a valid positive number"),
   startDate: z.number().int().positive(),
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
-  recurrenceValue: z.string().min(1, "Recurrence is required").refine((data) => {
-    const res = validateOccurrence(data);
-    return res.ok;
-  }, "Invalid cron expression"),
+  recurrenceValue: z
+    .string()
+    .min(1, "Recurrence is required")
+    .refine((data) => {
+      const res = validateOccurrence(data);
+      return res.ok;
+    }, "Invalid cron expression"),
 });
 
-export type NewRecurringTransactionForm = z.infer<typeof NewRecurringTransactionFormSchema>;
-
-// Common cron expressions for recurring transactions
-const COMMON_RECURRENCES = [
-  { label: "Daily", value: "0 0 * * *" },
-  { label: "Weekly", value: "0 0 * * 0" },
-  { label: "Bi-weekly", value: "0 0 */14 * *" },
-  { label: "Monthly", value: "0 0 1 * *" },
-  { label: "Quarterly", value: "0 0 1 */3 *" },
-  { label: "Yearly", value: "0 0 1 1 *" },
-];
+export type NewRecurringTransactionForm = z.infer<
+  typeof NewRecurringTransactionFormSchema
+>;
 
 export default function Page() {
   const backgroundColor = useThemeColor("background");
@@ -77,7 +82,9 @@ export default function Page() {
       return createRecurringTransaction(valueWithSign);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY],
+      });
       toast.success("Recurring transaction created successfully");
       form.reset();
       router.back();
@@ -85,7 +92,9 @@ export default function Page() {
     onError: (error: any) => {
       console.error("[UI] Error creating recurring transaction", error);
       const errorMessage =
-        error?.message || error?.toString() || "Failed to create recurring transaction";
+        error?.message ||
+        error?.toString() ||
+        "Failed to create recurring transaction";
       toast.error(errorMessage);
     },
   });
@@ -146,12 +155,12 @@ export default function Page() {
                 modal
                 mode="date"
                 open={isDatePickerOpen}
+                date={new Date(field.state.value)}
                 onCancel={() => setIsDatePickerOpen(false)}
                 onConfirm={(date) => {
                   setIsDatePickerOpen(false);
                   field.handleChange(date.getTime());
                 }}
-                date={new Date(field.state.value)}
               />
             </>
           )}
@@ -166,16 +175,13 @@ export default function Page() {
                   style={[styles.amountInput, { color: textColor }]}
                   placeholder="0.00"
                   placeholderTextColor={textColor + "80"}
-                  value={field.state.value === "0" ? "" : field.state.value}
-                  onChangeText={(text) => {
-                    // Allow empty string, digits, and one decimal point
-                    if (text === "" || /^\d*\.?\d*$/.test(text)) {
-                      field.handleChange(text || "0");
-                    }
-                  }}
-                  keyboardType="numeric"
+                  value={field.state.value}
+                  onChangeText={field.handleChange}
+                  keyboardType="decimal-pad"
                 />
-                <ThemedText style={styles.currencySymbol}>{currency}</ThemedText>
+                <ThemedText style={styles.currencySymbol}>
+                  {currency}
+                </ThemedText>
                 <TouchableOpacity
                   style={[
                     styles.toggleButton,
@@ -195,7 +201,9 @@ export default function Page() {
               </ThemedView>
               {field.state.meta.errors.length > 0 && (
                 <ThemedView style={styles.errorContainer}>
-                  <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
+                  <ThemedText
+                    style={[styles.errorText, { color: destructiveColor }]}
+                  >
                     {field.state.meta.errors[0]?.message}
                   </ThemedText>
                 </ThemedView>
@@ -219,8 +227,10 @@ export default function Page() {
               />
               {field.state.meta.errors.length > 0 && (
                 <ThemedView style={styles.errorContainer}>
-                  <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
-                  {field.state.meta.errors[0]?.message}
+                  <ThemedText
+                    style={[styles.errorText, { color: destructiveColor }]}
+                  >
+                    {field.state.meta.errors[0]?.message}
                   </ThemedText>
                 </ThemedView>
               )}
@@ -232,7 +242,10 @@ export default function Page() {
           {(field) => (
             <ThemedView>
               <TextInput
-                style={[styles.categoryInput, { color: textColor, borderColor }]}
+                style={[
+                  styles.categoryInput,
+                  { color: textColor, borderColor },
+                ]}
                 placeholder="Category"
                 placeholderTextColor={textColor + "80"}
                 value={field.state.value}
@@ -240,7 +253,9 @@ export default function Page() {
               />
               {field.state.meta.errors.length > 0 && (
                 <ThemedView style={styles.errorContainer}>
-                  <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
+                  <ThemedText
+                    style={[styles.errorText, { color: destructiveColor }]}
+                  >
                     {field.state.meta.errors[0]?.message}
                   </ThemedText>
                 </ThemedView>
@@ -299,7 +314,10 @@ export default function Page() {
           {(field) => (
             <ThemedView>
               <TextInput
-                style={[styles.recurrenceInput, { color: textColor, borderColor }]}
+                style={[
+                  styles.recurrenceInput,
+                  { color: textColor, borderColor },
+                ]}
                 placeholder="Recurrence (cron expression)"
                 placeholderTextColor={textColor + "80"}
                 value={field.state.value}
@@ -307,7 +325,9 @@ export default function Page() {
               />
               {field.state.meta.errors.length > 0 && (
                 <ThemedView style={styles.errorContainer}>
-                  <ThemedText style={[styles.errorText, { color: destructiveColor }]}>
+                  <ThemedText
+                    style={[styles.errorText, { color: destructiveColor }]}
+                  >
                     {field.state.meta.errors[0]?.message}
                   </ThemedText>
                 </ThemedView>
@@ -378,7 +398,9 @@ export default function Page() {
             <ThemedText
               style={[styles.submitButtonText, { color: backgroundColor }]}
             >
-              {mutation.isPending ? "Creating..." : "Create Recurring Transaction"}
+              {mutation.isPending
+                ? "Creating..."
+                : "Create Recurring Transaction"}
             </ThemedText>
           </TouchableOpacity>
         </ThemedView>
