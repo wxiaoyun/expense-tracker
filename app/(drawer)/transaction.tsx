@@ -125,7 +125,7 @@ export default function TransactionDrawer() {
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancelText}>Cancel</Text>
        </TouchableOpacity>
-        <Text style={styles.title}>{isEdit ? 'Edit Transaction' : 'New Transaction'</Text>
+        <Text style={styles.title}>{isEdit ? 'Edit Transaction' : 'New Transaction'}</Text>
         <TouchableOpacity onPress={handleSave}>
           <Text style={styles.saveText}>Save</Text>
        </TouchableOpacity>
@@ -134,7 +134,7 @@ export default function TransactionDrawer() {
       <ScrollView style={styles.form}>
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error</Text>
+            <Text style={styles.errorText}>{error}</Text>
          </View>
         )}
 

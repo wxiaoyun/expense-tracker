@@ -8,7 +8,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerTransparent: true,
-        headerBlurEffect: 'systemUltraThinMaterial',
+
         tabBarActiveTintColor: '#007AFF',
       }}
     >

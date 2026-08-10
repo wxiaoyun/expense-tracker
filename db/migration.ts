@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import * as FileSystem from 'expo-file-system';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { sql } from "drizzle-orm";
 import { v5 as uuidv5 } from 'uuid';
@@ -79,8 +80,7 @@ export const markMigrationComplete = async (newDb: ReturnType<typeof drizzle>): 
  * Get legacy database path
  */
 export const getLegacyDbPath = (): string => {
-  // Legacy DB was at Documents/expense_tracker.db in the old app
-  return SQLite.getDatabaseDirectory() + '/expense_tracker.db';
+  return SQLite.defaultDatabaseDirectory + '/expense_tracker.db';
 };
 
 /**
@@ -98,6 +98,30 @@ export const legacyDbExists = (): boolean => {
   }
 };
 
+type LegacyTransaction = {
+  id: number;
+  amount: number;
+  transaction_date: number;
+  description: string;
+  category: string;
+  recurring_transaction_id: number | null;
+  verified: number;
+  created_at: number;
+  updated_at: number;
+};
+
+type LegacyRecurring = {
+  id: number;
+  amount: number;
+  description: string;
+  category: string;
+  start_date: number;
+  last_charged: number | null;
+  recurrence_value: string;
+  created_at: number;
+  updated_at: number;
+};
+
 /**
  * Get legacy table row counts
  */
@@ -105,17 +129,9 @@ export const getLegacyCounts = async (): Promise<{ transactions: number; recurri
   try {
     const path = getLegacyDbPath();
     const legacyDb = SQLite.openDatabaseSync(path);
-    const drizzleLegacy = drizzle(legacyDb);
-    
-    const txCount = await drizzleLegacy.get<{ count: number }>(
-      sql`SELECT COUNT(*) as count FROM transactions`
-    );
-    const recCount = await drizzleLegacy.get<{ count: number }>(
-      sql`SELECT COUNT(*) as count FROM recurring_transactions`
-    );
-    
+    const txCount = legacyDb.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM transactions");
+    const recCount = legacyDb.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM recurring_transactions");
     legacyDb.closeSync();
-    
     return {
       transactions: txCount?.count ?? 0,
       recurring: recCount?.count ?? 0,
@@ -130,27 +146,27 @@ export const getLegacyCounts = async (): Promise<{ transactions: number; recurri
  * Migrate legacy transactions to new schema
  */
 export const migrateTransactions = async (
-  legacyDrizzle: ReturnType<typeof drizzle>,
+  legacyDb: SQLite.SQLiteDatabase,
   newDrizzle: ReturnType<typeof drizzle>
 ): Promise<number> => {
   const BATCH_SIZE = 1000;
   let totalMigrated = 0;
   
-  const allLegacy = await legacyDrizzle.select().from(transactions).all();
+  const allLegacy = legacyDb.getAllSync<LegacyTransaction>("SELECT * FROM transactions");
   
   for (let i = 0; i < allLegacy.length; i += BATCH_SIZE) {
     const batch = allLegacy.slice(i, i + BATCH_SIZE);
     const values = batch.map((tx) => ({
       id: generateMigrationUUID(tx.id),
       amount: tx.amount,
-      transactionDate: tx.transactionDate,
+      transactionDate: tx.transaction_date,
       description: tx.description,
       category: tx.category,
-      recurringTransactionId: tx.recurringTransactionId ? generateMigrationUUID(tx.recurringTransactionId) : null,
+      recurringTransactionId: tx.recurring_transaction_id ? generateMigrationUUID(tx.recurring_transaction_id) : null,
       verified: tx.verified,
       notes: null,
-      createdAt: tx.createdAt,
-      updatedAt: tx.updatedAt,
+      createdAt: tx.created_at,
+      updatedAt: tx.updated_at,
     }));
     
     await newDrizzle.insert(transactions).values(values).run();
@@ -165,13 +181,13 @@ export const migrateTransactions = async (
  * Migrate legacy recurring transactions to new schema
  */
 export const migrateRecurringTransactions = async (
-  legacyDrizzle: ReturnType<typeof drizzle>,
+  legacyDb: SQLite.SQLiteDatabase,
   newDrizzle: ReturnType<typeof drizzle>
 ): Promise<number> => {
   const BATCH_SIZE = 1000;
   let totalMigrated = 0;
   
-  const allLegacy = await legacyDrizzle.select().from(recurringTransactions).all();
+  const allLegacy = legacyDb.getAllSync<LegacyRecurring>("SELECT * FROM recurring_transactions");
   
   for (let i = 0; i < allLegacy.length; i += BATCH_SIZE) {
     const batch = allLegacy.slice(i, i + BATCH_SIZE);
@@ -180,11 +196,11 @@ export const migrateRecurringTransactions = async (
       amount: rt.amount,
       description: rt.description,
       category: rt.category,
-      startDate: rt.startDate,
-      lastCharged: rt.lastCharged,
-      recurrenceValue: rt.recurrenceValue,
-      createdAt: rt.createdAt,
-      updatedAt: rt.updatedAt,
+      startDate: rt.start_date,
+      lastCharged: rt.last_charged,
+      recurrenceValue: rt.recurrence_value,
+      createdAt: rt.created_at,
+      updatedAt: rt.updated_at,
     }));
     
     await newDrizzle.insert(recurringTransactions).values(values).run();
@@ -202,15 +218,8 @@ export const backupLegacyDb = async (): Promise<string | null> => {
   try {
     const legacyPath = getLegacyDbPath();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = SQLite.getDatabaseDirectory() + `/legacy_backup_${timestamp}.db`;
-    
-    // Copy file using FileSystem
-    const { copyFile } = await import('expo-file-system');
-    await copyFile({
-      from: legacyPath,
-      to: backupPath,
-    });
-    
+    const backupPath = SQLite.defaultDatabaseDirectory + `/legacy_backup_${timestamp}.db`;
+    await FileSystem.copyAsync({ from: legacyPath, to: backupPath });
     console.info("[MIGRATION] Legacy DB backed up to:", backupPath);
     return backupPath;
   } catch (error) {
@@ -226,39 +235,31 @@ export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<{
   try {
     console.info("[MIGRATION] Starting migration...");
     
-    // Open legacy DB
     const legacyPath = getLegacyDbPath();
     const legacyDb = SQLite.openDatabaseSync(legacyPath);
-    const legacyDrizzle = drizzle(legacyDb);
     
-    // Get counts for reporting
     const counts = await getLegacyCounts();
     if (!counts) {
+      legacyDb.closeSync();
       return { success: false, error: 'Could not read legacy database' };
     }
     
-    // Check if already migrated
     const alreadyDone = await isMigrationDone(newDb);
     if (alreadyDone) {
       legacyDb.closeSync();
       return { success: false, error: 'Migration already completed' };
     }
     
-    // Seed preset categories first
     await seedPresetCategories(newDb);
     
-    // Migrate transactions
-    const txMigrated = await migrateTransactions(legacyDrizzle, newDb);
+    const txMigrated = await migrateTransactions(legacyDb, newDb);
     console.info("[MIGRATION] Total transactions migrated:", txMigrated);
     
-    // Migrate recurring transactions
-    const recMigrated = await migrateRecurringTransactions(legacyDrizzle, newDb);
+    const recMigrated = await migrateRecurringTransactions(legacyDb, newDb);
     console.info("[MIGRATION] Total recurring transactions migrated:", recMigrated);
     
-    // Mark migration complete
     await markMigrationComplete(newDb);
     
-    // Backup legacy DB
     const backupPath = await backupLegacyDb();
     
     legacyDb.closeSync();

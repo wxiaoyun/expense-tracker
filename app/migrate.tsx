@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as SQLite from 'expo-sqlite';
 import { runMigration, getLegacyCounts, legacyDbExists } from '@/db/migration';
-import { GlassView } from '@/components/glass/GlassView';
+import GlassView from '@/components/glass/GlassView';
 
 export default function MigrationScreen() {
   const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
@@ -93,7 +93,7 @@ export default function MigrationScreen() {
             </Text>
             <View style={styles.buttonRow}>
               <Button title="Import" onPress={handleMigrate} />
-              <Button title="Skip" onPress={handleSkip} variant="secondary" />
+              <Button title="Skip" onPress={handleSkip} />
             </View>
           </View>
         );
@@ -119,7 +119,7 @@ export default function MigrationScreen() {
             <Text style={styles.text}>{error}</Text>
             <View style={styles.buttonRow}>
               <Button title="Retry" onPress={handleMigrate} />
-              <Button title="Skip" onPress={handleSkip} variant="secondary" />
+              <Button title="Skip" onPress={handleSkip} />
             </View>
           </View>
         );

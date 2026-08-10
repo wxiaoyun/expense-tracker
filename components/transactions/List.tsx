@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Transaction } from '@/db/schema';
 import { TransactionRow } from './Row';
@@ -14,6 +14,15 @@ type TransactionListProps = {
   isLoadingMore?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
+};
+
+const renderFooter = (isLoadingMore: boolean, textColor: string) => {
+  if (!isLoadingMore) return null;
+  return (
+    <View style={styles.loadingFooter}>
+      <ActivityIndicator size="small" color={textColor} />
+    </View>
+  );
 };
 
 export const TransactionList: React.FC<TransactionListProps> = ({
@@ -41,8 +50,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     [onEdit, onDelete, onToggleVerified]
   );
 
-  const estimatedItemSize = 88;
-
   if (transactions.length === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor }]}>
@@ -58,38 +65,28 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     <FlashList
       data={transactions}
       renderItem={renderItem}
-      estimatedItemSize={estimatedItemSize}
+      estimatedItemSize={88}
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
-      ListFooterComponent={
-        isLoadingMore && (
-          <View style={styles.loadingFooter}>
-            <ActivityIndicator size="small" color={textColor} />
-          </View>
-        )
-      }
+      ListFooterComponent={renderFooter(isLoadingMore ?? false, textColor)}
       refreshControl={
-        onRefresh && (
+        onRefresh ? (
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={refreshing ?? false}
             onRefresh={onRefresh}
-            colors={[textColor]}
+            tintColor={textColor}
           />
-        )
+        ) : undefined
       }
-      style={styles.list}
       contentContainerStyle={styles.contentContainer}
     />
   );
 };
 
 const styles = StyleSheet.create({
-  list: {
-    flex: 1,
-  },
   contentContainer: {
     paddingTop: 8,
-    paddingBottom: 100, // Space for tab bar
+    paddingBottom: 100,
   },
   emptyContainer: {
     flex: 1,

@@ -16,7 +16,7 @@ export default function HomeScreen() {
   const backgroundColor = '#fff';
   const textColor = '#000';
 
-  const { dateRange } = useDateRange();
+  const [dateRange] = useDateRange();
   const [categories] = useCategoryFilter();
   const [search] = useSearch();
 

@@ -13,7 +13,7 @@ const CATEGORY_COLORS = [
 ];
 
 export default function SummaryScreen() {
-  const { dateRange } = useDateRange();
+  const [dateRange] = useDateRange();
   const [categories] = useCategoryFilter();
   const backgroundColor = '#fff';
   const textColor = '#000';
@@ -117,7 +117,7 @@ export default function SummaryScreen() {
           return (
             <View key={cat.text} style={styles.topRow}>
               <View style={[styles.dot, { backgroundColor: cat.color }]} />
-              <Text style={[styles.topName, { color: textColor }]}>{cat.text</Text>
+              <Text style={[styles.topName, { color: textColor }]}>{cat.text}</Text>
               <Text style={[styles.topAmount, { color: textColor }]}>
                 {formatCurrency(-cat.value)}
              </Text>

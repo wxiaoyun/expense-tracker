@@ -1,17 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import ReanimatedSwipeable, {
   SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  Easing,
-  runOnJS,
-  SharedValue,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { format } from 'date-fns';
 import { Transaction } from '@/db/schema';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -25,135 +17,75 @@ type SwipeableTransactionProps = {
   onDelete: (id: string, animateDelete: () => Promise<unknown>) => void;
 };
 
-const DELETE_THRESHOLD = 100;
-const EDIT_THRESHOLD = -100;
-
-function LeftAction(prog: SharedValue<number>, drag: SharedValue<number>) {
-  const hasReachedThreshold = useSharedValue(false);
-
-  useAnimatedReaction(
-    () => drag.value,
-    (dragValue) => {
-      hasReachedThreshold.value = dragValue >= DELETE_THRESHOLD;
-    }
-  );
-
-  const rStyle = useAnimatedStyle(() => ({
-    opacity: drag.value / DELETE_THRESHOLD,
-    transform: [{ translateX: drag.value }],
-    backgroundColor: hasReachedThreshold.value ? '#FF3B30' : '#FF3B30',
-  }));
-
+const LeftAction: React.FC<{ progress: SharedValue<number>; translation: SharedValue<number> }> = ({ progress, translation }) => {
   return (
-    <View
-      style={[
-        styles.leftAction,
-        rStyle,
-        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 },
-      ]}
-    >
+    <View style={[styles.deleteAction, { justifyContent: 'center', paddingHorizontal: 20 }]}>
       <Feather name="trash-2" size={24} color="white" />
-      <Text style={{ color: 'white', marginLeft: 8, fontWeight: '600' }}>
-        {hasReachedThreshold.value ? 'Release to Delete' : 'Delete'}
-      </Text>
+      <Text style={styles.actionText}>Delete</Text>
     </View>
   );
-}
+};
 
-function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
-  const hasReachedThreshold = useSharedValue(false);
-
-  useAnimatedReaction(
-    () => drag.value,
-    (dragValue) => {
-      hasReachedThreshold.value = dragValue <= EDIT_THRESHOLD;
-    }
-  );
-
-  const rStyle = useAnimatedStyle(() => ({
-    opacity: -drag.value / Math.abs(EDIT_THRESHOLD),
-    transform: [{ translateX: drag.value }],
-    backgroundColor: hasReachedThreshold.value ? '#007AFF' : '#007AFF',
-  }));
-
+const RightAction: React.FC<{ progress: SharedValue<number>; translation: SharedValue<number> }> = ({ progress, translation }) => {
   return (
-    <View
-      style={[
-        styles.rightAction,
-        rStyle,
-        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, justifyContent: 'flex-end' },
-      ]}
-    >
-      <Text style={{ color: 'white', marginRight: 8, fontWeight: '600' }}>
-        {hasReachedThreshold.value ? 'Release to Edit' : 'Edit'}
-      </Text>
+    <View style={[styles.editAction, { justifyContent: 'center', alignItems: 'flex-end' }]}>
+      <Text style={styles.actionText}>Edit</Text>
       <Feather name="edit-2" size={24} color="white" />
     </View>
   );
-}
+};
 
 export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
   transaction,
-  onToggleVerified,
   onEdit,
   onDelete,
 }) => {
   const textColor = useThemeColor('text');
-  const backgroundColor = useThemeColor('background');
   const secondaryColor = useThemeColor('backgroundSecondary');
   const isExpense = transaction.amount < 0;
   const amountColor = isExpense ? '#FF3B30' : '#34C759';
 
   const swipeableRef = React.useRef<SwipeableMethods>(null);
-  const drag = useSharedValue(0);
-  const prog = useSharedValue(0);
 
   const animateDelete = React.useCallback(async () => {
-    return new Promise<void>((resolve) => {
-      drag.value = withTiming(-120, { duration: 200, easing: Easing.inOut(Easing.quad) }, () => {
-        runOnJS(resolve)();
-      });
-    });
+    swipeableRef.current?.close();
+    return undefined;
   }, []);
 
-  const onSwipeableOpen = React.useCallback((progress: number) => {
-    drag.value = progress;
-    prog.value = progress;
-  }, []);
+  const onSwipeLeftOpen = () => {
+    onDelete(transaction.id, animateDelete);
+  };
 
-  const onSwipeableClose = React.useCallback(() => {
-    drag.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.quad) });
-  }, []);
-
-  const rowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: drag.value }],
-  }));
+  const onSwipeRightOpen = () => {
+    onEdit(transaction.id);
+  };
 
   return (
     <ReanimatedSwipeable
       ref={swipeableRef}
       friction={2}
       overshootFriction={2}
-      leftThreshold={DELETE_THRESHOLD}
-      rightThreshold={Math.abs(EDIT_THRESHOLD)}
-      onSwipeableWillOpen={(progress) => onSwipeableOpen(progress)}
-      onSwipeableWillClose={onSwipeableClose}
-      renderLeftActions={(progress, drag) => <LeftAction prog={progress} drag={drag} />}
-      renderRightActions={(progress, drag) => <RightAction prog={progress} drag={drag} />}
-      onSwipeableLeftOpen={() => onDelete(transaction.id, animateDelete)}
-      onSwipeableRightOpen={() => onEdit(transaction.id)}
-      onSwipeableLeftWillOpen={() => {
-        runOnJS(() => {})();
-      }}
-      onSwipeableRightWillOpen={() => {
-        runOnJS(() => {})();
+      leftThreshold={80}
+      rightThreshold={80}
+      renderLeftActions={(progress, translation) => (
+        <LeftAction progress={progress} translation={translation} />
+      )}
+      renderRightActions={(progress, translation) => (
+        <RightAction progress={progress} translation={translation} />
+      )}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'left') onSwipeLeftOpen();
+        else onSwipeRightOpen();
       }}
     >
-      <View style={[styles.row, { backgroundColor: secondaryColor }, rowStyle]}>
+      <View style={[styles.row, { backgroundColor: secondaryColor }]}>
         <View style={styles.content}>
           <View style={styles.leftSection}>
             <Feather name="circle" size={24} color={amountColor} />
             <Text style={[styles.description, { color: textColor }]}>{transaction.description}</Text>
+            {transaction.verified ? (
+              <Feather name="check-circle" size={14} color="#34C759" />
+            ) : null}
           </View>
           <View style={styles.rightSection}>
             <Text style={[styles.amount, { color: amountColor }]}>
@@ -167,9 +99,6 @@ export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
                 {transaction.category}
               </Text>
             </View>
-            {transaction.verified && (
-              <Feather name="check-circle" size={18} color="#34C759" style={styles.verified} />
-            )}
           </View>
         </View>
       </View>
@@ -194,6 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   rightSection: {
     alignItems: 'flex-end',
@@ -202,6 +132,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
   },
   amount: {
     fontSize: 18,
@@ -219,19 +150,26 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 12,
   },
-  verified: {
-    marginLeft: 8,
-  },
-  leftAction: {
+  deleteAction: {
+    backgroundColor: '#FF3B30',
     flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
   },
-  rightAction: {
+  editAction: {
+    backgroundColor: '#007AFF',
     flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
+  },
+  actionText: {
+    color: 'white',
+    fontWeight: '600',
+    marginHorizontal: 8,
   },
 });

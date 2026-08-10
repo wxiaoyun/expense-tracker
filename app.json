@@ -21,7 +21,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.example.vibetracker",
       "infoPlist": {
-        "UIBackgroundModes": ["fetch"]
+        "UIBackgroundModes": [
+          "fetch"
+        ]
       }
     },
     "extra": {
@@ -31,6 +33,9 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "android": {
+      "package": "com.example.vibetracker"
+    }
   }
 }

@@ -124,7 +124,7 @@ export default function RecurringEditDrawer() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
-        <Text style={styles.title}>{isEdit ? 'Edit Recurring' : 'New Recurring'</Text>
+        <Text style={styles.title}>{isEdit ? 'Edit Recurring' : 'New Recurring'}</Text>
         <TouchableOpacity onPress={handleSave}>
           <Text style={styles.saveText}>Save</Text>
       </TouchableOpacity>
@@ -133,7 +133,7 @@ export default function RecurringEditDrawer() {
       <ScrollView style={styles.form}>
         {error && (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error</Text>
+            <Text style={styles.errorText}>{error}</Text>
         </View>
         )}
 
@@ -204,7 +204,7 @@ export default function RecurringEditDrawer() {
           placeholder="Cron expression (e.g. 0 0 1 * *)"
         />
         {!validation.ok && (
-          <Text style={styles.errorText}>{validation.error</Text>
+          <Text style={styles.errorText}>{validation.error}</Text>
         )}
 
         {validation.ok && nextDates.length > 0 && (
