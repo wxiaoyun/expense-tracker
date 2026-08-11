@@ -12,7 +12,7 @@ const GlassView: React.FC<{ children?: React.ReactNode; style?: any; intensity?:
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
 

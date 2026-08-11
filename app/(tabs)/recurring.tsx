@@ -132,7 +132,6 @@ export default function RecurringScreen() {
     <FlashList
       data={allRecurring}
       renderItem={renderItem}
-      estimatedItemSize={88}
       contentContainerStyle={{ paddingTop: 8, paddingBottom: 100 }}
     />
   );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import Feather from '@expo/vector-icons/Feather';
 import { db } from '@/db';
@@ -15,6 +15,7 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     try {
       // expo-sqlite exposes the DB file; we'll share it
+      console.info('[backup.export][stage=locate_db] locating database file');
       const dbDir = FileSystem.documentDirectory + 'SQLite/';
       const dbPath = dbDir + 'expense_tracker.db';
       const fileInfo = await FileSystem.getInfoAsync(dbPath);
@@ -26,7 +27,9 @@ export default function SettingsScreen() {
         UTI: 'public.database',
         mimeType: 'application/x-sqlite3',
       });
+      console.info('[backup.export][stage=share_db] database shared');
     } catch (err) {
+      console.error('[backup.export][stage=share_db] export failed', { error: String(err) });
       Alert.alert('Export Failed', String(err));
     }
   };
@@ -37,7 +40,10 @@ export default function SettingsScreen() {
         type: 'application/x-sqlite3',
         copyToCacheDirectory: true,
       });
-      if (result.canceled) return;
+      if (result.canceled) {
+        console.info('[backup.import][stage=pick_db][reason=user_cancelled] import skipped');
+        return;
+      }
 
       Alert.alert(
         'Import Database',
@@ -51,9 +57,12 @@ export default function SettingsScreen() {
               try {
                 const sourceUri = result.assets[0].uri;
                 const targetPath = FileSystem.documentDirectory + 'SQLite/expense_tracker.db';
+                console.info('[backup.import][stage=copy_db] copying selected database');
                 await FileSystem.copyAsync({ from: sourceUri, to: targetPath });
+                console.info('[backup.import][stage=copy_db] database copied');
                 Alert.alert('Import Complete', 'Please restart the app.');
               } catch (e) {
+                console.error('[backup.import][stage=copy_db] import failed', { error: String(e) });
                 Alert.alert('Import Failed', String(e));
               }
             },
@@ -61,6 +70,7 @@ export default function SettingsScreen() {
         ],
       );
     } catch (err) {
+      console.error('[backup.import][stage=pick_db] import failed', { error: String(err) });
       Alert.alert('Import Failed', String(err));
     }
   };
@@ -76,12 +86,15 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.info('[db.reset][stage=delete_tables] resetting local data');
               await db.delete(transactions).run();
               await db.delete(recurringTransactions).run();
               await db.delete(categories).run();
               await db.delete(settings).run();
+              console.info('[db.reset][stage=delete_tables] local data reset');
               router.replace('/migrate');
             } catch (e) {
+              console.error('[db.reset][stage=delete_tables] reset failed', { error: String(e) });
               Alert.alert('Reset Failed', String(e));
             }
           },

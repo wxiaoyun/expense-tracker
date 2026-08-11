@@ -65,7 +65,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     <FlashList
       data={transactions}
       renderItem={renderItem}
-      estimatedItemSize={88}
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
       ListFooterComponent={renderFooter(isLoadingMore ?? false, textColor)}
