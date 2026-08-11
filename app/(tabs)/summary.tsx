@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
-import { PieChart, BarChart } from 'react-native-gifted-charts';
-
 import { ThemedText } from '@/components/ThemedText';
+import { CategoryDonut } from '@/components/summary/CategoryDonut';
+import { MonthlyBar } from '@/components/summary/MonthlyBar';
 import { useDateRange, useCategoryFilter } from '@/hooks/useFilter';
 import { useTransactionSummary } from '@/hooks/useTransactionsQuery';
 import { formatCurrency } from '@/libs/intl';
@@ -90,25 +90,14 @@ export default function SummaryScreen() {
             No expense data in selected range
          </Text>
         ) : (
-          <View style={styles.chartContainer}>
-            <PieChart
-              data={pieData}
-              donut
-              radius={80}
-              innerRadius={50}
-              innerCircleColor={backgroundColor}
-              centerLabelComponent={() => (
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 14, color: textColor, opacity: 0.6 }}>Total</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: textColor }}>
-                    {formatCurrency(-Math.abs(totalExpense))}
-                 </Text>
-               </View>
-              )}
-            />
-         </View>
+          <CategoryDonut data={pieData} />
         )}
      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Monthly Spending</Text>
+        <MonthlyBar data={data?.byMonth ?? []} />
+      </View>
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: textColor }]}>Top 5 Categories</Text>

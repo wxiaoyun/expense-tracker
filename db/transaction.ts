@@ -1,8 +1,7 @@
 import { and, between, desc, eq, inArray, sql, sum, asc } from "drizzle-orm";
 import { db } from "./index";
 import { transactions } from "./schema";
-import { v4 as uuidv4 } from 'uuid';
-import { generateMigrationUUID } from "./migration";
+import { createId } from '@/libs/id';
 
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
@@ -77,7 +76,7 @@ export const listTransactions = async (query?: {
     .offset(offset)
     .all();
 
-  const nextOffset = items.length === 0 ? null : offset + limit;
+  const nextOffset = items.length < limit ? null : offset + limit;
   return { items, nextOffset };
 };
 
@@ -122,7 +121,7 @@ export const createTransaction = async (
   transaction: Omit<NewTransaction, "id" | "createdAt" | "updatedAt">
 ): Promise<Transaction | null> => {
   const now = Date.now();
-  const id = uuidv4();
+  const id = createId();
   const result = await db
     .insert(transactions)
     .values({
@@ -194,7 +193,7 @@ export const batchCreateTransactions = async (
   const now = Date.now();
   const values = txs.map((tx) => ({
     ...tx,
-    id: uuidv4(),
+    id: createId(),
     verified: tx.verified ?? 0,
     createdAt: now,
     updatedAt: now,
@@ -204,11 +203,11 @@ export const batchCreateTransactions = async (
 };
 
 export const summarizeByCategory = async (
-  query?: { start?: Date; end?: Date }
+  query?: { start?: Date; end?: Date; categories?: string[] }
 ): Promise<
   { category: string; balance: number; income: number; expense: number }[] | null
 > => {
-  const { start, end } = query ?? {};
+  const { start, end, categories = [] } = query ?? {};
   const startTs = start?.getTime() ?? 0;
   const endTs = end?.getTime() ?? Date.now();
 
@@ -220,7 +219,7 @@ export const summarizeByCategory = async (
       expense: sum(sql<number>`CASE WHEN ${transactions.amount} < 0 THEN ${transactions.amount} ELSE 0 END`),
     })
     .from(transactions)
-    .where(between(transactions.transactionDate, startTs, endTs))
+    .where(and(between(transactions.transactionDate, startTs, endTs), categories.length ? inArray(transactions.category, categories) : undefined))
     .groupBy(transactions.category)
     .all();
 
@@ -231,6 +230,17 @@ export const summarizeByCategory = async (
     income: Number(r.income ?? 0),
     expense: Number(r.expense ?? 0),
   }));
+};
+
+export const summarizeByMonth = async (query?: { start?: Date; end?: Date; categories?: string[] }) => {
+  const startTs = query?.start?.getTime() ?? 0;
+  const endTs = query?.end?.getTime() ?? Date.now();
+  const categories = query?.categories ?? [];
+  const rows = await db.select({
+    month: sql<string>`strftime('%Y-%m', ${transactions.transactionDate} / 1000, 'unixepoch')`,
+    expense: sum(sql<number>`CASE WHEN ${transactions.amount} < 0 THEN -${transactions.amount} ELSE 0 END`),
+  }).from(transactions).where(and(between(transactions.transactionDate, startTs, endTs), categories.length ? inArray(transactions.category, categories) : undefined)).groupBy(sql`strftime('%Y-%m', ${transactions.transactionDate} / 1000, 'unixepoch')`).all();
+  return rows.map(row => ({ month: row.month, expense: Number(row.expense ?? 0) })).sort((a, b) => a.month.localeCompare(b.month));
 };
 
 export const setVerification = async (

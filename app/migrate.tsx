@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Button } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, Button } from 'react-native';
 import { router } from 'expo-router';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import * as SQLite from 'expo-sqlite';
-import { runMigration, getLegacyCounts, legacyDbExists } from '@/db/migration';
+import {
+  runMigration,
+  getLegacyCounts,
+  legacyDbExists,
+  markMigrationComplete,
+  seedPresetCategories,
+} from '@/db/migration';
 import GlassView from '@/components/glass/GlassView';
+import { db } from '@/db';
 
 export default function MigrationScreen() {
   const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
@@ -20,8 +25,6 @@ export default function MigrationScreen() {
         setStatus('found');
       } else {
         // No legacy DB - just seed presets and skip to main app
-        const db = drizzle(SQLite.openDatabaseSync('expense_tracker.db', { enableChangeListener: false }));
-        const { seedPresetCategories, markMigrationComplete } = await import('@/db/migration');
         await seedPresetCategories(db);
         await markMigrationComplete(db);
         router.replace('/(tabs)');
@@ -34,8 +37,6 @@ export default function MigrationScreen() {
     setStatus('migrating');
     setProgress('Opening databases...');
     setError(null);
-
-    const db = drizzle(SQLite.openDatabaseSync('expense_tracker.db', { enableChangeListener: false }));
 
     try {
       const result = await runMigration(db);
@@ -58,7 +59,24 @@ export default function MigrationScreen() {
       'Your existing data will not be imported. You can import it later from Settings.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', style: 'destructive', onPress: () => router.replace('/(tabs)') },
+        {
+          text: 'Skip',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await seedPresetCategories(db);
+              await markMigrationComplete(db);
+              console.info('[migration][stage=skip][reason=user_selected] migration skipped');
+              router.replace('/(tabs)');
+            } catch (skipError) {
+              console.error('[migration][stage=skip] failed to initialize new database', {
+                error: String(skipError),
+              });
+              setError(String(skipError));
+              setStatus('error');
+            }
+          },
+        },
       ]
     );
   };

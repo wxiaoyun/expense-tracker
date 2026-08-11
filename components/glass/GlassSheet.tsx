@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Modal } from 'react-native';
 
 const GlassSheet: React.FC<{ 
   visible: boolean; 
@@ -18,10 +17,10 @@ const GlassSheet: React.FC<{
       onRequestClose={onRequestClose}
       animationType="slide"
     >
-      <View style={styles.backdrop} onTouchStart={onRequestClose}>
-        <View style={[styles.container, style]}>
+      <View style={styles.backdrop}>
+        <BlurView intensity={70} tint="systemMaterial" style={[styles.container, style]}>
           {children}
-        </View>
+        </BlurView>
       </View>
     </Modal>
   );

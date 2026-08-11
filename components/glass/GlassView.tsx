@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 const GlassView: React.FC<{ children?: React.ReactNode; style?: any; intensity?: number }> = ({ children, style, intensity = 60 }) => {

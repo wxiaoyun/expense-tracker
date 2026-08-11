@@ -1,29 +1,45 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import Feather from '@expo/vector-icons/Feather';
 import { db } from '@/db';
 import { transactions, recurringTransactions, categories, settings } from '@/db/schema';
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { router } from 'expo-router';
+import { setAutoBackup as registerAutoBackup } from '@/libs/background';
+import { createLocalBackup, restoreDatabase, validateSqliteFile } from '@/libs/backup';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function SettingsScreen() {
-  const [autoBackup, setAutoBackup] = useState(false);
+  const queryClient = useQueryClient();
+  const [restoring, setRestoring] = useState(false);
+  const [autoBackup, setAutoBackup] = useState(() => {
+    try {
+      const row = db.select().from(settings).where(eq(settings.key, 'backup.cadence')).get();
+      return row?.value === 'daily';
+    } catch (error) {
+      console.error('[backup.settings][stage=load] preference load failed', { error: String(error) });
+      return false;
+    }
+  });
+
+  const handleAutoBackup = async (enabled: boolean) => {
+    try {
+      await registerAutoBackup(enabled ? 'daily' : null);
+      await db.insert(settings).values({ key: 'backup.cadence', value: enabled ? 'daily' : 'off' }).onConflictDoUpdate({ target: settings.key, set: { value: enabled ? 'daily' : 'off' } }).run();
+      setAutoBackup(enabled);
+    } catch (error) {
+      console.error('[backup.settings][stage=save] preference save failed', { enabled, error: String(error) });
+      Alert.alert('Auto-backup Failed', String(error));
+    }
+  };
 
   const handleExport = async () => {
     try {
-      // expo-sqlite exposes the DB file; we'll share it
-      console.info('[backup.export][stage=locate_db] locating database file');
-      const dbDir = FileSystem.documentDirectory + 'SQLite/';
-      const dbPath = dbDir + 'expense_tracker.db';
-      const fileInfo = await FileSystem.getInfoAsync(dbPath);
-      if (!fileInfo.exists) {
-        Alert.alert('Export Failed', 'Database file not found');
-        return;
-      }
-      await Sharing.shareAsync(dbPath, {
+      console.info('[backup.export][stage=create_snapshot] creating consistent database snapshot');
+      const backupPath = await createLocalBackup();
+      await Sharing.shareAsync(backupPath, {
         UTI: 'public.database',
         mimeType: 'application/x-sqlite3',
       });
@@ -45,6 +61,8 @@ export default function SettingsScreen() {
         return;
       }
 
+      await validateSqliteFile(result.assets[0].uri);
+
       Alert.alert(
         'Import Database',
         'This will replace your current data. Continue?',
@@ -54,16 +72,21 @@ export default function SettingsScreen() {
             text: 'Replace',
             style: 'destructive',
             onPress: async () => {
+              setRestoring(true);
               try {
                 const sourceUri = result.assets[0].uri;
-                const targetPath = FileSystem.documentDirectory + 'SQLite/expense_tracker.db';
-                console.info('[backup.import][stage=copy_db] copying selected database');
-                await FileSystem.copyAsync({ from: sourceUri, to: targetPath });
-                console.info('[backup.import][stage=copy_db] database copied');
-                Alert.alert('Import Complete', 'Please restart the app.');
+                const recoveryPath = await createLocalBackup();
+                console.info('[backup.import][stage=create_recovery] pre-restore snapshot created', { recovery_path: recoveryPath });
+                await restoreDatabase(sourceUri);
+                console.info('[backup.import][stage=sqlite_backup] database restored');
+                queryClient.clear();
+                router.replace('/(tabs)');
+                Alert.alert('Import Complete', 'Database restored and app data reloaded.');
               } catch (e) {
                 console.error('[backup.import][stage=copy_db] import failed', { error: String(e) });
                 Alert.alert('Import Failed', String(e));
+              } finally {
+                setRestoring(false);
               }
             },
           },
@@ -104,7 +127,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+    <ScrollView pointerEvents={restoring ? 'none' : 'auto'} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.row}>
@@ -125,8 +149,20 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Backup</Text>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Auto-backup</Text>
-          <Switch value={autoBackup} onValueChange={setAutoBackup} />
+          <Switch value={autoBackup} onValueChange={handleAutoBackup} accessibilityLabel="Daily auto-backup" />
       </View>
+        <TouchableOpacity style={styles.row} onPress={async () => {
+          try {
+            const path = await createLocalBackup();
+            Alert.alert('Backup Created', path);
+          } catch (error) {
+            console.error('[backup.settings][stage=create_now] backup failed', { error: String(error) });
+            Alert.alert('Backup Failed', String(error));
+          }
+        }}>
+          <Text style={styles.rowLabel}>Back Up Now</Text>
+          <Feather name="database" size={20} color="#007AFF" />
+      </TouchableOpacity>
         <TouchableOpacity style={styles.row} onPress={handleExport}>
           <Text style={styles.rowLabel}>Export Database</Text>
           <Feather name="upload" size={20} color="#007AFF" />
@@ -143,7 +179,9 @@ export default function SettingsScreen() {
           <Text style={[styles.rowLabel, { color: '#FF3B30' }]}>Reset All Data</Text>
       </TouchableOpacity>
     </View>
-  </ScrollView>
+    </ScrollView>
+    {restoring && <View style={styles.restoreOverlay}><ActivityIndicator size="large" /><Text style={styles.restoreText}>Restoring database</Text></View>}
+  </View>
   );
 }
 
@@ -151,6 +189,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f2f2f7',
+  },
+  restoreOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(242,242,247,0.86)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restoreText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
   },
   content: {
     paddingTop: 100,

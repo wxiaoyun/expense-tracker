@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "VibeTracker",
-    "slug": "vibe-tracker",
+    "slug": "expo-expense-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,16 +14,19 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.vibetracker",
+      "bundleIdentifier": "com.wxiaoyun.expense-tracker",
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch"
-        ]
+        ],
+        "UISupportsDocumentBrowser": true,
+        "UIFileSharingEnabled": true,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "de96c907-42c7-4949-ad68-b40573325e5a"
       }
     },
     "plugins": [
@@ -36,10 +39,8 @@
       "expo-splash-screen",
       "expo-sqlite",
       "expo-status-bar",
-      "expo-web-browser"
-    ],
-    "android": {
-      "package": "com.example.vibetracker"
-    }
+      "expo-web-browser",
+      "expo-background-task"
+    ]
   }
 }

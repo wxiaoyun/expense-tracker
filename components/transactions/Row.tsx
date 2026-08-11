@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import ReanimatedSwipeable, {
   SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -9,6 +9,7 @@ import { Transaction } from '@/db/schema';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/libs/intl';
 import Feather from '@expo/vector-icons/Feather';
+import { getTransactionSwipeAction } from './swipe-action';
 
 type SwipeableTransactionProps = {
   transaction: Transaction;
@@ -37,6 +38,7 @@ const RightAction: React.FC<{ progress: SharedValue<number>; translation: Shared
 
 export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
   transaction,
+  onToggleVerified,
   onEdit,
   onDelete,
 }) => {
@@ -52,14 +54,6 @@ export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
     return undefined;
   }, []);
 
-  const onSwipeLeftOpen = () => {
-    onDelete(transaction.id, animateDelete);
-  };
-
-  const onSwipeRightOpen = () => {
-    onEdit(transaction.id);
-  };
-
   return (
     <ReanimatedSwipeable
       ref={swipeableRef}
@@ -74,18 +68,24 @@ export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
         <RightAction progress={progress} translation={translation} />
       )}
       onSwipeableOpen={(direction) => {
-        if (direction === 'left') onSwipeLeftOpen();
-        else onSwipeRightOpen();
+        const action = getTransactionSwipeAction(direction);
+        if (action === 'edit') onEdit(transaction.id);
+        else onDelete(transaction.id, animateDelete);
       }}
     >
       <View style={[styles.row, { backgroundColor: secondaryColor }]}>
         <View style={styles.content}>
           <View style={styles.leftSection}>
-            <Feather name="circle" size={24} color={amountColor} />
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityLabel={`Mark ${transaction.description} verified`}
+              accessibilityState={{ checked: Boolean(transaction.verified) }}
+              hitSlop={10}
+              onPress={() => onToggleVerified(transaction.id, !transaction.verified)}
+            >
+              <Feather name={transaction.verified ? 'check-circle' : 'circle'} size={24} color={transaction.verified ? '#34C759' : amountColor} />
+            </Pressable>
             <Text style={[styles.description, { color: textColor }]}>{transaction.description}</Text>
-            {transaction.verified ? (
-              <Feather name="check-circle" size={14} color="#34C759" />
-            ) : null}
           </View>
           <View style={styles.rightSection}>
             <Text style={[styles.amount, { color: amountColor }]}>

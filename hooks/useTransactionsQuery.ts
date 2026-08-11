@@ -1,10 +1,10 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { listTransactions, summarizeTransactions, summarizeByCategory } from '@/db/transaction';
+import { listTransactions, summarizeTransactions, summarizeByCategory, summarizeByMonth } from '@/db/transaction';
 
 export const queryKeys = {
   transactions: {
     list: (filter: any) => ['transactions', 'list', filter] as const,
-    summary: () => ['transactions', 'summary'] as const,
+    summary: (filter: any) => ['transactions', 'summary', filter] as const,
   },
   recurring: {
     list: () => ['recurring', 'list'] as const,
@@ -36,13 +36,14 @@ export const useInfiniteTransactionListQuery = (filter: any) => {
 
 export const useTransactionSummary = (filter: any) => {
   return useQuery({
-    queryKey: queryKeys.transactions.summary(),
+    queryKey: queryKeys.transactions.summary(filter),
     queryFn: async () => {
-      const [summary, byCategory] = await Promise.all([
+      const [summary, byCategory, byMonth] = await Promise.all([
         summarizeTransactions({ start: filter.start, end: filter.end, categories: filter.categories }),
-        summarizeByCategory({ start: filter.start, end: filter.end }),
+        summarizeByCategory({ start: filter.start, end: filter.end, categories: filter.categories }),
+        summarizeByMonth({ start: filter.start, end: filter.end, categories: filter.categories }),
       ]);
-      return { summary, byCategory };
+      return { summary, byCategory, byMonth };
     },
   });
 };

@@ -1,24 +1,35 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import Fuse from 'fuse.js';
 
 import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
-import { deleteTransaction, setVerification } from '@/db/transaction';
-import { useCategoryFilter, useDateRange, useSearch } from '@/hooks/useFilter';
+import { deleteTransaction, listCategories, setVerification } from '@/db/transaction';
+import { useQuery } from '@tanstack/react-query';
+import { computeDateRange, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
 import { useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
 import { useInvalidateTransactions } from '@/hooks/useQueryClient';
 import { showConfirmDialog } from '@/libs/dialog';
+import { AddExpenseButton } from '@/components/transactions/add-expense-button';
+import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
 
 export default function HomeScreen() {
   const router = useRouter();
   const backgroundColor = '#fff';
   const textColor = '#000';
 
-  const [dateRange] = useDateRange();
-  const [categories] = useCategoryFilter();
-  const [search] = useSearch();
+  const [dateRange, setDateRange] = useDateRange();
+  const [categories, setCategories] = useCategoryFilter();
+  const [search, setSearch] = useSearch();
+  const { data: availableCategories = [] } = useQuery({
+    queryKey: ['categories', 'distinct'],
+    queryFn: listCategories,
+  });
+
+  const handlePresetChange = useCallback((preset: DateRangePreset) => {
+    const range = computeDateRange(preset, new Date());
+    setDateRange({ preset, ...range });
+  }, [setDateRange]);
 
   const invalidateTransactionQueries = useInvalidateTransactions();
 
@@ -35,7 +46,7 @@ export default function HomeScreen() {
     limit: 50,
     orderBy: ["transactionDate", "DESC"],
     categories,
-    verified: null,
+    search: search.trim() || undefined,
   });
 
   const allTransactions = useMemo(() => {
@@ -43,26 +54,7 @@ export default function HomeScreen() {
     return data.pages.flatMap((page) => page.items);
   }, [data]);
 
-  const fuse = useMemo(() => {
-    const fuseOptions = {
-      keys: [
-        { name: "description", weight: 0.7 },
-        { name: "category", weight: 0.3 },
-      ],
-      threshold: 0.4,
-      distance: 100,
-      minMatchCharLength: 1,
-    };
-    return new Fuse(allTransactions, fuseOptions);
-  }, [allTransactions]);
-
-  const transactions = useMemo(() => {
-    if (!search || search.trim() === "") {
-      return allTransactions;
-    }
-    const searchResults = fuse.search(search.trim());
-    return searchResults.map((result) => result.item);
-  }, [allTransactions, fuse, search]);
+  const transactions = allTransactions;
 
   const handleToggleVerified = useCallback(
     async (id: string, verified: boolean) => {
@@ -150,13 +142,25 @@ export default function HomeScreen() {
   }
 
   return (
-    <TransactionList
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onToggleVerified={handleToggleVerified}
-      transactions={transactions}
-      onLoadMore={hasNextPage ? fetchNextPage : undefined}
-      isLoadingMore={isFetchingNextPage}
-    />
+    <View style={{ flex: 1, backgroundColor, paddingTop: 100 }}>
+      <ExpenseFilterBar
+        search={search}
+        preset={dateRange.preset}
+        onSearchChange={setSearch}
+        onPresetChange={handlePresetChange}
+        categories={availableCategories}
+        selectedCategories={categories}
+        onCategoriesChange={setCategories}
+      />
+      <TransactionList
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onToggleVerified={handleToggleVerified}
+        transactions={transactions}
+        onLoadMore={hasNextPage ? fetchNextPage : undefined}
+        isLoadingMore={isFetchingNextPage}
+      />
+      <AddExpenseButton />
+    </View>
   );
 }

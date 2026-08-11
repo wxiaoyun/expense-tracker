@@ -1,10 +1,9 @@
-import { CronExpressionParser } from 'cron-parser';
 import { and, between, desc, eq, sql } from "drizzle-orm";
-import { db } from "./index";
+import { db, sqlite } from "./index";
 import { recurringTransactions, transactions } from "./schema";
 import type { NewTransaction, Transaction } from "./transaction";
-import { batchCreateTransactions } from "./transaction";
-import { v4 as uuidv4 } from 'uuid';
+import { getDueOccurrenceDates, recurringOccurrenceId } from './recurrence-core';
+import { createId } from '@/libs/id';
 
 export type RecurringTransaction = typeof recurringTransactions.$inferSelect;
 export type NewRecurringTransaction = typeof recurringTransactions.$inferInsert;
@@ -43,7 +42,7 @@ export const createRecurringTransaction = async (
   transaction: Omit<NewRecurringTransaction, "id" | "createdAt" | "updatedAt">
 ): Promise<RecurringTransaction | null> => {
   const now = Date.now();
-  const id = uuidv4();
+  const id = createId();
   const result = await db
     .insert(recurringTransactions)
     .values({
@@ -110,19 +109,13 @@ export const incurRecurringTransaction = async (id: string): Promise<number | nu
   const incurDates: Date[] = [];
 
   try {
-    const cronExp = CronExpressionParser.parse(rt.recurrenceValue, {
-      currentDate: lastCharged,
-    });
-
-    for (
-      let nextDate = cronExp.next().toDate();
-      nextDate <= now;
-      nextDate = cronExp.next().toDate()
-    ) {
-      incurDates.push(nextDate);
-    }
+    incurDates.push(...getDueOccurrenceDates(rt.recurrenceValue, lastCharged, now));
   } catch (error) {
-    console.error("[DB][incurRecurringTransaction] failed to parse cron:", error);
+    console.error('[recurring][stage=parse_cron] failed to parse recurrence', {
+      id,
+      recurrenceValue: rt.recurrenceValue,
+      error: String(error),
+    });
     return null;
   }
 
@@ -142,26 +135,25 @@ export const incurRecurringTransaction = async (id: string): Promise<number | nu
       }) as Omit<NewTransaction, "id" | "createdAt" | "updatedAt" | "id" | "verified" | "notes">
   );
 
-  const res = await batchCreateTransactions(toCreate);
-  if (!res) {
-    console.error(`[DB][incurRecurringTransaction] failed to create transactions for recurring transaction ${id}`);
-    return null;
-  }
-
-  const incurred = toCreate.length;
-  console.info("[DB][incurRecurringTransaction] total incurred %d, updated recurring transaction %o", incurred, rt);
-
+  let incurred = 0;
   const lastDate = incurDates[incurDates.length - 1];
-  const updated = await updateRecurringTransaction({
-    ...rt,
-    lastCharged: lastDate.getTime(),
-  });
-
-  if (!updated) {
-    console.error(`[DB][incurRecurringTransaction] failed to update recurring transaction ${id}`);
+  try {
+    await sqlite.withExclusiveTransactionAsync(async (transactionDb) => {
+      const timestamp = Date.now();
+      for (const transaction of toCreate) {
+        const result = await transactionDb.runAsync(
+          'INSERT OR IGNORE INTO transactions (id, amount, transaction_date, description, category, recurring_transaction_id, verified, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)',
+          recurringOccurrenceId(rt.id, transaction.transactionDate), transaction.amount, transaction.transactionDate, transaction.description, transaction.category, rt.id, timestamp, timestamp,
+        );
+        incurred += result.changes;
+      }
+      await transactionDb.runAsync('UPDATE recurring_transactions SET last_charged = ?, updated_at = ? WHERE id = ?', lastDate.getTime(), timestamp, id);
+    });
+  } catch (error) {
+    console.error('[recurring][stage=commit_occurrences] atomic recurrence update failed', { id, error: String(error) });
     return null;
   }
-
+  console.info('[recurring][stage=commit_occurrences] recurring transactions incurred', { id, incurred });
   return incurred;
 };
 

@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   getRecurringTransaction,
   createRecurringTransaction,
   updateRecurringTransaction,
-  RecurringTransaction,
+  incurRecurringTransaction,
 } from '@/db/recurring';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
-import { validateOccurrence, getNextOccurrences, occurrenceToText } from '@/libs/date';
+import { validateOccurrence, getNextOccurrences } from '@/libs/date';
 import { useQueryClient } from '@tanstack/react-query';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CRON_PRESETS = [
   { label: 'Daily', value: '0 0 * * *' },
@@ -36,8 +37,12 @@ export default function RecurringEditDrawer() {
 
   useEffect(() => {
     const loadCategories = async () => {
-      const cats = await db.select().from(categoriesTable).all();
-      setAvailableCategories(cats);
+      try {
+        const cats = await db.select().from(categoriesTable).all();
+        setAvailableCategories(cats);
+      } catch (loadError) {
+        console.error('[recurring.form][stage=load_categories] category query failed', { error: String(loadError) });
+      }
     };
     loadCategories();
   }, []);
@@ -45,15 +50,21 @@ export default function RecurringEditDrawer() {
   useEffect(() => {
     if (!isEdit || !id) return;
     const load = async () => {
-      const rt = await getRecurringTransaction(id);
-      if (rt) {
-        setAmount(String(Math.abs(rt.amount)));
-        setDescription(rt.description);
-        setCategory(rt.category);
-        setRecurrenceValue(rt.recurrenceValue);
-        setStartDate(new Date(rt.startDate));
+      try {
+        const rt = await getRecurringTransaction(id);
+        if (rt) {
+          setAmount(String(Math.abs(rt.amount)));
+          setDescription(rt.description);
+          setCategory(rt.category);
+          setRecurrenceValue(rt.recurrenceValue);
+          setStartDate(new Date(rt.startDate));
+        }
+      } catch (loadError) {
+        console.error('[recurring.form][stage=load_rule] recurring query failed', { id, error: String(loadError) });
+        setError(String(loadError));
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     load();
   }, [id, isEdit]);
@@ -70,18 +81,24 @@ export default function RecurringEditDrawer() {
       }
       const signedAmount = -Math.abs(parsedAmount);
 
+      if (!description.trim()) {
+        setError('Description is required');
+        return;
+      }
+
       if (!validation.ok) {
         setError(`Invalid cron: ${validation.error}`);
         return;
       }
 
+      let savedId: string;
       if (isEdit && id) {
         const existing = await getRecurringTransaction(id);
         if (!existing) {
           setError('Not found');
           return;
         }
-        await updateRecurringTransaction({
+        const saved = await updateRecurringTransaction({
           ...existing,
           amount: signedAmount,
           description: description.trim(),
@@ -89,8 +106,10 @@ export default function RecurringEditDrawer() {
           recurrenceValue: recurrenceValue.trim(),
           startDate: startDate.getTime(),
         });
+        if (!saved) throw new Error('Recurring rule update failed');
+        savedId = saved.id;
       } else {
-        await createRecurringTransaction({
+        const saved = await createRecurringTransaction({
           amount: signedAmount,
           description: description.trim(),
           category: category.trim() || 'Other',
@@ -98,11 +117,20 @@ export default function RecurringEditDrawer() {
           startDate: startDate.getTime(),
           lastCharged: null,
         });
+        if (!saved) throw new Error('Recurring rule creation failed');
+        savedId = saved.id;
       }
 
+      const incurred = await incurRecurringTransaction(savedId);
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       router.back();
+      if (incurred === null) {
+        console.error('[recurring.form][stage=catch_up] rule saved but catch-up failed', { id: savedId });
+        Alert.alert('Rule Saved', 'Catch-up could not finish and will retry next launch.');
+      }
     } catch (err) {
+      console.error('[recurring.form][stage=save] recurring save failed', { id: id ?? null, error: String(err) });
       setError(String(err));
     }
   };
@@ -179,6 +207,17 @@ export default function RecurringEditDrawer() {
           placeholder="Or custom category"
         />
 
+        <Text style={styles.label}>Start Date</Text>
+        <View style={styles.dateInput}>
+          <DateTimePicker
+            accessibilityLabel="Recurring start date"
+            value={startDate}
+            mode="date"
+            display="compact"
+            onChange={(_, date) => date && setStartDate(date)}
+          />
+        </View>
+
         <Text style={styles.label}>Recurrence</Text>
         <View style={styles.chipsContainer}>
           {CRON_PRESETS.map((p) => (
@@ -250,7 +289,7 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   label: {
     fontSize: 14,
@@ -268,6 +307,15 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: '#FF3B30',
+  },
+  dateInput: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#f8f8f8',
   },
   chipsContainer: {
     flexDirection: 'row',

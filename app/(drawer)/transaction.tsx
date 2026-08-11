@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Switch, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { v4 as uuidv4 } from 'uuid';
-import { getTransaction, createTransaction, updateTransaction, Transaction } from '@/db/transaction';
+import { getTransaction, createTransaction, updateTransaction } from '@/db/transaction';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
 import { useInvalidateTransactions } from '@/hooks/useQueryClient';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function TransactionDrawer() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -29,7 +29,9 @@ export default function TransactionDrawer() {
         const cats = await db.select().from(categoriesTable).all();
         setAvailableCategories(cats);
       } catch (err) {
-        console.error("Failed to load categories:", err);
+        console.error('[transaction.form][stage=load_categories] category query failed', {
+          error: String(err),
+        });
       }
     };
     loadCategories();
@@ -51,6 +53,10 @@ export default function TransactionDrawer() {
           setTransactionDate(new Date(tx.transactionDate));
         }
       } catch (err) {
+        console.error('[transaction.form][stage=load_transaction] transaction query failed', {
+          id,
+          error: String(err),
+        });
         setError(String(err));
       } finally {
         setLoading(false);
@@ -69,6 +75,17 @@ export default function TransactionDrawer() {
 
       // Negative = expense, positive = income
       const signedAmount = -Math.abs(parsedAmount);
+
+      if (!description.trim()) {
+        setError('Description is required');
+        return;
+      }
+
+      console.info('[transaction.form][stage=save] saving transaction', {
+        mode: isEdit ? 'edit' : 'create',
+        id: id ?? null,
+        category: category.trim() || 'Other',
+      });
 
       if (isEdit && id) {
         const existing = await getTransaction(id);
@@ -99,7 +116,16 @@ export default function TransactionDrawer() {
 
       invalidateTransactions();
       router.back();
+      console.info('[transaction.form][stage=save] transaction saved', {
+        mode: isEdit ? 'edit' : 'create',
+        id: id ?? null,
+      });
     } catch (err) {
+      console.error('[transaction.form][stage=save] transaction save failed', {
+        mode: isEdit ? 'edit' : 'create',
+        id: id ?? null,
+        error: String(err),
+      });
       setError(String(err));
     }
   };
@@ -185,9 +211,15 @@ export default function TransactionDrawer() {
         />
 
         <Text style={styles.label}>Date</Text>
-        <Text style={styles.dateText}>
-          {transactionDate.toLocaleDateString()}
-       </Text>
+        <View style={styles.dateInput}>
+          <DateTimePicker
+            accessibilityLabel="Transaction date"
+            value={transactionDate}
+            mode="date"
+            display="compact"
+            onChange={(_, date) => date && setTransactionDate(date)}
+          />
+        </View>
 
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Verified</Text>
@@ -198,7 +230,7 @@ export default function TransactionDrawer() {
           />
        </View>
 
-        <Text style={styles.label}>Notes (optional</Text>
+        <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
           value={notes}
@@ -275,9 +307,10 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 14,
   },
-  dateText: {
-    fontSize: 16,
-    padding: 12,
+  dateInput: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     borderRadius: 8,

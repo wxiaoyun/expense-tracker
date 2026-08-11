@@ -10,6 +10,7 @@ import { listRecurringTransactions, deleteRecurringTransaction, RecurringTransac
 import { showConfirmDialog } from '@/libs/dialog';
 import { formatCurrency } from '@/libs/intl';
 import { occurrenceToText } from '@/libs/date';
+import { AddRecurringButton } from '@/components/transactions/add-recurring-button';
 
 export default function RecurringScreen() {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function RecurringScreen() {
         await deleteRecurringTransaction(id);
         queryClient.invalidateQueries({ queryKey: ['recurring'] });
       } catch (err) {
+        console.error('[recurring.list][stage=delete_rule] recurring delete failed', { id, error: String(err) });
         Alert.alert('Error', 'Failed to delete recurring transaction');
       }
     },
@@ -118,21 +120,19 @@ export default function RecurringScreen() {
         <Text style={{ fontSize: 16, color: textColor, opacity: 0.6, textAlign: 'center' }}>
           Create recurring rules for subscriptions, bills, or regular income
        </Text>
-        <Text
-          style={{ marginTop: 24, color: '#007AFF', fontSize: 16 }}
-          onPress={() => router.push('/(drawer)/recurring-edit')}
-        >
-          + Add Recurring
-       </Text>
+        <AddRecurringButton />
      </View>
     );
   }
 
   return (
-    <FlashList
-      data={allRecurring}
-      renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 8, paddingBottom: 100 }}
-    />
+    <View style={{ flex: 1, backgroundColor }}>
+      <FlashList
+        data={allRecurring}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingTop: 100, paddingBottom: 100 }}
+      />
+      <AddRecurringButton />
+    </View>
   );
 }

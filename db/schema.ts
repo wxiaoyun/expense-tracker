@@ -5,7 +5,6 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
-import { v4 as uuidv4 } from 'uuid';
 
 // Helper to generate deterministic UUID from integer (for migration)
 // We'll use a fixed namespace for consistency
