@@ -1,15 +1,17 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import { GlassTabBar } from '@/components/glass/GlassTabBar.ios';
 
 export default function TabsLayout() {
   return (
     <Tabs
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={{
         headerShown: true,
         headerTransparent: true,
-
         tabBarActiveTintColor: '#007AFF',
+        sceneStyle: { paddingBottom: 88 },
       }}
     >
       <Tabs.Screen
