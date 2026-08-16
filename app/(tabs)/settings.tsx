@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Pressable, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// eslint-disable-next-line import/no-unresolved
+import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import Feather from '@expo/vector-icons/Feather';
@@ -25,74 +27,39 @@ type PickerOption = { value: string; label: string };
 function PreferenceRow({
   label,
   valueLabel,
-  onPress,
+  options,
+  onSelect,
   last,
 }: {
   label: string;
   valueLabel: string;
-  onPress: () => void;
+  options: PickerOption[];
+  onSelect: (value: string) => void;
   last?: boolean;
 }) {
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      onPress={onPress}
-      activeOpacity={0.6}
-      style={[styles.row, last && { borderBottomWidth: 0 }]}
-    >
-      <Text style={styles.rowLabel}>{label}</Text>
-      <View style={styles.rowValueWrap}>
-        <Text style={styles.rowValue}>{valueLabel}</Text>
-        <Feather name="chevron-down" size={16} color="#C7C7CC" />
-      </View>
-    </TouchableOpacity>
-  );
-}
+  const menuConfig: MenuConfig = {
+    menuTitle: label,
+    menuItems: options.map((option) => ({
+      actionKey: option.value,
+      actionTitle: option.label,
+      menuState: option.value === valueLabel || option.label === valueLabel ? 'on' : 'off',
+    })),
+  };
 
-function OptionPicker({
-  visible,
-  title,
-  options,
-  value,
-  onSelect,
-  onClose,
-}: {
-  visible: boolean;
-  title: string;
-  options: PickerOption[];
-  value: string;
-  onSelect: (value: string) => void;
-  onClose: () => void;
-}) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.pickerBackdrop} onPress={onClose}>
-        <Pressable style={styles.pickerSheet} onPress={() => {}}>
-          <Text style={styles.pickerTitle}>{title}</Text>
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item.value}
-            renderItem={({ item }) => {
-              const selected = item.value === value;
-              return (
-                <TouchableOpacity
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    onSelect(item.value);
-                    onClose();
-                  }}
-                >
-                  <Text style={[styles.pickerOptionLabel, selected && styles.pickerOptionLabelSelected]}>
-                    {item.label}
-                  </Text>
-                  {selected ? <Feather name="check" size={18} color="#007AFF" /> : null}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <ContextMenuButton
+      isMenuPrimaryAction
+      menuConfig={menuConfig}
+      onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
+    >
+      <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <View style={styles.rowValueWrap}>
+          <Text style={styles.rowValue}>{valueLabel}</Text>
+          <Feather name="chevron-down" size={16} color="#C7C7CC" />
+        </View>
+      </View>
+    </ContextMenuButton>
   );
 }
 
@@ -102,7 +69,6 @@ export default function SettingsScreen() {
   const [currency, setCurrency] = useAtom(currencyAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [restoring, setRestoring] = useState(false);
-  const [picker, setPicker] = useState<{ title: string; options: PickerOption[]; value: string; onSelect: (value: string) => void } | null>(null);
   const [autoBackup, setAutoBackup] = useState(() => {
     try {
       const row = db.select().from(settings).where(eq(settings.key, 'backup.cadence')).get();
@@ -123,10 +89,6 @@ export default function SettingsScreen() {
       Alert.alert('Auto-backup Failed', String(error));
     }
   };
-
-  const openPicker = useCallback((title: string, options: PickerOption[], value: string, onSelect: (value: string) => void) => {
-    setPicker({ title, options, value, onSelect });
-  }, []);
 
   const changeCurrency = useCallback((value: string) => {
     setCurrency(value);
@@ -242,12 +204,14 @@ export default function SettingsScreen() {
         <PreferenceRow
           label="Currency"
           valueLabel={currency}
-          onPress={() => openPicker('Currency', CURRENCIES.map((c) => ({ value: c, label: c })), currency, changeCurrency)}
+          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+          onSelect={changeCurrency}
         />
         <PreferenceRow
           label="Week starts"
           valueLabel={WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}
-          onPress={() => openPicker('Week starts', WEEK_STARTS, weekStart, changeWeekStart)}
+          options={WEEK_STARTS}
+          onSelect={changeWeekStart}
           last
         />
       </View>
@@ -288,16 +252,6 @@ export default function SettingsScreen() {
     </View>
     </ScrollView>
     {restoring && <View style={styles.restoreOverlay}><ActivityIndicator size="large" /><Text style={styles.restoreText}>Restoring database</Text></View>}
-    {picker && (
-      <OptionPicker
-        visible
-        title={picker.title}
-        options={picker.options}
-        value={picker.value}
-        onSelect={picker.onSelect}
-        onClose={() => setPicker(null)}
-      />
-    )}
   </View>
   );
 }
@@ -321,6 +275,7 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 24,
     paddingBottom: 32,
+    paddingHorizontal: 16,
   },
   pageHeader: {
     marginBottom: 4,
@@ -370,43 +325,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  pickerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'flex-end',
-  },
-  pickerSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-    maxHeight: '70%',
-  },
-  pickerTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5EA',
-  },
-  pickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 15,
-    paddingHorizontal: 24,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F0F0F0',
-  },
-  pickerOptionLabel: {
-    fontSize: 17,
-    color: '#000',
-  },
-  pickerOptionLabelSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
   },
 });

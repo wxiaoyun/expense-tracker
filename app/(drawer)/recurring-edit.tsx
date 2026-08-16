@@ -222,15 +222,13 @@ export default function RecurringEditDrawer() {
         />
 
         <Text style={styles.label}>Start Date</Text>
-        <View style={styles.dateInput}>
-          <DateTimePicker
-            accessibilityLabel="Recurring start date"
-            value={startDate}
-            mode="date"
-            display="compact"
-            onChange={(_, date) => date && setStartDate(date)}
-          />
-        </View>
+        <DateTimePicker
+          accessibilityLabel="Recurring start date"
+          value={startDate}
+          mode="date"
+          display="compact"
+          onChange={(_, date) => date && setStartDate(date)}
+        />
 
         <Text style={styles.label}>Recurrence</Text>
         <View style={styles.chipsContainer}>
@@ -332,15 +330,6 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: '#FF3B30',
-  },
-  dateInput: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
   },
   chipsContainer: {
     flexDirection: 'row',

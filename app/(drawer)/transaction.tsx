@@ -226,15 +226,13 @@ export default function TransactionDrawer() {
         />
 
         <Text style={styles.label}>Date</Text>
-        <View style={styles.dateInput}>
-          <DateTimePicker
-            accessibilityLabel="Transaction date"
-            value={transactionDate}
-            mode="date"
-            display="compact"
-            onChange={(_, date) => date && setTransactionDate(date)}
-          />
-        </View>
+        <DateTimePicker
+          accessibilityLabel="Transaction date"
+          value={transactionDate}
+          mode="date"
+          display="compact"
+          onChange={(_, date) => date && setTransactionDate(date)}
+        />
 
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Verified</Text>
@@ -334,15 +332,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-  },
-  dateInput: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
   },
   toggleRow: {
     flexDirection: 'row',

@@ -80,25 +80,21 @@ export function ExpenseFilterBar({
         })}
       </ScrollView>
       {preset === 'custom' && (
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1, borderRadius: 12, backgroundColor: '#F2F2F7', paddingHorizontal: 10, justifyContent: 'center' }}>
-            <DateTimePicker
-              accessibilityLabel="Custom start date"
-              value={customStart ?? new Date()}
-              mode="date"
-              display="compact"
-              onChange={(_, date) => date && onCustomStartChange?.(date)}
-            />
-          </View>
-          <View style={{ flex: 1, borderRadius: 12, backgroundColor: '#F2F2F7', paddingHorizontal: 10, justifyContent: 'center' }}>
-            <DateTimePicker
-              accessibilityLabel="Custom end date"
-              value={customEnd ?? new Date()}
-              mode="date"
-              display="compact"
-              onChange={(_, date) => date && onCustomEndChange?.(date)}
-            />
-          </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <DateTimePicker
+            accessibilityLabel="Custom start date"
+            value={customStart ?? new Date()}
+            mode="date"
+            display="compact"
+            onChange={(_, date) => date && onCustomStartChange?.(date)}
+          />
+          <DateTimePicker
+            accessibilityLabel="Custom end date"
+            value={customEnd ?? new Date()}
+            mode="date"
+            display="compact"
+            onChange={(_, date) => date && onCustomEndChange?.(date)}
+          />
         </View>
       )}
       {categories.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
