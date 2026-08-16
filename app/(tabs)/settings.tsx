@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// eslint-disable-next-line import/no-unresolved
 import { db } from '@/db';
 import { categories, recurringTransactions, settings, transactions } from '@/db/schema';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
@@ -14,6 +13,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useAtom } from 'jotai';
+// eslint-disable-next-line import/no-unresolved
 import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
@@ -119,7 +119,7 @@ export default function SettingsScreen() {
   const handleImport = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/x-sqlite3',
+        type: '*/*',
         copyToCacheDirectory: true,
       });
       if (result.canceled) {
