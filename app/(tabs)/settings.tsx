@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator, Modal, Appearance, FlatList, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator, Appearance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// eslint-disable-next-line import/no-unresolved
+import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import Feather from '@expo/vector-icons/Feather';
@@ -27,42 +29,42 @@ const WEEK_STARTS: { value: WeekStart; label: string }[] = [
 
 type PickerOption = { value: string; label: string };
 
-function OptionPicker({
-  visible,
-  title,
+function PreferenceRow({
+  label,
+  valueLabel,
   options,
   onSelect,
-  onClose,
+  last,
 }: {
-  visible: boolean;
-  title: string;
+  label: string;
+  valueLabel: string;
   options: PickerOption[];
   onSelect: (value: string) => void;
-  onClose: () => void;
+  last?: boolean;
 }) {
+  const menuConfig: MenuConfig = {
+    menuTitle: label,
+    menuItems: options.map((option) => ({
+      actionKey: option.value,
+      actionTitle: option.label,
+      menuState: option.value === valueLabel || option.label === valueLabel ? 'on' : 'off',
+    })),
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.pickerBackdrop} onPress={onClose}>
-        <View style={styles.pickerSheet}>
-          <Text style={styles.pickerTitle}>{title}</Text>
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item.value}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.pickerOption}
-                onPress={() => {
-                  onSelect(item.value);
-                  onClose();
-                }}
-              >
-                <Text style={styles.pickerOptionLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            )}
-          />
+    <ContextMenuButton
+      isMenuPrimaryAction
+      menuConfig={menuConfig}
+      onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
+    >
+      <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <View style={styles.rowValueWrap}>
+          <Text style={styles.rowValue}>{valueLabel}</Text>
+          <Feather name="chevron-down" size={16} color="#C7C7CC" />
         </View>
-      </Pressable>
-    </Modal>
+      </View>
+    </ContextMenuButton>
   );
 }
 
@@ -73,7 +75,6 @@ export default function SettingsScreen() {
   const [theme, setTheme] = useAtom(themeAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [restoring, setRestoring] = useState(false);
-  const [picker, setPicker] = useState<{ title: string; options: PickerOption[]; onSelect: (value: string) => void } | null>(null);
   const [autoBackup, setAutoBackup] = useState(() => {
     try {
       const row = db.select().from(settings).where(eq(settings.key, 'backup.cadence')).get();
@@ -94,10 +95,6 @@ export default function SettingsScreen() {
       Alert.alert('Auto-backup Failed', String(error));
     }
   };
-
-  const openPicker = useCallback((title: string, options: PickerOption[], onSelect: (value: string) => void) => {
-    setPicker({ title, options, onSelect });
-  }, []);
 
   const applyTheme = useCallback((value: string) => {
     const next = value as ThemePreference;
@@ -213,27 +210,25 @@ export default function SettingsScreen() {
     <ScrollView pointerEvents={restoring ? 'none' : 'auto'} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
-        <TouchableOpacity style={styles.row} onPress={() => openPicker('Currency', CURRENCIES.map((c) => ({ value: c, label: c })), changeCurrency)}>
-          <Text style={styles.rowLabel}>Currency</Text>
-          <View style={styles.rowValueWrap}>
-            <Text style={styles.rowValue}>{currency}</Text>
-            <Feather name="chevron-right" size={18} color="#c8c8cc" />
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.row} onPress={() => openPicker('Theme', THEMES, applyTheme)}>
-          <Text style={styles.rowLabel}>Theme</Text>
-          <View style={styles.rowValueWrap}>
-            <Text style={styles.rowValue}>{THEMES.find((t) => t.value === theme)?.label ?? 'System'}</Text>
-            <Feather name="chevron-right" size={18} color="#c8c8cc" />
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, { borderBottomWidth: 0 }]} onPress={() => openPicker('Week starts', WEEK_STARTS, changeWeekStart)}>
-          <Text style={styles.rowLabel}>Week starts</Text>
-          <View style={styles.rowValueWrap}>
-            <Text style={styles.rowValue}>{WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}</Text>
-            <Feather name="chevron-right" size={18} color="#c8c8cc" />
-          </View>
-        </TouchableOpacity>
+        <PreferenceRow
+          label="Currency"
+          valueLabel={currency}
+          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+          onSelect={changeCurrency}
+        />
+        <PreferenceRow
+          label="Theme"
+          valueLabel={THEMES.find((t) => t.value === theme)?.label ?? 'System'}
+          options={THEMES}
+          onSelect={applyTheme}
+        />
+        <PreferenceRow
+          label="Week starts"
+          valueLabel={WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}
+          options={WEEK_STARTS}
+          onSelect={changeWeekStart}
+          last
+        />
       </View>
 
       <View style={styles.section}>
@@ -272,7 +267,6 @@ export default function SettingsScreen() {
     </View>
     </ScrollView>
     {restoring && <View style={styles.restoreOverlay}><ActivityIndicator size="large" /><Text style={styles.restoreText}>Restoring database</Text></View>}
-    {picker && <OptionPicker visible title={picker.title} options={picker.options} onSelect={picker.onSelect} onClose={() => setPicker(null)} />}
   </View>
   );
 }
@@ -332,37 +326,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  pickerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'flex-end',
-  },
-  pickerSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 32,
-    maxHeight: '60%',
-  },
-  pickerTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
-  },
-  pickerOption: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0',
-  },
-  pickerOptionLabel: {
-    fontSize: 17,
-    color: '#007AFF',
-    textAlign: 'center',
   },
 });

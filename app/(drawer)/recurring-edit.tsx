@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   getRecurringTransaction,
@@ -144,21 +144,35 @@ export default function RecurringEditDrawer() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.dismiss()}>
+    <View collapsable={false} style={styles.container}>
+      <View collapsable={false} style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+          hitSlop={12}
+          onPress={() => router.dismiss()}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+        >
           <Text style={styles.cancelText}>Cancel</Text>
-      </TouchableOpacity>
+        </Pressable>
         <Text style={styles.title}>{isEdit ? 'Edit Recurring' : 'New Recurring'}</Text>
-        <TouchableOpacity onPress={handleSave}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Save"
+          hitSlop={12}
+          onPress={handleSave}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+        >
           <Text style={styles.saveText}>Save</Text>
-      </TouchableOpacity>
+        </Pressable>
     </View>
 
-      <ScrollView style={styles.form}>
+      <ScrollView
+        style={styles.form}
+        contentContainerStyle={styles.formContent}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         {error && (
           <View style={styles.errorBanner}>
             <Text style={styles.errorText}>{error}</Text>
@@ -185,7 +199,7 @@ export default function RecurringEditDrawer() {
         <Text style={styles.label}>Category</Text>
         <View style={styles.chipsContainer}>
           {availableCategories.map((cat) => (
-            <TouchableOpacity
+            <Pressable
               key={cat.name}
               style={[
                 styles.chip,
@@ -197,7 +211,7 @@ export default function RecurringEditDrawer() {
               <Text style={[styles.chipText, category === cat.name && { color: cat.color }]}>
                 {cat.name}
             </Text>
-          </TouchableOpacity>
+            </Pressable>
           ))}
       </View>
         <TextInput
@@ -221,7 +235,7 @@ export default function RecurringEditDrawer() {
         <Text style={styles.label}>Recurrence</Text>
         <View style={styles.chipsContainer}>
           {CRON_PRESETS.map((p) => (
-            <TouchableOpacity
+            <Pressable
               key={p.value}
               style={[
                 styles.chip,
@@ -232,7 +246,7 @@ export default function RecurringEditDrawer() {
               <Text style={[styles.chipText, recurrenceValue === p.value && { color: '#007AFF' }]}>
                 {p.label}
             </Text>
-          </TouchableOpacity>
+            </Pressable>
           ))}
       </View>
 
@@ -256,54 +270,65 @@ export default function RecurringEditDrawer() {
             ))}
         </View>
         )}
-    </ScrollView>
-  </KeyboardAvoidingView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2F2F7',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#E5E5EA',
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
+    color: '#000',
   },
   cancelText: {
-    fontSize: 16,
-    color: '#007aff',
+    fontSize: 17,
+    color: '#007AFF',
   },
   saveText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#007aff',
+    color: '#007AFF',
   },
   form: {
     flex: 1,
+  },
+  formContent: {
     paddingHorizontal: 16,
+    paddingBottom: 32,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     marginTop: 16,
     marginBottom: 8,
-    color: '#666',
+    color: '#6E6E73',
+    textTransform: 'uppercase',
   },
   input: {
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 16,
+    color: '#000',
   },
   inputError: {
     borderColor: '#FF3B30',
@@ -311,11 +336,11 @@ const styles = StyleSheet.create({
   dateInput: {
     minHeight: 48,
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f8f8f8',
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
   },
   chipsContainer: {
     flexDirection: 'row',
@@ -324,19 +349,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chip: {
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: '#E5E5EA',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   chipText: {
     fontSize: 14,
   },
   preview: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#fff',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 8,
   },
   previewText: {

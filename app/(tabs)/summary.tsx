@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingTop: 24,
-    paddingBottom: 32,
+    paddingBottom: 120,
   },
   centered: {
     flex: 1,
