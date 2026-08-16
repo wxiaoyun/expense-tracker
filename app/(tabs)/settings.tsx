@@ -1,20 +1,20 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
-import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
-import * as DocumentPicker from 'expo-document-picker';
-import * as Sharing from 'expo-sharing';
-import Feather from '@expo/vector-icons/Feather';
 import { db } from '@/db';
-import { transactions, recurringTransactions, categories, settings } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { router } from 'expo-router';
+import { categories, recurringTransactions, settings, transactions } from '@/db/schema';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, restoreDatabase, validateSqliteFile } from '@/libs/backup';
+import { currencyAtom, savePreference, weekStartAtom, type WeekStart } from '@/libs/preferences';
+import Feather from '@expo/vector-icons/Feather';
 import { useQueryClient } from '@tanstack/react-query';
+import { eq } from 'drizzle-orm';
+import * as DocumentPicker from 'expo-document-picker';
+import { router } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useAtom } from 'jotai';
-import { currencyAtom, weekStartAtom, savePreference, type WeekStart } from '@/libs/preferences';
+import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
 const WEEK_STARTS: { value: WeekStart; label: string }[] = [
@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 16,
     marginBottom: 4,
+    marginHorizontal: 16,
     textTransform: 'uppercase',
   },
   row: {
