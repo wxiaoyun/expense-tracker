@@ -47,19 +47,19 @@ function PreferenceRow({
   };
 
   return (
-    <ContextMenuButton
-      isMenuPrimaryAction
-      menuConfig={menuConfig}
-      onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
-    >
-      <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
-        <Text style={styles.rowLabel}>{label}</Text>
+    <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <ContextMenuButton
+        isMenuPrimaryAction
+        menuConfig={menuConfig}
+        onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
+      >
         <View style={styles.rowValueWrap}>
           <Text style={styles.rowValue}>{valueLabel}</Text>
           <Feather name="chevron-down" size={16} color="#C7C7CC" />
         </View>
-      </View>
-    </ContextMenuButton>
+      </ContextMenuButton>
+    </View>
   );
 }
 
@@ -275,10 +275,10 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 24,
     paddingBottom: 32,
-    paddingHorizontal: 16,
   },
   pageHeader: {
     marginBottom: 4,
+    marginHorizontal: 16,
   },
   pageTitle: {
     fontSize: 34,
@@ -302,7 +302,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
     marginTop: 16,
-    marginHorizontal: 16,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
@@ -310,7 +309,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#c8c8cc',
   },
