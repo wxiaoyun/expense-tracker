@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Text, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { format } from 'date-fns';
 
@@ -14,6 +15,7 @@ import { AddRecurringButton } from '@/components/transactions/add-recurring-butt
 
 export default function RecurringScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const backgroundColor = '#fff';
   const textColor = '#000';
@@ -130,7 +132,7 @@ export default function RecurringScreen() {
       <FlashList
         data={allRecurring}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 100, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 100 }}
       />
       <AddRecurringButton />
     </View>

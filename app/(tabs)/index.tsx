@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
@@ -15,6 +16,7 @@ import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const backgroundColor = '#fff';
   const textColor = '#000';
 
@@ -142,7 +144,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor, paddingTop: 100 }}>
+    <View style={{ flex: 1, backgroundColor, paddingTop: insets.top + 8 }}>
       <ExpenseFilterBar
         search={search}
         preset={dateRange.preset}

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import ReanimatedSwipeable, {
   SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import type { SharedValue } from 'react-native-reanimated';
 import { format } from 'date-fns';
 import { Transaction } from '@/db/schema';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -18,20 +17,22 @@ type SwipeableTransactionProps = {
   onDelete: (id: string, animateDelete: () => Promise<unknown>) => void;
 };
 
-const LeftAction: React.FC<{ progress: SharedValue<number>; translation: SharedValue<number> }> = ({ progress, translation }) => {
+const ACTION_WIDTH = 88;
+
+const LeftAction = () => {
   return (
-    <View style={[styles.deleteAction, { justifyContent: 'center', paddingHorizontal: 20 }]}>
-      <Feather name="trash-2" size={24} color="white" />
+    <View style={styles.deleteAction}>
+      <Feather name="trash-2" size={22} color="white" />
       <Text style={styles.actionText}>Delete</Text>
     </View>
   );
 };
 
-const RightAction: React.FC<{ progress: SharedValue<number>; translation: SharedValue<number> }> = ({ progress, translation }) => {
+const RightAction = () => {
   return (
-    <View style={[styles.editAction, { justifyContent: 'center', alignItems: 'flex-end' }]}>
-      <Text style={styles.actionText}>Edit</Text>
+    <View style={styles.editAction}>
       <Feather name="edit-2" size={24} color="white" />
+      <Text style={styles.actionText}>Edit</Text>
     </View>
   );
 };
@@ -61,12 +62,8 @@ export const TransactionRow: React.FC<SwipeableTransactionProps> = ({
       overshootFriction={2}
       leftThreshold={80}
       rightThreshold={80}
-      renderLeftActions={(progress, translation) => (
-        <LeftAction progress={progress} translation={translation} />
-      )}
-      renderRightActions={(progress, translation) => (
-        <RightAction progress={progress} translation={translation} />
-      )}
+      renderLeftActions={() => <LeftAction />}
+      renderRightActions={() => <RightAction />}
       onSwipeableOpen={(direction) => {
         const action = getTransactionSwipeAction(direction);
         if (action === 'edit') onEdit(transaction.id);
@@ -152,24 +149,29 @@ const styles = StyleSheet.create({
   },
   deleteAction: {
     backgroundColor: '#FF3B30',
-    flex: 1,
-    flexDirection: 'row',
+    width: ACTION_WIDTH,
+    height: '100%',
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
   },
   editAction: {
     backgroundColor: '#007AFF',
-    flex: 1,
-    flexDirection: 'row',
+    width: ACTION_WIDTH,
+    height: '100%',
+    flexDirection: 'column',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    gap: 4,
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
   },
   actionText: {
     color: 'white',
     fontWeight: '600',
-    marginHorizontal: 8,
+    fontSize: 12,
   },
 });

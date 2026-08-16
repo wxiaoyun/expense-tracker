@@ -9,6 +9,7 @@ import { settings } from '@/db/schema';
 import { sql } from 'drizzle-orm';
 import { incurAllRecurringTransactions } from '@/db/recurring';
 import { AppRoot } from '@/components/app-root';
+import { loadPreferences } from '@/libs/preferences';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,7 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   useEffect(() => {
+    loadPreferences();
     const init = async () => {
       try {
         const result = await db.select().from(settings).where(sql`${settings.key} = 'app.migrated'`).get();

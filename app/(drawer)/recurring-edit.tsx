@@ -124,7 +124,7 @@ export default function RecurringEditDrawer() {
       const incurred = await incurRecurringTransaction(savedId);
       queryClient.invalidateQueries({ queryKey: ['recurring'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      router.back();
+      router.dismiss();
       if (incurred === null) {
         console.error('[recurring.form][stage=catch_up] rule saved but catch-up failed', { id: savedId });
         Alert.alert('Rule Saved', 'Catch-up could not finish and will retry next launch.');
@@ -149,7 +149,7 @@ export default function RecurringEditDrawer() {
       style={styles.container}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.dismiss()}>
           <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
         <Text style={styles.title}>{isEdit ? 'Edit Recurring' : 'New Recurring'}</Text>

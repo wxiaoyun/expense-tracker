@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { CategoryDonut } from '@/components/summary/CategoryDonut';
 import { MonthlyBar } from '@/components/summary/MonthlyBar';
@@ -13,6 +14,7 @@ const CATEGORY_COLORS = [
 ];
 
 export default function SummaryScreen() {
+  const insets = useSafeAreaInsets();
   const [dateRange] = useDateRange();
   const [categories] = useCategoryFilter();
   const backgroundColor = '#fff';
@@ -67,7 +69,7 @@ export default function SummaryScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
       <View style={styles.kpiRow}>
         <View style={styles.kpiCard}>
           <Text style={[styles.kpiLabel, { color: textColor, opacity: 0.6 }]}>Total</Text>
@@ -127,8 +129,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 100,
-    paddingBottom: 100,
+    paddingTop: 24,
+    paddingBottom: 32,
   },
   centered: {
     flex: 1,

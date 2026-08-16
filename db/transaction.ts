@@ -76,6 +76,16 @@ export const listTransactions = async (query?: {
     .offset(offset)
     .all();
 
+  console.info('[transactions.list][stage=query] rows fetched', {
+    startTs,
+    endTs,
+    offset,
+    limit,
+    count: items.length,
+    categories: categories.length,
+    search: search ?? null,
+  });
+
   const nextOffset = items.length < limit ? null : offset + limit;
   return { items, nextOffset };
 };

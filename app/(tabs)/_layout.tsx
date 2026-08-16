@@ -1,55 +1,25 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
-import { GlassTabBar } from '@/components/glass/GlassTabBar.ios';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <GlassTabBar {...props} />}
-      screenOptions={{
-        headerShown: true,
-        headerTransparent: true,
-        tabBarActiveTintColor: '#007AFF',
-        sceneStyle: { paddingBottom: 88 },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Expenses',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="list" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="recurring"
-        options={{
-          title: 'Recurring',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="repeat" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="summary"
-        options={{
-          title: 'Summary',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="pie-chart" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="settings" size={size} color={color} />
-          ),
-        }}
-      />
-  </Tabs>
+    <NativeTabs tintColor="#007AFF">
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Expenses</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet', selected: 'list.bullet' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="recurring">
+        <NativeTabs.Trigger.Label>Recurring</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'arrow.triangle.2.circlepath', selected: 'arrow.triangle.2.circlepath' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="summary">
+        <NativeTabs.Trigger.Label>Summary</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'chart.pie', selected: 'chart.pie.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

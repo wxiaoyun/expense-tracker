@@ -115,7 +115,7 @@ export default function TransactionDrawer() {
       }
 
       invalidateTransactions();
-      router.back();
+      router.dismiss();
       console.info('[transaction.form][stage=save] transaction saved', {
         mode: isEdit ? 'edit' : 'create',
         id: id ?? null,
@@ -131,7 +131,7 @@ export default function TransactionDrawer() {
   };
 
   const handleCancel = () => {
-    router.back();
+    router.dismiss();
   };
 
   if (loading) {
