@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '@/db';
 import { categories, recurringTransactions, settings, transactions } from '@/db/schema';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
-import { createLocalBackup, restoreDatabase, validateSqliteFile } from '@/libs/backup';
+import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
 import { currencyAtom, savePreference, weekStartAtom, type WeekStart } from '@/libs/preferences';
 import Feather from '@expo/vector-icons/Feather';
 import { useQueryClient } from '@tanstack/react-query';
@@ -143,11 +143,18 @@ export default function SettingsScreen() {
                 const sourceUri = result.assets[0].uri;
                 const recoveryPath = await createLocalBackup();
                 console.info('[backup.import][stage=create_recovery] pre-restore snapshot created', { recovery_path: recoveryPath });
-                await restoreDatabase(sourceUri);
-                console.info('[backup.import][stage=sqlite_backup] database restored');
+                const importResult = await importDatabase(sourceUri);
+                console.info('[backup.import][stage=sqlite_backup] database imported', {
+                  mode: importResult.mode,
+                });
                 queryClient.clear();
                 router.replace('/(tabs)');
-                Alert.alert('Import Complete', 'Database restored and app data reloaded.');
+                Alert.alert(
+                  'Import Complete',
+                  importResult.mode === 'migrate'
+                    ? 'Legacy database migrated and app data reloaded.'
+                    : 'Database restored and app data reloaded.',
+                );
               } catch (e) {
                 console.error('[backup.import][stage=copy_db] import failed', { error: String(e) });
                 Alert.alert('Import Failed', String(e));

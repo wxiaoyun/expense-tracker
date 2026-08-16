@@ -1,7 +1,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import { DATABASE_NAME } from '@/db/schema-sql';
-import { sqlite } from '@/db';
+import { db, sqlite } from '@/db';
+import { getLegacyDbPath, runMigration } from '@/db/migration';
 import { backupFilename, hasExactColumns, hasSqliteHeader } from './backup-core';
 
 export const databasePath = `${FileSystem.documentDirectory}SQLite/${DATABASE_NAME}`;
@@ -12,6 +13,9 @@ const REQUIRED_COLUMNS: Record<string, string[]> = {
   categories: ['id', 'name', 'icon', 'color', 'is_preset', 'sort_order', 'created_at'],
   settings: ['key', 'value'],
 };
+const IMPORT_STAGING_NAME = 'expense_tracker_import_candidate.db';
+const sqliteDirectory = `${FileSystem.documentDirectory}SQLite/`;
+const importStagingPath = `${sqliteDirectory}${IMPORT_STAGING_NAME}`;
 
 export async function validateSqliteFile(uri: string) {
   console.info('[backup.validate][stage=read_header] reading backup header', { uri });
@@ -68,5 +72,99 @@ export async function restoreDatabase(sourceUri: string) {
   } finally {
     await sourceDb.closeAsync();
     await FileSystem.deleteAsync(stagingPath, { idempotent: true });
+  }
+}
+
+function getColumnNames(sourceDb: SQLite.SQLiteDatabase, table: string) {
+  return sourceDb
+    .getAllSync<{ name: string }>(`PRAGMA table_info(${table})`)
+    .map((column) => column.name);
+}
+
+function isV2Database(sourceDb: SQLite.SQLiteDatabase) {
+  return Object.entries(REQUIRED_COLUMNS).every(([table, expected]) =>
+    hasExactColumns(getColumnNames(sourceDb, table), expected),
+  );
+}
+
+function isLegacyDatabase(sourceDb: SQLite.SQLiteDatabase) {
+  const tables = sourceDb
+    .getAllSync<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")
+    .map((row) => row.name);
+  if (!tables.includes('transactions') || !tables.includes('recurring_transactions')) {
+    return false;
+  }
+
+  const transactionColumns = sourceDb.getAllSync<{ name: string; type: string }>(
+    'PRAGMA table_info(transactions)',
+  );
+  const idColumn = transactionColumns.find((column) => column.name === 'id');
+  const hasNotesColumn = transactionColumns.some((column) => column.name === 'notes');
+
+  return idColumn?.type.toUpperCase() === 'INTEGER' && !hasNotesColumn;
+}
+
+function clearCurrentDatabase() {
+  sqlite.execSync(`
+    DELETE FROM transactions;
+    DELETE FROM recurring_transactions;
+    DELETE FROM categories;
+    DELETE FROM settings;
+  `);
+}
+
+export async function importDatabase(sourceUri: string) {
+  await validateSqliteFile(sourceUri);
+  await FileSystem.deleteAsync(importStagingPath, { idempotent: true });
+  await FileSystem.copyAsync({ from: sourceUri, to: importStagingPath });
+
+  let sourceDb: SQLite.SQLiteDatabase | null = null;
+  try {
+    sourceDb = SQLite.openDatabaseSync(IMPORT_STAGING_NAME, {}, sqliteDirectory);
+    const integrity = sourceDb.getFirstSync<{ integrity_check: string }>('PRAGMA integrity_check');
+    if (integrity?.integrity_check !== 'ok') {
+      console.error('[backup.import][stage=validate_schema] imported database integrity failed', {
+        integrity: integrity?.integrity_check,
+      });
+      throw new Error('Backup schema or integrity is invalid');
+    }
+
+    if (isV2Database(sourceDb)) {
+      console.info('[backup.import][stage=restore_v2] restoring current-schema database');
+      await SQLite.backupDatabaseAsync({ sourceDatabase: sourceDb, destDatabase: sqlite });
+      return { mode: 'restore' as const };
+    }
+
+    if (isLegacyDatabase(sourceDb)) {
+      sourceDb.closeSync();
+      sourceDb = null;
+
+      const legacyPath = getLegacyDbPath();
+      await FileSystem.deleteAsync(legacyPath, { idempotent: true });
+      await FileSystem.copyAsync({ from: importStagingPath, to: legacyPath });
+      console.info('[backup.import][stage=migrate_legacy] staging legacy database', { legacyPath });
+
+      clearCurrentDatabase();
+      const result = await runMigration(db);
+      if (!result.success) {
+        throw new Error(result.error || 'Legacy database migration failed');
+      }
+
+      return { mode: 'migrate' as const, stats: result.stats };
+    }
+
+    console.error('[backup.import][stage=validate_schema] imported database has unsupported schema');
+    throw new Error('Backup schema or integrity is invalid');
+  } finally {
+    if (sourceDb) {
+      try {
+        sourceDb.closeSync();
+      } catch (closeError) {
+        console.warn('[backup.import][stage=close_source] source database close failed', {
+          error: String(closeError),
+        });
+      }
+    }
+    await FileSystem.deleteAsync(importStagingPath, { idempotent: true });
   }
 }
