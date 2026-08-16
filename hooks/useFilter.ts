@@ -23,7 +23,7 @@ export const debouncedSetSearch = debounce((search: string) => {
 }, 200);
 
 const now = new Date();
-const endOfDay = (date: Date) =>
+export const endOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
 export const dateRangeAtom = atom<DateRange>({

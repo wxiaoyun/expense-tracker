@@ -31,6 +31,7 @@ export const useInfiniteTransactionListQuery = (filter: any) => {
     },
     getNextPageParam: (lastPage) => lastPage.nextOffset,
     initialPageParam: 0,
+    placeholderData: (previousData) => previousData,
   });
 };
 

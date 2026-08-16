@@ -1,8 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator, Appearance } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, Pressable, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// eslint-disable-next-line import/no-unresolved
-import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import Feather from '@expo/vector-icons/Feather';
@@ -14,14 +12,9 @@ import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, restoreDatabase, validateSqliteFile } from '@/libs/backup';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAtom } from 'jotai';
-import { currencyAtom, themeAtom, weekStartAtom, savePreference, type ThemePreference, type WeekStart } from '@/libs/preferences';
+import { currencyAtom, weekStartAtom, savePreference, type WeekStart } from '@/libs/preferences';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
-const THEMES: { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-];
 const WEEK_STARTS: { value: WeekStart; label: string }[] = [
   { value: 'sunday', label: 'Sunday' },
   { value: 'monday', label: 'Monday' },
@@ -32,39 +25,74 @@ type PickerOption = { value: string; label: string };
 function PreferenceRow({
   label,
   valueLabel,
-  options,
-  onSelect,
+  onPress,
   last,
 }: {
   label: string;
   valueLabel: string;
-  options: PickerOption[];
-  onSelect: (value: string) => void;
+  onPress: () => void;
   last?: boolean;
 }) {
-  const menuConfig: MenuConfig = {
-    menuTitle: label,
-    menuItems: options.map((option) => ({
-      actionKey: option.value,
-      actionTitle: option.label,
-      menuState: option.value === valueLabel || option.label === valueLabel ? 'on' : 'off',
-    })),
-  };
-
   return (
-    <ContextMenuButton
-      isMenuPrimaryAction
-      menuConfig={menuConfig}
-      onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={onPress}
+      activeOpacity={0.6}
+      style={[styles.row, last && { borderBottomWidth: 0 }]}
     >
-      <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <View style={styles.rowValueWrap}>
-          <Text style={styles.rowValue}>{valueLabel}</Text>
-          <Feather name="chevron-down" size={16} color="#C7C7CC" />
-        </View>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <View style={styles.rowValueWrap}>
+        <Text style={styles.rowValue}>{valueLabel}</Text>
+        <Feather name="chevron-down" size={16} color="#C7C7CC" />
       </View>
-    </ContextMenuButton>
+    </TouchableOpacity>
+  );
+}
+
+function OptionPicker({
+  visible,
+  title,
+  options,
+  value,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  options: PickerOption[];
+  value: string;
+  onSelect: (value: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.pickerBackdrop} onPress={onClose}>
+        <Pressable style={styles.pickerSheet} onPress={() => {}}>
+          <Text style={styles.pickerTitle}>{title}</Text>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => {
+              const selected = item.value === value;
+              return (
+                <TouchableOpacity
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    onSelect(item.value);
+                    onClose();
+                  }}
+                >
+                  <Text style={[styles.pickerOptionLabel, selected && styles.pickerOptionLabelSelected]}>
+                    {item.label}
+                  </Text>
+                  {selected ? <Feather name="check" size={18} color="#007AFF" /> : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -72,9 +100,9 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useAtom(currencyAtom);
-  const [theme, setTheme] = useAtom(themeAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [restoring, setRestoring] = useState(false);
+  const [picker, setPicker] = useState<{ title: string; options: PickerOption[]; value: string; onSelect: (value: string) => void } | null>(null);
   const [autoBackup, setAutoBackup] = useState(() => {
     try {
       const row = db.select().from(settings).where(eq(settings.key, 'backup.cadence')).get();
@@ -96,12 +124,9 @@ export default function SettingsScreen() {
     }
   };
 
-  const applyTheme = useCallback((value: string) => {
-    const next = value as ThemePreference;
-    setTheme(next);
-    savePreference('pref.theme', next).catch(() => {});
-    Appearance.setColorScheme(next === 'system' ? 'unspecified' : next);
-  }, [setTheme]);
+  const openPicker = useCallback((title: string, options: PickerOption[], value: string, onSelect: (value: string) => void) => {
+    setPicker({ title, options, value, onSelect });
+  }, []);
 
   const changeCurrency = useCallback((value: string) => {
     setCurrency(value);
@@ -208,25 +233,21 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
     <ScrollView pointerEvents={restoring ? 'none' : 'auto'} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Settings</Text>
+        <Text style={styles.pageSubtitle}>Preferences, backup, and data</Text>
+      </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <PreferenceRow
           label="Currency"
           valueLabel={currency}
-          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-          onSelect={changeCurrency}
-        />
-        <PreferenceRow
-          label="Theme"
-          valueLabel={THEMES.find((t) => t.value === theme)?.label ?? 'System'}
-          options={THEMES}
-          onSelect={applyTheme}
+          onPress={() => openPicker('Currency', CURRENCIES.map((c) => ({ value: c, label: c })), currency, changeCurrency)}
         />
         <PreferenceRow
           label="Week starts"
           valueLabel={WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}
-          options={WEEK_STARTS}
-          onSelect={changeWeekStart}
+          onPress={() => openPicker('Week starts', WEEK_STARTS, weekStart, changeWeekStart)}
           last
         />
       </View>
@@ -267,6 +288,16 @@ export default function SettingsScreen() {
     </View>
     </ScrollView>
     {restoring && <View style={styles.restoreOverlay}><ActivityIndicator size="large" /><Text style={styles.restoreText}>Restoring database</Text></View>}
+    {picker && (
+      <OptionPicker
+        visible
+        title={picker.title}
+        options={picker.options}
+        value={picker.value}
+        onSelect={picker.onSelect}
+        onClose={() => setPicker(null)}
+      />
+    )}
   </View>
   );
 }
@@ -290,6 +321,19 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 24,
     paddingBottom: 32,
+  },
+  pageHeader: {
+    marginBottom: 4,
+  },
+  pageTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#000',
+  },
+  pageSubtitle: {
+    fontSize: 15,
+    color: '#6E6E73',
+    marginTop: 4,
   },
   section: {
     backgroundColor: '#fff',
@@ -326,5 +370,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+    maxHeight: '70%',
+  },
+  pickerTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 24,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+  },
+  pickerOptionLabel: {
+    fontSize: 17,
+    color: '#000',
+  },
+  pickerOptionLabelSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });

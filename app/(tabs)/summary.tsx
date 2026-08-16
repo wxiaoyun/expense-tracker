@@ -70,6 +70,10 @@ export default function SummaryScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Summary</Text>
+        <Text style={styles.pageSubtitle}>Spending insights and trends</Text>
+      </View>
       <View style={styles.kpiRow}>
         <View style={styles.kpiCard}>
           <Text style={[styles.kpiLabel, { color: textColor, opacity: 0.6 }]}>Total</Text>
@@ -136,6 +140,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pageHeader: {
+    marginBottom: 16,
+  },
+  pageTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#000',
+  },
+  pageSubtitle: {
+    fontSize: 15,
+    color: '#6E6E73',
+    marginTop: 4,
   },
   kpiRow: {
     flexDirection: 'row',

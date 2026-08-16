@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import type { DateRangePreset } from '@/hooks/useFilter';
 
 type ExpenseFilterBarProps = {
@@ -10,12 +11,18 @@ type ExpenseFilterBarProps = {
   categories?: string[];
   selectedCategories?: string[];
   onCategoriesChange?: (categories: string[]) => void;
+  customStart?: Date | null;
+  customEnd?: Date | null;
+  onCustomStartChange?: (date: Date) => void;
+  onCustomEndChange?: (date: Date) => void;
 };
 
 const PRESETS: { label: string; accessibilityLabel: string; value: DateRangePreset }[] = [
+  { label: 'Week', accessibilityLabel: 'This week', value: 'weekly' },
   { label: 'Month', accessibilityLabel: 'This month', value: 'monthly' },
   { label: 'Year', accessibilityLabel: 'Last 365 days', value: '365d' },
   { label: 'All', accessibilityLabel: 'All history', value: 'all' },
+  { label: 'Custom', accessibilityLabel: 'Custom range', value: 'custom' },
 ];
 
 export function ExpenseFilterBar({
@@ -26,6 +33,10 @@ export function ExpenseFilterBar({
   categories = [],
   selectedCategories = [],
   onCategoriesChange,
+  customStart,
+  customEnd,
+  onCustomStartChange,
+  onCustomEndChange,
 }: ExpenseFilterBarProps) {
   return (
     <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 }}>
@@ -68,6 +79,28 @@ export function ExpenseFilterBar({
           );
         })}
       </ScrollView>
+      {preset === 'custom' && (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1, borderRadius: 12, backgroundColor: '#F2F2F7', paddingHorizontal: 10, justifyContent: 'center' }}>
+            <DateTimePicker
+              accessibilityLabel="Custom start date"
+              value={customStart ?? new Date()}
+              mode="date"
+              display="compact"
+              onChange={(_, date) => date && onCustomStartChange?.(date)}
+            />
+          </View>
+          <View style={{ flex: 1, borderRadius: 12, backgroundColor: '#F2F2F7', paddingHorizontal: 10, justifyContent: 'center' }}>
+            <DateTimePicker
+              accessibilityLabel="Custom end date"
+              value={customEnd ?? new Date()}
+              mode="date"
+              display="compact"
+              onChange={(_, date) => date && onCustomEndChange?.(date)}
+            />
+          </View>
+        </View>
+      )}
       {categories.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {categories.map(category => {
           const selected = selectedCategories.includes(category);

@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
 import { deleteTransaction, listCategories, setVerification } from '@/db/transaction';
 import { useQuery } from '@tanstack/react-query';
-import { computeDateRange, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
+import { computeDateRange, endOfDay, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
 import { useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
 import { useInvalidateTransactions } from '@/hooks/useQueryClient';
 import { showConfirmDialog } from '@/libs/dialog';
@@ -29,8 +29,51 @@ export default function HomeScreen() {
   });
 
   const handlePresetChange = useCallback((preset: DateRangePreset) => {
+    if (preset === 'custom') {
+      setDateRange((prev) => {
+        const customStart = prev.customStart ?? new Date();
+        const customEnd = prev.customEnd ?? new Date();
+        return {
+          ...prev,
+          preset: 'custom',
+          customStart,
+          customEnd,
+          start: customStart,
+          end: endOfDay(customEnd),
+        };
+      });
+      return;
+    }
     const range = computeDateRange(preset, new Date());
     setDateRange({ preset, ...range });
+  }, [setDateRange]);
+
+  const handleCustomStartChange = useCallback((date: Date) => {
+    setDateRange((prev) => {
+      const customEnd = prev.customEnd ?? new Date();
+      return {
+        ...prev,
+        preset: 'custom',
+        customStart: date,
+        customEnd,
+        start: date,
+        end: endOfDay(customEnd),
+      };
+    });
+  }, [setDateRange]);
+
+  const handleCustomEndChange = useCallback((date: Date) => {
+    setDateRange((prev) => {
+      const customStart = prev.customStart ?? new Date(0);
+      return {
+        ...prev,
+        preset: 'custom',
+        customStart,
+        customEnd: date,
+        start: customStart,
+        end: endOfDay(date),
+      };
+    });
   }, [setDateRange]);
 
   const invalidateTransactionQueries = useInvalidateTransactions();
@@ -153,6 +196,10 @@ export default function HomeScreen() {
         categories={availableCategories}
         selectedCategories={categories}
         onCategoriesChange={setCategories}
+        customStart={dateRange.customStart ?? null}
+        customEnd={dateRange.customEnd ?? null}
+        onCustomStartChange={handleCustomStartChange}
+        onCustomEndChange={handleCustomEndChange}
       />
       <TransactionList
         onEdit={handleEdit}
