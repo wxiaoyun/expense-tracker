@@ -13,6 +13,7 @@ export default function TransactionDrawer() {
   const invalidateTransactions = useInvalidateTransactions();
 
   const [amount, setAmount] = useState('');
+  const [isIncome, setIsIncome] = useState(false);
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [notes, setNotes] = useState('');
@@ -46,6 +47,7 @@ export default function TransactionDrawer() {
         const tx = await getTransaction(id);
         if (tx) {
           setAmount(String(Math.abs(tx.amount)));
+          setIsIncome(tx.amount > 0);
           setDescription(tx.description);
           setCategory(tx.category);
           setNotes(tx.notes || '');
@@ -73,8 +75,7 @@ export default function TransactionDrawer() {
         return;
       }
 
-      // Negative = expense, positive = income
-      const signedAmount = -Math.abs(parsedAmount);
+      const signedAmount = isIncome ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
 
       if (!description.trim()) {
         setError('Description is required');
@@ -188,6 +189,24 @@ export default function TransactionDrawer() {
           keyboardType="decimal-pad"
           placeholderTextColor="#999"
         />
+
+        <View style={styles.typeRow}>
+          {(['Expense', 'Income'] as const).map((type) => {
+            const selected = isIncome === (type === 'Income');
+            return (
+              <Pressable
+                key={type}
+                accessibilityRole="button"
+                accessibilityLabel={`Transaction type: ${type}`}
+                accessibilityState={{ selected }}
+                onPress={() => setIsIncome(type === 'Income')}
+                style={[styles.typeButton, selected && styles.typeButtonSelected]}
+              >
+                <Text style={[styles.typeButtonText, selected && styles.typeButtonTextSelected]}>{type}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -311,6 +330,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#000',
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  typeButton: {
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 10,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+  },
+  typeButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  typeButtonText: {
+    color: '#3C3C43',
+    fontWeight: '600',
+  },
+  typeButtonTextSelected: {
+    color: '#fff',
   },
   notesInput: {
     minHeight: 80,
