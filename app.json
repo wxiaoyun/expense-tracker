@@ -4,8 +4,9 @@
     "slug": "expo-expense-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "vibetracker",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -14,7 +15,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wxiaoyun.expense-tracker",
+      "bundleIdentifier": "com.wxiaoyun.vibetracker",
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch"
@@ -23,6 +24,18 @@
         "UIFileSharingEnabled": true,
         "ITSAppUsesNonExemptEncryption": false
       }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.wxiaoyun.vibetracker"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
@@ -36,7 +49,15 @@
       "expo-image",
       "expo-localization",
       "expo-sharing",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-sqlite",
       "expo-status-bar",
       "expo-web-browser",
