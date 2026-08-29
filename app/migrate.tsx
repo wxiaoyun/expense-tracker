@@ -19,18 +19,28 @@ export default function MigrationScreen() {
 
   useEffect(() => {
     const checkLegacy = async () => {
-      if (legacyDbExists()) {
-        const counts = await getLegacyCounts();
-        setCounts(counts);
-        setStatus('found');
-      } else {
-        // No legacy DB - just seed presets and skip to main app
-        await seedPresetCategories(db);
-        await markMigrationComplete(db);
-        router.replace('/(tabs)');
+      try {
+        console.info('[migration.screen][stage=check_legacy] checking for legacy database');
+        if (legacyDbExists()) {
+          const legacyCounts = await getLegacyCounts();
+          if (!legacyCounts) throw new Error('Could not read legacy database');
+          setCounts(legacyCounts);
+          setStatus('found');
+        } else {
+          console.info('[migration.screen][stage=initialize] initializing latest database');
+          await seedPresetCategories(db);
+          await markMigrationComplete(db);
+          router.replace('/(tabs)');
+        }
+      } catch (checkError) {
+        console.error('[migration.screen][stage=check_legacy] migration check failed', {
+          error: String(checkError),
+        });
+        setError(String(checkError));
+        setStatus('error');
       }
     };
-    checkLegacy();
+    void checkLegacy();
   }, []);
 
   const handleMigrate = async () => {
@@ -39,15 +49,23 @@ export default function MigrationScreen() {
     setError(null);
 
     try {
+      console.info('[migration.screen][stage=run_migration] starting legacy migration');
       const result = await runMigration(db);
       if (result.success) {
         setProgress('Migration complete!');
         setStatus('success');
       } else {
-        setError(result.error || 'Migration failed');
+        const migrationError = result.error || 'Migration failed';
+        console.error('[migration.screen][stage=run_migration] legacy migration failed', {
+          error: migrationError,
+        });
+        setError(migrationError);
         setStatus('error');
       }
     } catch (err) {
+      console.error('[migration.screen][stage=run_migration] legacy migration failed', {
+        error: String(err),
+      });
       setError(String(err));
       setStatus('error');
     }

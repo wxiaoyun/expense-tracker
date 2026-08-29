@@ -20,7 +20,17 @@ const PREF_KEYS = {
   suggestionLookback: 'pref.template_suggestion_lookback',
 } as const;
 
-const SUGGESTION_LOOKBACK_VALUES: SuggestionLookback[] = ['1m', '3m', '6m', '12m', 'all'];
+export const SUGGESTION_LOOKBACK_OPTIONS: ReadonlyArray<{
+  value: SuggestionLookback;
+  label: string;
+}> = [
+  { value: '1m', label: '1 month' },
+  { value: '3m', label: '3 months' },
+  { value: '6m', label: '6 months' },
+  { value: '12m', label: '12 months' },
+  { value: 'all', label: 'All time' },
+];
+const SUGGESTION_LOOKBACK_VALUES = SUGGESTION_LOOKBACK_OPTIONS.map(({ value }) => value);
 
 const isSuggestionLookback = (value: string | null): value is SuggestionLookback =>
   value !== null && SUGGESTION_LOOKBACK_VALUES.includes(value as SuggestionLookback);
@@ -64,6 +74,15 @@ export async function savePreference(key: string, value: string) {
     console.error('[preferences.save][stage=upsert] setting save failed', { key, error: String(error) });
     throw error;
   }
+}
+
+export async function savePreferenceAndApply(
+  key: string,
+  value: string,
+  apply: () => void,
+) {
+  await savePreference(key, value);
+  apply();
 }
 
 export const PREFERENCE_KEYS = PREF_KEYS;

@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Toaster, toast } from 'sonner-native';
+import { toast } from 'sonner-native';
 
 import { AddTemplateButton } from '@/components/templates/add-template-button';
 import { TemplateFilterBar } from '@/components/templates/template-filter-bar';
@@ -222,7 +222,6 @@ export default function TemplatesScreen() {
         />
       ) : null}
       <AddTemplateButton />
-      <Toaster position="bottom-center" />
     </View>
   );
 }

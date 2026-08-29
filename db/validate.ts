@@ -23,39 +23,48 @@ const EXPECTED_TABLES = {
   transactions: {
     columns: [
       'id',
-      'amount', 
+      'amount',
       'transaction_date',
       'description',
       'category',
-      'recurring_transaction_id',
+      'template_id',
       'verified',
       'notes',
+      'deleted_at',
       'created_at',
       'updated_at'
     ],
     indexes: [
       'idx_transactions_date',
-      'idx_transactions_category', 
-      'idx_transactions_recurring',
-      'idx_transactions_verified'
+      'idx_transactions_category',
+      'idx_transactions_template',
+      'idx_transactions_verified',
+      'idx_transactions_deleted'
     ]
   },
-  recurring_transactions: {
+  transaction_templates: {
     columns: [
       'id',
+      'name',
+      'normalized_name',
       'amount',
-      'description', 
+      'transaction_type',
+      'description',
       'category',
-      'start_date',
-      'last_charged',
+      'notes',
+      'verified',
       'recurrence_value',
+      'start_date',
+      'schedule_cursor_at',
+      'schedule_active',
+      'deleted_at',
       'created_at',
       'updated_at'
     ],
     indexes: [
-      'idx_recurring_transactions_date',
-      'idx_recurring_transactions_category',
-      'idx_recurring_transactions_last_charged'
+      'idx_templates_active_name',
+      'idx_templates_category',
+      'idx_templates_schedule'
     ]
   },
   settings: {
@@ -270,33 +279,27 @@ const performIntegrityChecks = async (db: ReturnType<typeof drizzle>): Promise<b
         }
       }
       
-      // Check recurring_transactions table has valid data types
-      const recurringTransactionSample = await db.get<{
+      // Check transaction_templates table has valid non-nullable data types
+      const templateSample = await db.get<{
         id: string;
-        amount: number;
-        description: string;
-        category: string;
-        start_date: number;
-        last_charged: number | null;
-        recurrence_value: string;
+        name: string;
+        normalized_name: string;
+        schedule_active: number;
         created_at: number;
         updated_at: number;
       }>(
-        sql`SELECT id, amount, description, category, start_date, last_charged, recurrence_value, created_at, updated_at 
-           FROM recurring_transactions LIMIT 1`
+        sql`SELECT id, name, normalized_name, schedule_active, created_at, updated_at
+           FROM transaction_templates LIMIT 1`
       );
-      
-      if (recurringTransactionSample) {
-        if (typeof recurringTransactionSample.id !== 'string' ||
-            typeof recurringTransactionSample.amount !== 'number' ||
-            typeof recurringTransactionSample.description !== 'string' ||
-            typeof recurringTransactionSample.category !== 'string' ||
-            typeof recurringTransactionSample.start_date !== 'number' ||
-            typeof recurringTransactionSample.last_charged !== 'number' ||
-            typeof recurringTransactionSample.recurrence_value !== 'string' ||
-            typeof recurringTransactionSample.created_at !== 'number' ||
-            typeof recurringTransactionSample.updated_at !== 'number') {
-          console.error("[DB][performIntegrityChecks] Invalid data types in recurring_transactions table");
+
+      if (templateSample) {
+        if (typeof templateSample.id !== 'string' ||
+            typeof templateSample.name !== 'string' ||
+            typeof templateSample.normalized_name !== 'string' ||
+            typeof templateSample.schedule_active !== 'number' ||
+            typeof templateSample.created_at !== 'number' ||
+            typeof templateSample.updated_at !== 'number') {
+          console.error("[DB][performIntegrityChecks] Invalid data types in transaction_templates table");
           return false;
         }
       }
@@ -332,147 +335,88 @@ const performIntegrityChecks = async (db: ReturnType<typeof drizzle>): Promise<b
 };
 
 /**
- * Quick validation check - just verify the database can be opened and has the basic tables
+ * Fast current-schema validation without logging database paths or schema contents.
  */
 export const quickValidateDatabase = async (databasePath: string): Promise<boolean> => {
   let db: SQLite.SQLiteDatabase | null = null;
-  
+  let stage = 'open';
+
   try {
-    console.info("[DB][quickValidateDatabase] Opening database:", databasePath);
-    
-    // Try different approaches to open the database
+    console.info('[db.quick_validate][stage=open] opening database');
     try {
       db = SQLite.openDatabaseSync(databasePath);
-    } catch (openError) {
-      console.error("[DB][quickValidateDatabase] Failed to open with openDatabaseSync:", openError);
-      
-      // Try alternative opening method
+    } catch {
+      console.info(
+        '[db.quick_validate][stage=open_fallback] retrying database open',
+        { primary_open_failed: true },
+      );
       try {
         db = SQLite.openDatabaseSync(databasePath, { enableChangeListener: false });
-      } catch (altOpenError) {
-        console.error("[DB][quickValidateDatabase] Failed to open with alternative method:", altOpenError);
+      } catch (error) {
+        console.error('[db.quick_validate][stage=open] database open failed', {
+          error_type: error instanceof Error ? error.name : typeof error,
+        });
         return false;
       }
     }
-    
-    const drizzleDb = drizzle(db);
-    
-    // Test basic database connectivity
-    try {
-      const testQuery = await drizzleDb.get(sql`SELECT 1 as test`);
-      console.info("[DB][quickValidateDatabase] Basic connectivity test:", testQuery);
-    } catch (connectivityError) {
-      console.error("[DB][quickValidateDatabase] Basic connectivity failed:", connectivityError);
-      return false;
-    }
-    
-    // Check SQLite version and database info
-    try {
-      const version = await drizzleDb.get(sql`SELECT sqlite_version() as version`);
-      console.info("[DB][quickValidateDatabase] SQLite version:", version);
-      
-      const dbInfo = await drizzleDb.all(sql`PRAGMA database_list`);
-      console.info("[DB][quickValidateDatabase] Database info:", dbInfo);
-    } catch (infoError) {
-      console.warn("[DB][quickValidateDatabase] Could not get database info:", infoError);
-    }
-    
-    // List all tables for debugging
-    const allTables = await drizzleDb.all(
-      sql`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`
-    );
-    console.info("[DB][quickValidateDatabase] Found tables:", allTables.map((t: any) => t.name));
-    
-    // Also check all objects in sqlite_master for debugging
-    const allObjects = await drizzleDb.all(
-      sql`SELECT type, name FROM sqlite_master ORDER BY type, name`
-    );
-    console.info("[DB][quickValidateDatabase] All database objects:", allObjects);
-    
-    // Try a different approach to list tables
-    const tablesAlt = await drizzleDb.all(
-      sql`SELECT tbl_name FROM sqlite_master WHERE type='table'`
-    );
-    console.info("[DB][quickValidateDatabase] Tables (alternative query):", tablesAlt);
-    
-    // Try raw SQLite queries without Drizzle
-    try {
-      console.info("[DB][quickValidateDatabase] Trying raw SQLite queries...");
-      const rawTables = db.getAllSync("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
-      console.info("[DB][quickValidateDatabase] Raw SQLite tables:", rawTables);
-      
-      const rawObjects = db.getAllSync("SELECT type, name FROM sqlite_master ORDER BY type, name");
-      console.info("[DB][quickValidateDatabase] Raw SQLite objects:", rawObjects);
-      
-      // Check if sqlite_master itself has any content
-      const masterCount = db.getFirstSync("SELECT COUNT(*) as count FROM sqlite_master");
-      console.info("[DB][quickValidateDatabase] sqlite_master row count:", masterCount);
-      
-      // Try to get all content from sqlite_master
-      const allMaster = db.getAllSync("SELECT * FROM sqlite_master");
-      console.info("[DB][quickValidateDatabase] All sqlite_master content:", allMaster);
-      
-      // Check database integrity
-      const integrityCheck = db.getFirstSync("PRAGMA integrity_check");
-      console.info("[DB][quickValidateDatabase] Integrity check:", integrityCheck);
-      
-      // Check if this might be an encrypted database
-      const firstBytes = db.getFirstSync("PRAGMA schema_version");
-      console.info("[DB][quickValidateDatabase] Schema version:", firstBytes);
-      
-      // Check user version (might indicate app version)
-      const userVersion = db.getFirstSync("PRAGMA user_version");
-      console.info("[DB][quickValidateDatabase] User version:", userVersion);
-      
-      // Check page count (should be > 0 for non-empty database)
-      const pageCount = db.getFirstSync("PRAGMA page_count");
-      console.info("[DB][quickValidateDatabase] Page count:", pageCount);
-      
-      // Check page size
-      const pageSize = db.getFirstSync("PRAGMA page_size");
-      console.info("[DB][quickValidateDatabase] Page size:", pageSize);
-      
-    } catch (rawError) {
-      console.error("[DB][quickValidateDatabase] Raw SQLite queries failed:", rawError);
-    }
-    
-    // Check if the main tables exist
-    const categoriesTable = await drizzleDb.get(
-      sql`SELECT name FROM sqlite_master WHERE type='table' AND name='categories'`
-    );
-    
-    const transactionsTable = await drizzleDb.get(
-      sql`SELECT name FROM sqlite_master WHERE type='table' AND name='transactions'`
-    );
-    
-    const recurringTransactionsTable = await drizzleDb.get(
-      sql`SELECT name FROM sqlite_master WHERE type='table' AND name='recurring_transactions'`
-    );
-    
-    const settingsTable = await drizzleDb.get(
-      sql`SELECT name FROM sqlite_master WHERE type='table' AND name='settings'`
-    );
-    
-    console.info("[DB][quickValidateDatabase] Categories table found:", !!categoriesTable);
-    console.info("[DB][quickValidateDatabase] Transactions table found:", !!transactionsTable);
-    console.info("[DB][quickValidateDatabase] Recurring transactions table found:", !!recurringTransactionsTable);
-    console.info("[DB][quickValidateDatabase] Settings table found:", !!settingsTable);
-    
-    const isValid = !!(categoriesTable && transactionsTable && recurringTransactionsTable && settingsTable);
-    console.info("[DB][quickValidateDatabase] Validation result:", isValid);
-    
-    return isValid;
-    
+
+    stage = 'inspect';
+    console.info('[db.quick_validate][stage=inspect] inspecting database requirements');
+    const integrity = db.getFirstSync<{ integrity_check: string }>('PRAGMA integrity_check');
+    const userVersion = db.getFirstSync<{ user_version: number }>('PRAGMA user_version');
+    const requiredTables = db.getFirstSync<{ count: number }>(`
+      SELECT COUNT(*) AS count
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name IN ('categories', 'transactions', 'transaction_templates', 'settings')
+    `);
+    const transactionColumns = db
+      .getAllSync<{ name: string }>('PRAGMA table_info(transactions)')
+      .map(({ name }) => name);
+    const templateColumns = db
+      .getAllSync<{ name: string }>('PRAGMA table_info(transaction_templates)')
+      .map(({ name }) => name);
+
+    const integrityOk = integrity?.integrity_check === 'ok';
+    const requiredTableCount = Number(requiredTables?.count ?? 0);
+    const transactionColumnsOk =
+      transactionColumns.length === EXPECTED_TABLES.transactions.columns.length &&
+      EXPECTED_TABLES.transactions.columns.every((name, index) => transactionColumns[index] === name);
+    const templateColumnsOk =
+      templateColumns.length === EXPECTED_TABLES.transaction_templates.columns.length &&
+      EXPECTED_TABLES.transaction_templates.columns.every((name, index) => templateColumns[index] === name);
+    const userVersionOk = Number(userVersion?.user_version ?? 0) === 3;
+    const valid =
+      integrityOk &&
+      requiredTableCount === 4 &&
+      transactionColumnsOk &&
+      templateColumnsOk &&
+      userVersionOk;
+
+    console.info('[db.quick_validate][stage=result] validation completed', {
+      integrity_ok: integrityOk,
+      required_table_count: requiredTableCount,
+      transaction_columns_ok: transactionColumnsOk,
+      template_columns_ok: templateColumnsOk,
+      user_version_ok: userVersionOk,
+      valid,
+    });
+    return valid;
   } catch (error) {
-    console.error("[DB][quickValidateDatabase] Quick validation error:", error);
+    console.error('[db.quick_validate] validation failed', {
+      stage,
+      error_type: error instanceof Error ? error.name : typeof error,
+    });
     return false;
   } finally {
     if (db) {
       try {
         db.closeSync();
-        console.info("[DB][quickValidateDatabase] Database connection closed");
-      } catch (closeError) {
-        console.warn("[DB][quickValidateDatabase] Error closing database:", closeError);
+        console.info('[db.quick_validate][stage=close] database connection closed');
+      } catch (error) {
+        console.error('[db.quick_validate][stage=close] database close failed', {
+          error_type: error instanceof Error ? error.name : typeof error,
+        });
       }
     }
   }
@@ -550,16 +494,16 @@ export const rawSqliteValidateDatabase = async (databaseName: string): Promise<b
       const tableNames = tables.map((t: any) => t.name);
       const hasCategories = tableNames.includes('categories');
       const hasTransactions = tableNames.includes('transactions');
-      const hasRecurringTransactions = tableNames.includes('recurring_transactions');
+      const hasTransactionTemplates = tableNames.includes('transaction_templates');
       const hasSettings = tableNames.includes('settings');
-      
+
       console.info("[DB][rawSqliteValidateDatabase] Has categories table:", hasCategories);
       console.info("[DB][rawSqliteValidateDatabase] Has transactions table:", hasTransactions);
-      console.info("[DB][rawSqliteValidateDatabase] Has recurring_transactions table:", hasRecurringTransactions);
+      console.info("[DB][rawSqliteValidateDatabase] Has transaction_templates table:", hasTransactionTemplates);
       console.info("[DB][rawSqliteValidateDatabase] Has settings table:", hasSettings);
-      
+
       // If we have all required tables, it's valid
-      if (hasCategories && hasTransactions && hasRecurringTransactions && hasSettings) {
+      if (hasCategories && hasTransactions && hasTransactionTemplates && hasSettings) {
         console.info("[DB][rawSqliteValidateDatabase] All required tables found - validation passed");
         return true;
       }

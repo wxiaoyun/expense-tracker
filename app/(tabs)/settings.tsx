@@ -2,10 +2,20 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '@/db';
-import { categories, settings, transactionTemplates, transactions } from '@/db/schema';
+import { settings } from '@/db/schema';
+import { resetAllData, ResetDataError } from '@/db/reset';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
-import { currencyAtom, savePreference, weekStartAtom, type WeekStart } from '@/libs/preferences';
+import {
+  currencyAtom,
+  PREFERENCE_KEYS,
+  savePreferenceAndApply,
+  SUGGESTION_LOOKBACK_OPTIONS,
+  suggestionLookbackAtom,
+  weekStartAtom,
+  type SuggestionLookback,
+  type WeekStart,
+} from '@/libs/preferences';
 import Feather from '@expo/vector-icons/Feather';
 import { useQueryClient } from '@tanstack/react-query';
 import { eq } from 'drizzle-orm';
@@ -68,9 +78,11 @@ export default function SettingsScreen() {
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useAtom(currencyAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
+  const [suggestionLookback, setSuggestionLookback] = useAtom(suggestionLookbackAtom);
   const [restoring, setRestoring] = useState(false);
   const [autoBackup, setAutoBackup] = useState(() => {
     try {
+      console.info('[backup.settings][stage=load] loading backup cadence');
       const row = db.select().from(settings).where(eq(settings.key, 'backup.cadence')).get();
       return row?.value === 'daily';
     } catch (error) {
@@ -81,6 +93,7 @@ export default function SettingsScreen() {
 
   const handleAutoBackup = async (enabled: boolean) => {
     try {
+      console.info('[backup.settings][stage=save] saving backup cadence', { enabled });
       await registerAutoBackup(enabled ? 'daily' : null);
       await db.insert(settings).values({ key: 'backup.cadence', value: enabled ? 'daily' : 'off' }).onConflictDoUpdate({ target: settings.key, set: { value: enabled ? 'daily' : 'off' } }).run();
       setAutoBackup(enabled);
@@ -90,21 +103,45 @@ export default function SettingsScreen() {
     }
   };
 
+  const persistPreference = useCallback(async (
+    key: string,
+    value: string,
+    onSaved: () => void,
+  ) => {
+    try {
+      await savePreferenceAndApply(key, value, onSaved);
+    } catch (error) {
+      console.error('[settings.preference][stage=save] preference update failed', {
+        key,
+        error: String(error),
+      });
+      Alert.alert('Preference Not Saved', 'Your previous setting was kept.');
+    }
+  }, []);
+
   const changeCurrency = useCallback((value: string) => {
-    setCurrency(value);
-    savePreference('pref.currency', value).catch(() => {});
-  }, [setCurrency]);
+    void persistPreference(PREFERENCE_KEYS.currency, value, () => setCurrency(value));
+  }, [persistPreference, setCurrency]);
 
   const changeWeekStart = useCallback((value: string) => {
     const next = value as WeekStart;
-    setWeekStart(next);
-    savePreference('pref.week_start', next).catch(() => {});
-  }, [setWeekStart]);
+    void persistPreference(PREFERENCE_KEYS.weekStart, next, () => setWeekStart(next));
+  }, [persistPreference, setWeekStart]);
+
+  const changeSuggestionLookback = useCallback((value: string) => {
+    const next = value as SuggestionLookback;
+    void persistPreference(
+      PREFERENCE_KEYS.suggestionLookback,
+      next,
+      () => setSuggestionLookback(next),
+    );
+  }, [persistPreference, setSuggestionLookback]);
 
   const handleExport = async () => {
     try {
       console.info('[backup.export][stage=create_snapshot] creating consistent database snapshot');
       const backupPath = await createLocalBackup();
+      console.info('[backup.export][stage=share_db] opening database share sheet');
       await Sharing.shareAsync(backupPath, {
         UTI: 'public.database',
         mimeType: 'application/x-sqlite3',
@@ -118,6 +155,7 @@ export default function SettingsScreen() {
 
   const handleImport = async () => {
     try {
+      console.info('[backup.import][stage=pick_db] opening document picker');
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
@@ -174,7 +212,7 @@ export default function SettingsScreen() {
   const handleReset = () => {
     Alert.alert(
       'Reset All Data',
-      'This will delete ALL transactions, recurring rules, and categories. This cannot be undone.',
+      'This will delete ALL transactions, templates, and categories. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -182,16 +220,12 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.info('[db.reset][stage=delete_tables] resetting local data');
-              await db.delete(transactions).run();
-              await db.delete(transactionTemplates).run();
-              await db.delete(categories).run();
-              await db.delete(settings).run();
-              console.info('[db.reset][stage=delete_tables] local data reset');
+              await resetAllData();
               router.replace('/migrate');
-            } catch (e) {
-              console.error('[db.reset][stage=delete_tables] reset failed', { error: String(e) });
-              Alert.alert('Reset Failed', String(e));
+            } catch (error) {
+              const stage = error instanceof ResetDataError ? error.stage : 'unknown';
+              console.error('[settings.reset] reset failed', { stage, error: String(error) });
+              Alert.alert('Reset Failed', String(error));
             }
           },
         },
@@ -219,6 +253,12 @@ export default function SettingsScreen() {
           valueLabel={WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}
           options={WEEK_STARTS}
           onSelect={changeWeekStart}
+        />
+        <PreferenceRow
+          label="Template suggestion history"
+          valueLabel={SUGGESTION_LOOKBACK_OPTIONS.find((option) => option.value === suggestionLookback)?.label ?? '3 months'}
+          options={[...SUGGESTION_LOOKBACK_OPTIONS]}
+          onSelect={changeSuggestionLookback}
           last
         />
       </View>

@@ -44,6 +44,8 @@ import {
   loadPreferences,
   PREFERENCE_KEYS,
   savePreference,
+  savePreferenceAndApply,
+  SUGGESTION_LOOKBACK_OPTIONS,
   suggestionLookbackAtom,
 } from '../preferences'
 
@@ -62,8 +64,18 @@ describe('template suggestion lookback preference', () => {
     expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
   })
 
-  it.each(['1m', '3m', '6m', '12m', 'all'] as const)('loads the allowed value %s', async (value) => {
-    await db.insert(settings).values({ key: PREFERENCE_KEYS.suggestionLookback, value }).run()
+  it('exposes the exact Settings labels and values', () => {
+    expect(SUGGESTION_LOOKBACK_OPTIONS).toEqual([
+      { value: '1m', label: '1 month' },
+      { value: '3m', label: '3 months' },
+      { value: '6m', label: '6 months' },
+      { value: '12m', label: '12 months' },
+      { value: 'all', label: 'All time' },
+    ])
+  })
+
+  it.each(['1m', '3m', '6m', '12m', 'all'] as const)('saves and loads the allowed value %s', async (value) => {
+    await savePreference(PREFERENCE_KEYS.suggestionLookback, value)
     loadPreferences()
     expect(getDefaultStore().get(suggestionLookbackAtom)).toBe(value)
   })
@@ -101,8 +113,13 @@ describe('template suggestion lookback preference', () => {
       throw new Error('forced preference save failure')
     }) as typeof db.insert)
 
-    await expect(savePreference(PREFERENCE_KEYS.suggestionLookback, 'secret-value'))
-      .rejects.toThrow('forced preference save failure')
+    const apply = jest.fn()
+    await expect(savePreferenceAndApply(
+      PREFERENCE_KEYS.suggestionLookback,
+      'secret-value',
+      apply,
+    )).rejects.toThrow('forced preference save failure')
+    expect(apply).not.toHaveBeenCalled()
     expect(info).toHaveBeenCalledWith(
       '[preferences.save][stage=upsert] saving setting',
       { key: PREFERENCE_KEYS.suggestionLookback },
