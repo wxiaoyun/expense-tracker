@@ -1,40 +1,13 @@
-diff --git a/node_modules/react-native-date-picker/ios/RNDatePickerManager.h b/node_modules/react-native-date-picker/ios/RNDatePickerManager.h
-index 6a4f206..f1d9f50 100644
---- a/node_modules/react-native-date-picker/ios/RNDatePickerManager.h
-+++ b/node_modules/react-native-date-picker/ios/RNDatePickerManager.h
-@@ -8,7 +8,13 @@
- #import <React/RCTConvert.h>
- #import <React/RCTViewManager.h>
- 
-+#ifdef RCT_NEW_ARCH_ENABLED
-+#import <RNDatePickerSpecs/RNDatePickerSpecs.h>
-+
-+@interface RNDatePickerManager : RCTViewManager <NativeRNDatePickerSpec>
-+#else
- @interface RNDatePickerManager : RCTViewManager
-+#endif
- 
- @property (strong, nonatomic) UIViewController *topViewController;
- 
-diff --git a/node_modules/react-native-date-picker/ios/RNDatePickerManager.mm b/node_modules/react-native-date-picker/ios/RNDatePickerManager.mm
-index da42873..0ca98d6 100644
---- a/node_modules/react-native-date-picker/ios/RNDatePickerManager.mm
-+++ b/node_modules/react-native-date-picker/ios/RNDatePickerManager.mm
-@@ -20,6 +20,12 @@ RCT_ENUM_CONVERTER(UIDatePickerMode, (@{
- 
- @implementation RNDatePickerManager
- 
-+#ifdef RCT_NEW_ARCH_ENABLED
-+- (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {
-+  return std::make_shared<facebook::react::NativeRNDatePickerSpecJSI>(params);
-+}
-+#endif
-+
- RCT_EXPORT_MODULE(RNDatePicker)
- 
- RCT_EXPORT_METHOD(addListener : (NSString *)eventName) {
-@@ -236,4 +242,3 @@ RCT_EXPORT_METHOD(closePicker)
- 
- @end
- 
--
+diff --git a/node_modules/react-native-date-picker/package.json b/node_modules/react-native-date-picker/package.json
+--- a/node_modules/react-native-date-picker/package.json
++++ b/node_modules/react-native-date-picker/package.json
+@@ -70,9 +70,6 @@
+     "ios": {
+       "componentProvider": {
+         "RNDatePicker": "RNDatePicker"
+-      },
+-      "modulesProvider": {
+-        "RNDatePicker": "RNDatePickerManager"
+       }
+     }
+   }
