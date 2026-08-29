@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
-import { deleteTransaction, listCategories, setVerification } from '@/db/transaction';
+import { listCategories, setVerification, softDeleteTransaction } from '@/db/transaction';
 import { useQuery } from '@tanstack/react-query';
 import { computeDateRange, endOfDay, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
 import { useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
@@ -141,7 +141,7 @@ export default function HomeScreen() {
       await animateDelete();
 
       try {
-        await deleteTransaction(id);
+        await softDeleteTransaction(id);
         invalidateTransactionQueries();
       } catch (error) {
         console.error("Failed to delete transaction:", error);
