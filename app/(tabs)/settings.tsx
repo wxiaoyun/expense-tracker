@@ -1,19 +1,10 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text as RNText, View } from 'react-native';
-import {
-  Button,
-  Column,
-  FieldGroup,
-  Host,
-  Picker,
-  Row,
-  Spacer,
-  Switch,
-  Text,
-} from '@expo/ui';
 import { db } from '@/db';
-import { settings } from '@/db/schema';
 import { resetAllData, ResetDataError } from '@/db/reset';
+import { settings } from '@/db/schema';
+import {
+  reinitializeAppRuntime,
+  waitForLaunchTemplateProcessing,
+} from '@/libs/app-runtime';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
 import {
@@ -21,20 +12,30 @@ import {
   PREFERENCE_KEYS,
   savePreferenceAndApply,
   SUGGESTION_LOOKBACK_OPTIONS,
-  suggestionLookbackAtom,
-  weekStartAtom,
   type SuggestionLookback,
+  suggestionLookbackAtom,
   type WeekStart,
+  weekStartAtom,
 } from '@/libs/preferences';
+import {
+  FieldGroup,
+  Host,
+  Icon,
+  type IconName,
+  Picker,
+  Row,
+  Spacer,
+  Switch,
+  Text,
+} from '@expo/ui';
 import { eq } from 'drizzle-orm';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
-import {
-  reinitializeAppRuntime,
-  waitForLaunchTemplateProcessing,
-} from '@/libs/app-runtime';
 import * as Sharing from 'expo-sharing';
 import { useAtom } from 'jotai';
+import { type ReactNode, useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Text as RNText, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
 const WEEK_STARTS: { value: WeekStart; label: string }[] = [
@@ -44,12 +45,52 @@ const WEEK_STARTS: { value: WeekStart; label: string }[] = [
 
 type PickerOption = { value: string; label: string };
 
+type SettingsRowProps = {
+  icon: IconName;
+  iconColor: string;
+  label: string;
+  children?: ReactNode;
+  onPress?: () => void;
+  destructive?: boolean;
+  testID?: string;
+};
+
+function SettingsRow({
+  icon,
+  iconColor,
+  label,
+  children,
+  onPress,
+  destructive = false,
+  testID,
+}: SettingsRowProps) {
+  return (
+    <Row alignment="center" spacing={12} style={styles.settingsRow} onPress={onPress} testID={testID}>
+      <Icon
+        name={icon}
+        size={18}
+        color="#FFFFFF"
+        style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: iconColor }}
+      />
+      <Text textStyle={{ fontSize: 16, color: destructive ? '#FF3B30' : '#000000' }}>
+        {label}
+      </Text>
+      <Spacer flexible />
+      {children}
+    </Row>
+  );
+}
+
 function PreferenceRow({
+  icon,
+  iconColor,
   label,
   selectedValue,
   options,
   onSelect,
 }: {
+  icon: IconName;
+  iconColor: string;
   label: string;
   selectedValue: string;
   options: PickerOption[];
@@ -57,9 +98,12 @@ function PreferenceRow({
 }) {
   const testIdSuffix = label.toLowerCase().replace(/\s+/g, '-');
   return (
-    <Row alignment="center" spacing={12} testID={`preference-${testIdSuffix}`}>
-      <Text textStyle={{ fontSize: 16, color: '#000' }}>{label}</Text>
-      <Spacer flexible />
+    <SettingsRow
+      icon={icon}
+      iconColor={iconColor}
+      label={label}
+      testID={`preference-${testIdSuffix}`}
+    >
       <Picker
         selectedValue={selectedValue}
         onValueChange={onSelect}
@@ -69,11 +113,12 @@ function PreferenceRow({
           <Picker.Item key={option.value} label={option.label} value={option.value} />
         ))}
       </Picker>
-    </Row>
+    </SettingsRow>
   );
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const [currency, setCurrency] = useAtom(currencyAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [suggestionLookback, setSuggestionLookback] = useAtom(suggestionLookbackAtom);
@@ -247,27 +292,32 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.pageHeader, { paddingTop: insets.top + 8 }]}>
+        <RNText style={styles.pageTitle}>Settings</RNText>
+      </View>
+
       <Host style={{ flex: 1 }}>
         <FieldGroup>
-          <Column style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-            <Text textStyle={{ fontSize: 34, fontWeight: '700', color: '#000' }}>Settings</Text>
-            <Text textStyle={{ fontSize: 15, color: '#6E6E73' }}>Preferences, backup, and data</Text>
-          </Column>
-
-          <FieldGroup.Section title="Preferences">
+          <FieldGroup.Section>
             <PreferenceRow
+              icon="dollarsign.circle.fill"
+              iconColor="#34C759"
               label="Currency"
               selectedValue={currency}
               options={CURRENCIES.map((c) => ({ value: c, label: c }))}
               onSelect={changeCurrency}
             />
             <PreferenceRow
+              icon="calendar"
+              iconColor="#FF9500"
               label="Week starts"
               selectedValue={weekStart}
               options={WEEK_STARTS}
               onSelect={changeWeekStart}
             />
             <PreferenceRow
+              icon="clock.arrow.circlepath"
+              iconColor="#AF52DE"
               label="Template suggestion history"
               selectedValue={suggestionLookback}
               options={[...SUGGESTION_LOOKBACK_OPTIONS]}
@@ -275,26 +325,47 @@ export default function SettingsScreen() {
             />
           </FieldGroup.Section>
 
-          <FieldGroup.Section title="Backup">
-            <Switch
+          <FieldGroup.Section>
+            <SettingsRow
+              icon="arrow.clockwise.circle.fill"
+              iconColor="#007AFF"
               label="Auto backup"
-              value={autoBackup}
-              onValueChange={handleAutoBackup}
-              testID="auto-backup"
+              testID="auto-backup-row"
+            >
+              <Switch testID="auto-backup" value={autoBackup} onValueChange={handleAutoBackup} />
+            </SettingsRow>
+            <SettingsRow
+              icon="externaldrive.fill"
+              iconColor="#8E8E93"
+              label="Back up now"
+              onPress={handleBackupNow}
+              testID="backup-now"
             />
-            <Button label="Back up now" onPress={handleBackupNow} variant="text" testID="backup-now" />
-            <Button label="Export database" onPress={handleExport} variant="text" testID="export-database" />
-            <Button label="Import database" onPress={handleImport} variant="text" testID="import-database" />
+            <SettingsRow
+              icon="square.and.arrow.up"
+              iconColor="#007AFF"
+              label="Export database"
+              onPress={handleExport}
+              testID="export-database"
+            />
+            <SettingsRow
+              icon="square.and.arrow.down"
+              iconColor="#007AFF"
+              label="Import database"
+              onPress={handleImport}
+              testID="import-database"
+            />
           </FieldGroup.Section>
 
-          <FieldGroup.Section title="Danger zone">
-            <Text
-              textStyle={{ fontSize: 16, color: '#FF3B30' }}
+          <FieldGroup.Section>
+            <SettingsRow
+              icon="trash.fill"
+              iconColor="#FF3B30"
+              label="Reset all data"
+              destructive
               onPress={handleReset}
               testID="reset-all-data"
-            >
-              Reset all data
-            </Text>
+            />
           </FieldGroup.Section>
         </FieldGroup>
       </Host>
@@ -313,6 +384,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f2f2f7',
+  },
+  pageHeader: {
+    paddingHorizontal: 16,
+  },
+  pageTitle: {
+    color: '#111111',
+    fontSize: 34,
+    fontWeight: '700',
+  },
+  settingsRow: {
+    height: 30,
   },
   restoreOverlay: {
     ...StyleSheet.absoluteFill,

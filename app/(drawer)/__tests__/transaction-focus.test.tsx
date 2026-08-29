@@ -65,12 +65,12 @@ jest.mock('@/db/template', () => ({
   getTemplate: (...args: unknown[]) => mockGetTemplate(...args),
 }));
 
-jest.mock('@expo/ui/community/datetime-picker', () => {
+jest.mock('@/components/ui/compact-date-picker', () => {
   const React = jest.requireActual('react');
   const { Text } = jest.requireActual('react-native');
   const MockDatePicker = ({ value, testID }: { value: Date; testID: string }) =>
     React.createElement(Text, { testID }, value.toISOString());
-  return { DateTimePicker: MockDatePicker };
+  return { CompactDatePicker: MockDatePicker };
 });
 
 const template = (overrides: Partial<TransactionTemplate> = {}): TransactionTemplate => ({

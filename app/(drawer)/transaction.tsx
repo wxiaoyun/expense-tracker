@@ -7,7 +7,7 @@ import { getTransactionInitialFocus } from '@/db/template-core';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
 import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
-import { DateTimePicker } from '@expo/ui/community/datetime-picker';
+import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -392,14 +392,13 @@ export default function TransactionDrawer() {
         />
 
         <Text style={styles.label}>Date</Text>
-        <DateTimePicker
-          testID="transaction-date"
-          value={transactionDate}
-          mode="date"
-          display="compact"
-          presentation="inline"
-          onValueChange={(_, date) => setTransactionDate(date)}
-        />
+        <View style={styles.datePickerContainer}>
+          <CompactDatePicker
+            testID="transaction-date"
+            value={transactionDate}
+            onValueChange={setTransactionDate}
+          />
+        </View>
 
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Verified</Text>
@@ -526,6 +525,9 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
+  },
+  datePickerContainer: {
+    alignItems: 'flex-start',
   },
   toggleRow: {
     flexDirection: 'row',

@@ -98,9 +98,13 @@ jest.mock('@expo/ui', () => {
     return null;
   };
 
-  const Row = ({ children, testID }: { children?: React.ReactNode; testID?: string }) =>
-    React.createElement(View, { testID }, children);
+  const Row = ({ children, onPress, testID }: {
+    children?: React.ReactNode;
+    onPress?: () => void;
+    testID?: string;
+  }) => React.createElement(onPress ? Pressable : View, { testID, onPress }, children);
   const Column = Row;
+  const Icon = () => null;
   const Spacer = () => null;
   const Host = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(View, null, children);
@@ -131,7 +135,7 @@ jest.mock('@expo/ui', () => {
     return React.createElement(View, null, children);
   };
 
-  return { Host, FieldGroup, Switch, Text, Button, Picker, Row, Column, Spacer };
+  return { Host, FieldGroup, Switch, Text, Button, Picker, Row, Column, Icon, Spacer };
 });
 
 describe('Settings database runtime orchestration', () => {

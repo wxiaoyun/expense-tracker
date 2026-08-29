@@ -193,7 +193,6 @@ export default function SummaryScreen() {
     >
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>Summary</Text>
-        <Text style={styles.pageSubtitle}>Cash flow and category breakdown</Text>
       </View>
       <ExpenseFilterBar
         preset={dateRange.preset}
@@ -264,11 +263,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '700',
   },
-  pageSubtitle: {
-    color: '#6E6E73',
-    fontSize: 15,
-    marginTop: 4,
-  },
+
   metricRow: {
     flexDirection: 'row',
     gap: 8,

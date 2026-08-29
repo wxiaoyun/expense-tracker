@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { DateTimePicker } from '@expo/ui/community/datetime-picker';
+import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import type { DateRangePreset } from '@/hooks/useFilter';
 
 type ExpenseFilterBarProps = {
@@ -87,22 +87,20 @@ export function ExpenseFilterBar({
       </ScrollView>
       {preset === 'custom' && (
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <DateTimePicker
-            testID="custom-start-date"
-            value={customStart ?? new Date()}
-            mode="date"
-            display="compact"
-            presentation="inline"
-            onValueChange={(_, date) => onCustomStartChange?.(date)}
-          />
-          <DateTimePicker
-            testID="custom-end-date"
-            value={customEnd ?? new Date()}
-            mode="date"
-            display="compact"
-            presentation="inline"
-            onValueChange={(_, date) => onCustomEndChange?.(date)}
-          />
+          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+            <CompactDatePicker
+              testID="custom-start-date"
+              value={customStart ?? new Date()}
+              onValueChange={(date) => onCustomStartChange?.(date)}
+            />
+          </View>
+          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+            <CompactDatePicker
+              testID="custom-end-date"
+              value={customEnd ?? new Date()}
+              onValueChange={(date) => onCustomEndChange?.(date)}
+            />
+          </View>
         </View>
       )}
       {showCategories && categories.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
