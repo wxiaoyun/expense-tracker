@@ -7,8 +7,11 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 
 type TransactionListProps = {
   transactions: Transaction[];
+  activeTemplateIds: ReadonlySet<string>;
   onEdit: (id: string) => void;
-  onDelete: (id: string, animateDelete: () => Promise<unknown>) => void;
+  onSaveAsTemplate: (id: string) => void;
+  onViewTemplate: (templateId: string) => void;
+  onDelete: (id: string) => void;
   onToggleVerified: (id: string, verified: boolean) => void;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
@@ -27,7 +30,10 @@ const renderFooter = (isLoadingMore: boolean, textColor: string) => {
 
 export const TransactionList: React.FC<TransactionListProps> = ({
   transactions,
+  activeTemplateIds,
   onEdit,
+  onSaveAsTemplate,
+  onViewTemplate,
   onDelete,
   onToggleVerified,
   onLoadMore,
@@ -42,12 +48,15 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     ({ item }: { item: Transaction }) => (
       <TransactionRow
         transaction={item}
+        hasActiveTemplate={Boolean(item.templateId && activeTemplateIds.has(item.templateId))}
         onEdit={onEdit}
+        onSaveAsTemplate={onSaveAsTemplate}
+        onViewTemplate={onViewTemplate}
         onDelete={onDelete}
         onToggleVerified={onToggleVerified}
       />
     ),
-    [onEdit, onDelete, onToggleVerified]
+    [activeTemplateIds, onEdit, onSaveAsTemplate, onViewTemplate, onDelete, onToggleVerified]
   );
 
   if (transactions.length === 0) {

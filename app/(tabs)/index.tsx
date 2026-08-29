@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,13 +6,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
 import { listCategories, setVerification, softDeleteTransaction } from '@/db/transaction';
+import { listTemplates } from '@/db/template';
 import { useQuery } from '@tanstack/react-query';
 import { computeDateRange, endOfDay, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
-import { useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
+import { queryKeys, useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
 import { useInvalidateTransactions } from '@/hooks/useQueryClient';
 import { showConfirmDialog } from '@/libs/dialog';
 import { AddExpenseButton } from '@/components/transactions/add-expense-button';
 import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
+
+const logFailure = (stage: string, error: unknown, transactionId?: string) => {
+  console.error(`[transactions.ui][stage=${stage}] failed`, {
+    ...(transactionId ? { transaction_id: transactionId } : {}),
+    stage,
+    error: String(error),
+  });
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -27,6 +36,21 @@ export default function HomeScreen() {
     queryKey: ['categories', 'distinct'],
     queryFn: listCategories,
   });
+  const templateQuery = useQuery({
+    queryKey: queryKeys.templates.list({}),
+    queryFn: () => listTemplates(),
+  });
+
+  useEffect(() => {
+    if (templateQuery.error) {
+      logFailure('load_templates', templateQuery.error);
+    }
+  }, [templateQuery.error]);
+
+  const activeTemplateIds = useMemo(() => {
+    if (templateQuery.error) return new Set<string>();
+    return new Set((templateQuery.data ?? []).map((template) => template.id));
+  }, [templateQuery.data, templateQuery.error]);
 
   const handlePresetChange = useCallback((preset: DateRangePreset) => {
     if (preset === 'custom') {
@@ -89,7 +113,7 @@ export default function HomeScreen() {
     start: dateRange.start,
     end: dateRange.end,
     limit: 50,
-    orderBy: ["transactionDate", "DESC"],
+    orderBy: ['transactionDate', 'DESC'],
     categories,
     search: search.trim() || undefined,
   });
@@ -108,8 +132,8 @@ export default function HomeScreen() {
         await setVerification(id, verified ? 1 : 0);
         invalidateTransactionQueries();
       } catch (error) {
-        console.error("Failed to update verification:", error);
-        Alert.alert("Error", "Failed to update transaction verification");
+        console.error('Failed to update verification:', error);
+        Alert.alert('Error', 'Failed to update transaction verification');
       }
     },
     [invalidateTransactionQueries],
@@ -119,7 +143,27 @@ export default function HomeScreen() {
     (id: string) => {
       console.log(`Edit transaction ${id}`);
       router.push({
-        pathname: "/(drawer)/transaction",
+        pathname: '/(drawer)/transaction',
+        params: { id },
+      });
+    },
+    [router],
+  );
+
+  const handleSaveAsTemplate = useCallback(
+    (id: string) => {
+      router.push({
+        pathname: '/(drawer)/template-edit',
+        params: { sourceTransactionId: id },
+      });
+    },
+    [router],
+  );
+
+  const handleViewTemplate = useCallback(
+    (id: string) => {
+      router.push({
+        pathname: '/(drawer)/template-edit',
         params: { id },
       });
     },
@@ -127,25 +171,36 @@ export default function HomeScreen() {
   );
 
   const handleDelete = useCallback(
-    async (id: string, animateDelete: () => Promise<unknown>) => {
+    async (id: string) => {
       const confirmed = await showConfirmDialog(
-        "Delete Transaction",
-        "Are you sure you want to delete this transaction?",
+        'Delete Transaction',
+        'Are you sure you want to delete this transaction?',
       );
 
       if (!confirmed) {
         return;
       }
 
-      console.log(`Confirmed delete transaction ${id}`);
-      await animateDelete();
+      console.info('[transactions.ui][stage=soft_delete]', {
+        transaction_id: id,
+        stage: 'soft_delete',
+      });
 
       try {
-        await softDeleteTransaction(id);
+        const deleted = await softDeleteTransaction(id);
+        if (!deleted) {
+          console.error('[transactions.ui][stage=soft_delete] failed', {
+            transaction_id: id,
+            stage: 'soft_delete',
+            reason: 'not_deleted',
+          });
+          Alert.alert('Error', 'Failed to delete transaction');
+          return;
+        }
         invalidateTransactionQueries();
       } catch (error) {
-        console.error("Failed to delete transaction:", error);
-        Alert.alert("Error", "Failed to delete transaction");
+        logFailure('soft_delete', error, id);
+        Alert.alert('Error', 'Failed to delete transaction');
       }
     },
     [invalidateTransactionQueries],
@@ -157,8 +212,8 @@ export default function HomeScreen() {
         style={{
           flex: 1,
           backgroundColor,
-          justifyContent: "center",
-          alignItems: "center",
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         <ActivityIndicator size="large" color={textColor} />
@@ -173,14 +228,14 @@ export default function HomeScreen() {
         style={{
           flex: 1,
           backgroundColor,
-          justifyContent: "center",
-          alignItems: "center",
+          justifyContent: 'center',
+          alignItems: 'center',
           padding: 20,
         }}
       >
         <ThemedText style={{ fontSize: 18, marginBottom: 8 }}>Error loading transactions</ThemedText>
-        <ThemedText style={{ textAlign: "center", opacity: 0.7 }}>
-          {error.message || "Something went wrong"}
+        <ThemedText style={{ textAlign: 'center', opacity: 0.7 }}>
+          {error.message || 'Something went wrong'}
         </ThemedText>
       </View>
     );
@@ -203,9 +258,12 @@ export default function HomeScreen() {
       />
       <TransactionList
         onEdit={handleEdit}
+        onSaveAsTemplate={handleSaveAsTemplate}
+        onViewTemplate={handleViewTemplate}
         onDelete={handleDelete}
         onToggleVerified={handleToggleVerified}
         transactions={transactions}
+        activeTemplateIds={activeTemplateIds}
         onLoadMore={hasNextPage ? fetchNextPage : undefined}
         isLoadingMore={isFetchingNextPage}
       />

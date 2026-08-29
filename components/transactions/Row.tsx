@@ -6,18 +6,25 @@ import Feather from '@expo/vector-icons/Feather';
 import { Transaction } from '@/db/schema';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/libs/intl';
+import { TransactionMenu } from './transaction-menu';
 
 type TransactionRowProps = {
   transaction: Transaction;
+  hasActiveTemplate: boolean;
   onToggleVerified: (id: string, verified: boolean) => void;
   onEdit: (id: string) => void;
-  onDelete: (id: string, animateDelete: () => Promise<unknown>) => void;
+  onSaveAsTemplate: (id: string) => void;
+  onViewTemplate: (templateId: string) => void;
+  onDelete: (id: string) => void;
 };
 
 export const TransactionRow: React.FC<TransactionRowProps> = ({
   transaction,
+  hasActiveTemplate,
   onToggleVerified,
   onEdit,
+  onSaveAsTemplate,
+  onViewTemplate,
   onDelete,
 }) => {
   const textColor = useThemeColor('text');
@@ -41,44 +48,39 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
             color={transaction.verified ? '#34C759' : amountColor}
           />
         </Pressable>
-        <View style={styles.body}>
-          <Text numberOfLines={1} style={[styles.description, { color: textColor }]}>
-            {transaction.description}
-          </Text>
-          <View style={styles.meta}>
-            <Text style={[styles.metaText, { color: textColor }]}>
-              {format(transaction.transactionDate, 'MMM d, yyyy')}
-            </Text>
-            <Text style={[styles.metaText, { color: textColor }]}>
-              {transaction.category}
-            </Text>
-          </View>
-        </View>
-        <Text style={[styles.amount, { color: amountColor }]}>
-          {formatCurrency(transaction.amount)}
-        </Text>
-      </View>
-      <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Edit ${transaction.description}`}
-          hitSlop={8}
           onPress={() => onEdit(transaction.id)}
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+          style={({ pressed }) => [styles.editTarget, pressed && styles.pressed]}
         >
-          <Feather name="edit-2" size={14} color="#007AFF" />
-          <Text style={styles.actionTextBlue}>Edit</Text>
+          <View style={styles.body}>
+            <Text numberOfLines={1} style={[styles.description, { color: textColor }]}>
+              {transaction.description}
+            </Text>
+            <View style={styles.meta}>
+              <Text style={[styles.metaText, { color: textColor }]}>
+                {format(transaction.transactionDate, 'MMM d, yyyy')}
+              </Text>
+              <Text style={[styles.metaText, { color: textColor }]}>
+                {transaction.category}
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.amount, { color: amountColor }]}>
+            {formatCurrency(transaction.amount)}
+          </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Delete ${transaction.description}`}
-          hitSlop={8}
-          onPress={() => onDelete(transaction.id, async () => undefined)}
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-        >
-          <Feather name="trash-2" size={14} color="#FF3B30" />
-          <Text style={styles.actionTextRed}>Delete</Text>
-        </Pressable>
+        <TransactionMenu
+          transactionId={transaction.id}
+          description={transaction.description}
+          templateId={transaction.templateId}
+          hasActiveTemplate={hasActiveTemplate}
+          onEdit={onEdit}
+          onSaveAsTemplate={onSaveAsTemplate}
+          onViewTemplate={onViewTemplate}
+          onDelete={onDelete}
+        />
       </View>
     </View>
   );
@@ -95,9 +97,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  editTarget: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
   body: {
     flex: 1,
-    marginLeft: 12,
   },
   description: {
     fontSize: 16,
@@ -117,31 +124,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  actions: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 8,
-  },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#F2F2F7',
-  },
-  actionPressed: {
+  pressed: {
     opacity: 0.55,
-  },
-  actionTextBlue: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  actionTextRed: {
-    color: '#FF3B30',
-    fontSize: 14,
-    fontWeight: '500',
   },
 });
