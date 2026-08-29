@@ -74,12 +74,12 @@ export default function RecurringEditDrawer() {
 
   const handleSave = async () => {
     try {
-      const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount)) {
-        setError('Invalid amount');
+      const parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        setError('Amount must be greater than zero');
         return;
       }
-      const signedAmount = -Math.abs(parsedAmount);
+      const signedAmount = -parsedAmount;
 
       if (!description.trim()) {
         setError('Description is required');

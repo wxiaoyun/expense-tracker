@@ -1,4 +1,5 @@
 import { v5 as uuidv5 } from 'uuid';
+import { mapRecurringRowsToTemplates } from './template-migration-core';
 
 const MIGRATION_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
@@ -35,16 +36,20 @@ export const mapLegacyTransaction = (transaction: LegacyTransaction) => ({
   transactionDate: transaction.transaction_date,
   description: transaction.description,
   category: transaction.category,
-  recurringTransactionId: transaction.recurring_transaction_id === null
+  templateId: transaction.recurring_transaction_id === null
     ? null
     : generateMigrationUUID(transaction.recurring_transaction_id),
   verified: transaction.verified,
   notes: null,
+  deletedAt: null,
   createdAt: transaction.created_at,
   updatedAt: transaction.updated_at,
 });
 
-export const mapLegacyRecurring = (transaction: LegacyRecurring) => ({
+export const mapLegacyRecurring = (
+  transaction: LegacyRecurring,
+  activeNames = new Set<string>(),
+) => mapRecurringRowsToTemplates([{
   id: generateMigrationUUID(transaction.id),
   amount: transaction.amount,
   description: transaction.description,
@@ -54,7 +59,7 @@ export const mapLegacyRecurring = (transaction: LegacyRecurring) => ({
   recurrenceValue: transaction.recurrence_value,
   createdAt: transaction.created_at,
   updatedAt: transaction.updated_at,
-});
+}], activeNames)[0];
 
 export const splitIntoMigrationBatches = <T>(rows: T[], batchSize = 1000): T[][] => {
   if (!Number.isInteger(batchSize) || batchSize < 1) {

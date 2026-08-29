@@ -165,7 +165,7 @@ export const updateTransaction = async (
       transactionDate: transaction.transactionDate,
       category: transaction.category,
       description: transaction.description,
-      recurringTransactionId: transaction.recurringTransactionId,
+      templateId: transaction.templateId,
       verified: transaction.verified ?? 0,
       notes: transaction.notes,
       updatedAt: now,

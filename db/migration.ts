@@ -1,8 +1,8 @@
 import * as SQLite from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { sql } from "drizzle-orm";
-import { transactions, recurringTransactions, categories, settings } from './schema';
+import { eq, sql } from "drizzle-orm";
+import { transactions, transactionTemplates, categories, settings } from './schema';
 import { LEGACY_DATABASE_NAME } from './schema-sql';
 import {
   generateMigrationUUID,
@@ -115,15 +115,31 @@ export const legacyDbExists = (): boolean => {
 /**
  * Get legacy table row counts
  */
-export const getLegacyCounts = async (): Promise<{ transactions: number; recurring: number } | null> => {
+export const getLegacyCounts = async (): Promise<{
+  transactions: number;
+  recurring: number;
+  linkedTransactions: number;
+  relationships: number;
+} | null> => {
   try {
     const legacyDb = openLegacyDatabase();
     const txCount = legacyDb.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM transactions");
     const recCount = legacyDb.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM recurring_transactions");
+    const linkedCount = legacyDb.getFirstSync<{ count: number }>(
+      'SELECT COUNT(*) AS count FROM transactions WHERE recurring_transaction_id IS NOT NULL',
+    );
+    const relationshipCount = legacyDb.getFirstSync<{ count: number }>(`
+      SELECT COUNT(*) AS count
+      FROM transactions
+      JOIN recurring_transactions
+        ON transactions.recurring_transaction_id = recurring_transactions.id
+    `);
     legacyDb.closeSync();
     return {
       transactions: txCount?.count ?? 0,
       recurring: recCount?.count ?? 0,
+      linkedTransactions: linkedCount?.count ?? 0,
+      relationships: relationshipCount?.count ?? 0,
     };
   } catch (error) {
     console.error('[migration][stage=count_legacy] failed to count legacy rows', { error: String(error) });
@@ -170,26 +186,27 @@ export const migrateRecurringTransactions = async (
   newDrizzle: ReturnType<typeof drizzle>
 ): Promise<number> => {
   const BATCH_SIZE = 1000;
+  const activeNames = new Set<string>();
   let totalMigrated = 0;
-  
+
   for (let offset = 0; ; offset += BATCH_SIZE) {
     const batch = legacyDb.getAllSync<LegacyRecurring>(
-      'SELECT * FROM recurring_transactions ORDER BY id LIMIT ? OFFSET ?',
+      'SELECT * FROM recurring_transactions ORDER BY created_at, id LIMIT ? OFFSET ?',
       BATCH_SIZE,
       offset,
     );
     if (batch.length === 0) break;
-    const values = batch.map(mapLegacyRecurring);
+    const values = batch.map((row) => mapLegacyRecurring(row, activeNames));
 
-    console.info('[migration][stage=copy_recurring] inserting batch', {
+    console.info('[migration][stage=copy_templates] inserting batch', {
       batch: offset / BATCH_SIZE + 1,
       count: batch.length,
       offset,
     });
-    await newDrizzle.insert(recurringTransactions).values(values).onConflictDoNothing().run();
+    await newDrizzle.insert(transactionTemplates).values(values).onConflictDoNothing().run();
     totalMigrated += batch.length;
   }
-  
+
   return totalMigrated;
 };
 
@@ -244,21 +261,37 @@ export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<{
     console.info('[migration][stage=copy_transactions] transaction copy finished', { count: txMigrated });
     
     const recMigrated = await migrateRecurringTransactions(legacyDb, newDb);
-    console.info('[migration][stage=copy_recurring] recurring copy finished', { count: recMigrated });
+    console.info('[migration][stage=copy_templates] template copy finished', { count: recMigrated });
 
     const newTransactionCount = await newDb.select({ count: sql<number>`count(*)` }).from(transactions).get();
-    const newRecurringCount = await newDb.select({ count: sql<number>`count(*)` }).from(recurringTransactions).get();
+    const newTemplateCount = await newDb.select({ count: sql<number>`count(*)` }).from(transactionTemplates).get();
+    const newLinkedCount = await newDb
+      .select({ count: sql<number>`count(*)` })
+      .from(transactions)
+      .where(sql`${transactions.templateId} IS NOT NULL`)
+      .get();
+    const newRelationshipCount = await newDb
+      .select({ count: sql<number>`count(*)` })
+      .from(transactions)
+      .innerJoin(transactionTemplates, eq(transactions.templateId, transactionTemplates.id))
+      .get();
     if (Number(newTransactionCount?.count ?? 0) !== counts.transactions ||
-        Number(newRecurringCount?.count ?? 0) !== counts.recurring) {
-      console.error('[migration][stage=verify_counts] migrated counts do not match source', {
+        Number(newTemplateCount?.count ?? 0) !== counts.recurring ||
+        Number(newLinkedCount?.count ?? 0) !== counts.linkedTransactions ||
+        Number(newRelationshipCount?.count ?? 0) !== counts.relationships) {
+      console.error('[migration][stage=verify_counts] migrated counts or relationships do not match source', {
         expectedTransactions: counts.transactions,
         actualTransactions: Number(newTransactionCount?.count ?? 0),
-        expectedRecurring: counts.recurring,
-        actualRecurring: Number(newRecurringCount?.count ?? 0),
+        expectedTemplates: counts.recurring,
+        actualTemplates: Number(newTemplateCount?.count ?? 0),
+        expectedLinkedTransactions: counts.linkedTransactions,
+        actualLinkedTransactions: Number(newLinkedCount?.count ?? 0),
+        expectedRelationships: counts.relationships,
+        actualRelationships: Number(newRelationshipCount?.count ?? 0),
       });
-      return { success: false, error: 'Migrated row counts do not match source database' };
+      return { success: false, error: 'Migrated row counts or relationships do not match source database' };
     }
-    console.info('[migration][stage=verify_counts] migrated counts match source', counts);
+    console.info('[migration][stage=verify_counts] migrated counts and relationships match source', counts);
     
     const backupPath = await backupLegacyDb(legacyDb);
     if (!backupPath) {

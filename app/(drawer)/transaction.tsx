@@ -111,7 +111,8 @@ export default function TransactionDrawer() {
           notes: notes.trim() || null,
           verified: verified ? 1 : 0,
           transactionDate: transactionDate.getTime(),
-          recurringTransactionId: null,
+          templateId: null,
+          deletedAt: null,
         });
       }
 

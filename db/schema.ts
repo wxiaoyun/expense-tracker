@@ -1,97 +1,99 @@
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
   real,
   sqliteTable,
   text,
-} from "drizzle-orm/sqlite-core";
-
-// Helper to generate deterministic UUID from integer (for migration)
-// We'll use a fixed namespace for consistency
-const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // example, we can use a fixed one
-// In migration we will use uuidv5 with this namespace and the integer id as string
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+import { z } from 'zod';
 
 export const categories = sqliteTable(
-  "categories",
+  'categories',
   {
-    id: text("id").primaryKey().notNull(),
-    name: text("name").notNull().unique(),
-    icon: text("icon").notNull(), // SF Symbol name
-    color: text("color").notNull(), // hex
-    is_preset: integer("is_preset", { mode: "boolean" }).notNull().default(false),
-    sort_order: integer("sort_order").notNull(),
-    createdAt: integer("created_at").notNull(),
+    id: text('id').primaryKey().notNull(),
+    name: text('name').notNull().unique(),
+    icon: text('icon').notNull(),
+    color: text('color').notNull(),
+    is_preset: integer('is_preset', { mode: 'boolean' }).notNull().default(false),
+    sort_order: integer('sort_order').notNull(),
+    createdAt: integer('created_at').notNull(),
   },
   (table) => ({
-    nameIdx: index("idx_categories_name").on(table.name),
+    nameIdx: index('idx_categories_name').on(table.name),
+  }),
+);
+
+export const transactionTemplates = sqliteTable(
+  'transaction_templates',
+  {
+    id: text('id').primaryKey().notNull(),
+    name: text('name').notNull(),
+    normalizedName: text('normalized_name').notNull(),
+    amount: real('amount'),
+    transactionType: text('transaction_type').$type<'income' | 'expense'>(),
+    description: text('description'),
+    category: text('category'),
+    notes: text('notes'),
+    verified: integer('verified'),
+    recurrenceValue: text('recurrence_value'),
+    startDate: integer('start_date'),
+    scheduleCursorAt: integer('schedule_cursor_at'),
+    scheduleActive: integer('schedule_active').notNull().default(0),
+    deletedAt: integer('deleted_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    activeNameIdx: uniqueIndex('idx_templates_active_name')
+      .on(table.normalizedName)
+      .where(sql`${table.deletedAt} IS NULL`),
+    categoryIdx: index('idx_templates_category').on(table.category),
+    scheduleIdx: index('idx_templates_schedule').on(table.scheduleActive, table.deletedAt),
   }),
 );
 
 export const transactions = sqliteTable(
-  "transactions",
+  'transactions',
   {
-    id: text("id").primaryKey().notNull(),
-    amount: real("amount").notNull(),
-    transactionDate: integer("transaction_date").notNull(),
-    description: text("description").notNull(),
-    category: text("category").notNull(),
-    recurringTransactionId: text("recurring_transaction_id"),
-    verified: integer("verified").notNull().default(0),
-    notes: text("notes"),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
+    id: text('id').primaryKey().notNull(),
+    amount: real('amount').notNull(),
+    transactionDate: integer('transaction_date').notNull(),
+    description: text('description').notNull(),
+    category: text('category').notNull(),
+    templateId: text('template_id'),
+    verified: integer('verified').notNull().default(0),
+    notes: text('notes'),
+    deletedAt: integer('deleted_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   (table) => ({
-    dateIdx: index("idx_transactions_date").on(table.transactionDate),
-    categoryIdx: index("idx_transactions_category").on(table.category),
-    recurringIdx: index("idx_transactions_recurring").on(table.recurringTransactionId),
-    verifiedIdx: index("idx_transactions_verified").on(table.verified),
-  }),
-);
-
-export const recurringTransactions = sqliteTable(
-  "recurring_transactions",
-  {
-    id: text("id").primaryKey().notNull(),
-    amount: real("amount").notNull(),
-    description: text("description").notNull(),
-    category: text("category").notNull(),
-    startDate: integer("start_date").notNull(),
-    lastCharged: integer("last_charged"),
-    recurrenceValue: text("recurrence_value").notNull(),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-  },
-  (table) => ({
-    dateIdx: index("idx_recurring_transactions_date").on(table.startDate),
-    categoryIdx: index("idx_recurring_transactions_category").on(table.category),
-    lastChargedIdx: index("idx_recurring_transactions_last_charged").on(table.lastCharged),
+    dateIdx: index('idx_transactions_date').on(table.transactionDate),
+    categoryIdx: index('idx_transactions_category').on(table.category),
+    templateIdx: index('idx_transactions_template').on(table.templateId),
+    verifiedIdx: index('idx_transactions_verified').on(table.verified),
+    deletedIdx: index('idx_transactions_deleted').on(table.deletedAt),
   }),
 );
 
 export const settings = sqliteTable(
-  "settings",
+  'settings',
   {
-    key: text("key").primaryKey().notNull(),
-    value: text("value").notNull(),
-  }
+    key: text('key').primaryKey().notNull(),
+    value: text('value').notNull(),
+  },
 );
 
-// Types
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
-
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
-
-export type RecurringTransaction = typeof recurringTransactions.$inferSelect;
-export type NewRecurringTransaction = typeof recurringTransactions.$inferInsert;
-
+export type TransactionTemplate = typeof transactionTemplates.$inferSelect;
+export type NewTransactionTemplate = typeof transactionTemplates.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
-
-// Zod schemas for validation (optional, but useful)
-import { z } from "zod";
 
 export const CategorySchema = z.object({
   id: z.string(),
@@ -109,21 +111,29 @@ export const TransactionSchema = z.object({
   transactionDate: z.number(),
   description: z.string(),
   category: z.string(),
-  recurringTransactionId: z.string().optional(),
+  templateId: z.string().nullable(),
   verified: z.number().min(0).max(1),
-  notes: z.string().optional(),
+  notes: z.string().nullable(),
+  deletedAt: z.number().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 
-export const RecurringTransactionSchema = z.object({
+export const TransactionTemplateSchema = z.object({
   id: z.string(),
-  amount: z.number(),
-  description: z.string(),
-  category: z.string(),
-  startDate: z.number(),
-  lastCharged: z.number().optional(),
-  recurrenceValue: z.string(),
+  name: z.string(),
+  normalizedName: z.string(),
+  amount: z.number().nullable(),
+  transactionType: z.enum(['income', 'expense']).nullable(),
+  description: z.string().nullable(),
+  category: z.string().nullable(),
+  notes: z.string().nullable(),
+  verified: z.number().min(0).max(1).nullable(),
+  recurrenceValue: z.string().nullable(),
+  startDate: z.number().nullable(),
+  scheduleCursorAt: z.number().nullable(),
+  scheduleActive: z.number().min(0).max(1),
+  deletedAt: z.number().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

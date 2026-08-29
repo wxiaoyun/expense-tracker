@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '@/db';
-import { categories, recurringTransactions, settings, transactions } from '@/db/schema';
+import { categories, settings, transactionTemplates, transactions } from '@/db/schema';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
 import { currencyAtom, savePreference, weekStartAtom, type WeekStart } from '@/libs/preferences';
@@ -184,7 +184,7 @@ export default function SettingsScreen() {
             try {
               console.info('[db.reset][stage=delete_tables] resetting local data');
               await db.delete(transactions).run();
-              await db.delete(recurringTransactions).run();
+              await db.delete(transactionTemplates).run();
               await db.delete(categories).run();
               await db.delete(settings).run();
               console.info('[db.reset][stage=delete_tables] local data reset');
