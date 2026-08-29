@@ -56,6 +56,10 @@ export default function RootLayout() {
               options={{ presentation: 'formSheet', headerShown: false, sheetGrabberVisible: true }}
             />
             <Stack.Screen
+              name="(drawer)/template-edit"
+              options={{ presentation: 'formSheet', headerShown: false, sheetGrabberVisible: true }}
+            />
+            <Stack.Screen
               name="(drawer)/recurring-edit"
               options={{ presentation: 'formSheet', headerShown: false, sheetGrabberVisible: true }}
             />

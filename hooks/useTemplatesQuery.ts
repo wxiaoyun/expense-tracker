@@ -48,12 +48,20 @@ export const useTemplateQuery = (id: string | undefined) => useQuery({
   enabled: Boolean(id),
 });
 
-export const useTemplateSuggestionsQuery = (lookback?: SuggestionLookback) => {
+export const useTemplateSuggestionsQuery = (lookback?: SuggestionLookback, enabled = true) => {
   const preferredLookback = useAtomValue(suggestionLookbackAtom);
   const resolvedLookback = lookback ?? preferredLookback;
   return useQuery({
     queryKey: queryKeys.templates.suggestions(resolvedLookback),
-    queryFn: () => listHistoricalTemplateSuggestions(resolvedLookback),
+    queryFn: () => {
+      console.info('[templates.ui][stage=load_suggestions]', {
+        template_id: null,
+        source_transaction_id: null,
+        stage: 'load_suggestions',
+      });
+      return listHistoricalTemplateSuggestions(resolvedLookback);
+    },
+    enabled,
   });
 };
 

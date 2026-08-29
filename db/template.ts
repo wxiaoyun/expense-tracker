@@ -8,6 +8,7 @@ import { transactionTemplates, transactions, type TransactionTemplate } from './
 import {
   buildTemplateSuggestions,
   mapTemplateToTransaction,
+  nextAvailableTemplateName,
   normalizeTemplateText,
   suggestionLookbackStart,
   validateTemplateDraft,
@@ -309,6 +310,21 @@ const processScheduledTemplateInTransaction = async (
   return inserted
 }
 
+export async function getNextAvailableTemplateName(base: string, excludedId?: string): Promise<string> {
+  info('next_available_name', 'query', { excludedId: excludedId ?? null })
+  try {
+    const rows = await db
+      .select({ id: transactionTemplates.id, name: transactionTemplates.name })
+      .from(transactionTemplates)
+      .where(and(isNull(transactionTemplates.deletedAt), excludedId ? ne(transactionTemplates.id, excludedId) : undefined))
+      .all()
+    return nextAvailableTemplateName(base, rows.map((row) => row.name))
+  } catch (error) {
+    failure('next_available_name', 'query', error, { excludedId: excludedId ?? null })
+    throw error
+  }
+}
+
 export async function getTemplate(id: string): Promise<TransactionTemplate | null> {
   info('get', 'query', { id })
   try {
@@ -425,9 +441,21 @@ export async function updateTemplate(
 
     const normalizedName = normalizeTemplateText(normalized.name)
     await assertUniqueName(normalizedName, id)
-    const scheduleChanged = existing.recurrenceValue !== normalized.recurrenceValue || existing.startDate !== normalized.startDate
+    const scheduleDefinitionChanged = sql`
+      ${transactionTemplates.recurrenceValue} IS NOT ${normalized.recurrenceValue}
+      OR ${transactionTemplates.startDate} IS NOT ${normalized.startDate}
+    `
+    // Evaluate activation against the row at UPDATE time so an inactive-to-active edit cannot retain a stale cursor.
     const scheduleCursorAt = normalized.recurrenceValue
-      ? scheduleChanged ? now : existing.scheduleCursorAt
+      ? normalized.scheduleActive
+        ? sql<number | null>`CASE
+            WHEN ${scheduleDefinitionChanged} OR ${transactionTemplates.scheduleActive} = 0 THEN ${now}
+            ELSE ${transactionTemplates.scheduleCursorAt}
+          END`
+        : sql<number | null>`CASE
+            WHEN ${scheduleDefinitionChanged} THEN ${now}
+            ELSE ${transactionTemplates.scheduleCursorAt}
+          END`
       : null
     const set = {
       name: normalized.name,
@@ -449,7 +477,12 @@ export async function updateTemplate(
       .set(set)
       .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
       .run()
-    return result.changes === 1 ? { ...existing, ...set } : null
+    if (result.changes !== 1) return null
+    return await db
+      .select()
+      .from(transactionTemplates)
+      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
+      .get() ?? null
   } catch (error) {
     const normalizedError = isUniqueNameError(error) ? new Error('Template name already exists') : error
     failure('update', 'update', normalizedError, { id, name: draft.name })

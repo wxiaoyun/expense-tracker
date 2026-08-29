@@ -87,6 +87,7 @@ import {
   backfillTemplate,
   convertTemplateToManual,
   createTemplate,
+  getNextAvailableTemplateName,
   getTemplate,
   listHistoricalTemplateSuggestions,
   listTemplates,
@@ -149,6 +150,14 @@ describe('template repository', () => {
     await expect(softDeleteTemplate(first.id, 100)).resolves.toBe(true)
     expect(await getTemplate(first.id)).toBeNull()
     await expect(createTemplate(validDraft({ name: 'coffee' }))).resolves.toEqual(expect.objectContaining({ name: 'coffee' }))
+  })
+
+  it('suggests the next active-name suffix while excluding the edited template', async () => {
+    const first = await createTemplate(validDraft())
+    await createTemplate(validDraft({ name: 'Coffee 2' }))
+
+    await expect(getNextAvailableTemplateName(' coffee ')).resolves.toBe('coffee 3')
+    await expect(getNextAvailableTemplateName('Coffee', first.id)).resolves.toBe('Coffee')
   })
 
   it('filters by search, manual or scheduled type, and category', async () => {
@@ -275,6 +284,23 @@ describe('template repository', () => {
 
     await updateTemplate(template.id, scheduledDraft({ name: 'Updated rent', recurrenceValue: '0 0 2 * *' }), 60)
     expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(60)
+  })
+
+  it('resets the cursor when an edit activates an inactive schedule alongside other changes', async () => {
+    const template = await createTemplate(scheduledDraft())
+    await pauseTemplate(template.id, 50)
+
+    await expect(updateTemplate(template.id, scheduledDraft({
+      name: 'Activated and edited rent',
+      category: 'Bills',
+      scheduleActive: true,
+    }), 70)).resolves.toEqual(expect.objectContaining({
+      name: 'Activated and edited rent',
+      category: 'Bills',
+      scheduleActive: 1,
+      scheduleCursorAt: 70,
+      updatedAt: 70,
+    }))
   })
 
   it('excludes incomplete active schedule rows before processing without mutating them', async () => {
