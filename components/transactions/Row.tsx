@@ -58,6 +58,9 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
             <Text numberOfLines={1} style={[styles.description, { color: textColor }]}>
               {transaction.description}
             </Text>
+            <Text style={[styles.amount, { color: amountColor }]}>
+              {formatCurrency(transaction.amount)}
+            </Text>
             <View style={styles.meta}>
               <Text style={[styles.metaText, { color: textColor }]}>
                 {format(transaction.transactionDate, 'MMM d, yyyy')}
@@ -67,9 +70,6 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
               </Text>
             </View>
           </View>
-          <Text style={[styles.amount, { color: amountColor }]}>
-            {formatCurrency(transaction.amount)}
-          </Text>
         </Pressable>
         <TransactionMenu
           transactionId={transaction.id}
@@ -99,8 +99,6 @@ const styles = StyleSheet.create({
   },
   editTarget: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     marginLeft: 12,
   },
   body: {
@@ -112,8 +110,9 @@ const styles = StyleSheet.create({
   },
   meta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 3,
+    marginTop: 4,
   },
   metaText: {
     fontSize: 13,
@@ -121,8 +120,8 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 17,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontWeight: '700',
+    marginTop: 4,
   },
   pressed: {
     opacity: 0.55,

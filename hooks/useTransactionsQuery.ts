@@ -1,5 +1,11 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { listTransactions, summarizeByCategory, summarizeByMonth, summarizeTransactions } from '@/db/transaction';
+import {
+  listTransactions,
+  summarizeByCategory,
+  summarizeCashFlowByPeriod,
+  summarizeTransactions,
+  type SummaryPeriodGranularity,
+} from '@/db/transaction';
 import type { TemplateListFilter } from '@/db/template';
 import type { SuggestionLookback } from '@/db/template-core';
 
@@ -17,7 +23,9 @@ export type TransactionListFilter = {
   search?: string;
 };
 
-export type TransactionSummaryFilter = Pick<TransactionListFilter, 'start' | 'end' | 'categories' | 'verified'>;
+export type TransactionSummaryFilter = Pick<TransactionListFilter, 'start' | 'end' | 'categories' | 'verified'> & {
+  granularity: SummaryPeriodGranularity;
+};
 
 export const queryKeys = {
   transactions: {
@@ -62,12 +70,15 @@ export const useTransactionSummary = (filter: TransactionSummaryFilter) => {
   return useQuery({
     queryKey: queryKeys.transactions.summary(filter),
     queryFn: async () => {
-      const [summary, byCategory, byMonth] = await Promise.all([
+      const [summary, byCategory, byPeriod] = await Promise.all([
         summarizeTransactions({ start: filter.start, end: filter.end, categories: filter.categories, verified: filter.verified }),
         summarizeByCategory({ start: filter.start, end: filter.end, categories: filter.categories }),
-        summarizeByMonth({ start: filter.start, end: filter.end, categories: filter.categories }),
+        summarizeCashFlowByPeriod(
+          { start: filter.start, end: filter.end, categories: filter.categories },
+          filter.granularity,
+        ),
       ]);
-      return { summary, byCategory, byMonth };
+      return { summary, byCategory, byPeriod };
     },
   });
 };

@@ -404,6 +404,56 @@ export const summarizeByMonth = async (query?: { start?: Date; end?: Date; categ
   }
 };
 
+export type SummaryPeriodGranularity = 'day' | 'month';
+
+export const summarizeCashFlowByPeriod = async (
+  query: { start?: Date; end?: Date; categories?: string[] },
+  granularity: SummaryPeriodGranularity,
+): Promise<{ period: string; income: number; expense: number }[]> => {
+  const context = getTransactionWhereContext(query, Date.now());
+  const { startTs, endTs, categories } = context;
+  const period = granularity === 'day'
+    ? sql<string>`strftime('%Y-%m-%d', ${transactions.transactionDate} / 1000, 'unixepoch')`
+    : sql<string>`strftime('%Y-%m', ${transactions.transactionDate} / 1000, 'unixepoch')`;
+
+  console.info('[transactions.summary_by_period][stage=query] summarizing cash flow by period', {
+    startTs,
+    endTs,
+    category_count: categories.length,
+    granularity,
+  });
+
+  try {
+    const rows = await db
+      .select({
+        period,
+        income: sum(sql<number>`CASE WHEN ${transactions.amount} > 0 THEN ${transactions.amount} ELSE 0 END`),
+        expense: sum(sql<number>`CASE WHEN ${transactions.amount} < 0 THEN -${transactions.amount} ELSE 0 END`),
+      })
+      .from(transactions)
+      .where(and(...getActiveTransactionConditions(context)))
+      .groupBy(period)
+      .all();
+
+    return rows
+      .map((row) => ({
+        period: row.period,
+        income: Number(row.income ?? 0),
+        expense: Number(row.expense ?? 0),
+      }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+  } catch (error) {
+    console.error('[transactions.summary_by_period][stage=query] cash flow summary failed', {
+      startTs,
+      endTs,
+      category_count: categories.length,
+      granularity,
+      error: String(error),
+    });
+    throw error;
+  }
+};
+
 export const listTemplateSuggestionRows = async (startDate: number): Promise<HistoricalTransactionInput[]> => {
   console.info('[transactions.template_suggestions][stage=query] listing historical suggestion rows', { startDate });
   try {

@@ -21,4 +21,20 @@ describe('ExpenseFilterBar', () => {
     expect(onSearchChange).toHaveBeenCalledWith('coffee');
     expect(onPresetChange).toHaveBeenCalledWith('all');
   });
+
+  it('can render date controls without transaction-only search or category controls', async () => {
+    const screen = await render(
+      <ExpenseFilterBar
+        preset="monthly"
+        onPresetChange={jest.fn()}
+        showSearch={false}
+        showCategories={false}
+        categories={['Food']}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Search expenses')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Filter Food' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'This month' })).toBeTruthy();
+  });
 });
