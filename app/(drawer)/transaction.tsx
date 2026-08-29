@@ -6,7 +6,7 @@ import { getTemplate } from '@/db/template';
 import { getTransactionInitialFocus } from '@/db/template-core';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
-import { useInvalidateTransactions } from '@/hooks/useQueryClient';
+import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
@@ -21,7 +21,7 @@ export default function TransactionDrawer() {
   const routeTemplateId = firstRouteParam(params.templateId);
   const isEdit = !!id;
   const sourceTemplateId = isEdit ? undefined : routeTemplateId;
-  const invalidateTransactions = useInvalidateTransactions();
+  const invalidateTransactionsAndTemplates = useInvalidateTransactionsAndTemplates();
 
   const amountRef = useRef<TextInput>(null);
   const descriptionRef = useRef<TextInput>(null);
@@ -254,7 +254,7 @@ export default function TransactionDrawer() {
         });
       }
 
-      invalidateTransactions();
+      await invalidateTransactionsAndTemplates();
       router.dismiss();
       console.info('[transaction.form][stage=save] transaction saved', {
         stage: 'save',

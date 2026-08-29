@@ -21,6 +21,14 @@ jest.mock('expo-sqlite', () => {
       return {
         executeSync: (params?: unknown[]) => {
           const normalized = normalizeParams(params)
+          const testState = globalThis as {
+            __beforeTemplateUpdate?: (target: typeof database) => void
+          }
+          if (/^\s*update\s+["`]?transaction_templates["`]?/i.test(sql)) {
+            const beforeUpdate = testState.__beforeTemplateUpdate
+            testState.__beforeTemplateUpdate = undefined
+            beforeUpdate?.(database)
+          }
           const result = statement.run(...normalized)
           return {
             changes: result.changes,
@@ -79,9 +87,9 @@ jest.mock('expo-sqlite', () => {
   return { openDatabaseSync: () => connection }
 })
 
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
-import { db, transactionTemplates, transactions } from '../index'
+import { categories, db, transactionTemplates, transactions } from '../index'
 import type { TemplateDraft } from '../template-core'
 import {
   backfillTemplate,
@@ -90,6 +98,7 @@ import {
   getNextAvailableTemplateName,
   getTemplate,
   listHistoricalTemplateSuggestions,
+  listTemplateCategories,
   listTemplates,
   pauseTemplate,
   previewTemplateBackfill,
@@ -127,15 +136,27 @@ const scheduledDraft = (overrides: Partial<TemplateDraft> = {}): TemplateDraft =
 })
 
 const clearTables = async () => {
-  ;(globalThis as { __beforeTemplateExclusiveTransaction?: () => void | Promise<void> })
-    .__beforeTemplateExclusiveTransaction = undefined
+  ;(globalThis as {
+    __beforeTemplateExclusiveTransaction?: () => void | Promise<void>
+    __beforeTemplateUpdate?: (database: unknown) => void
+  }).__beforeTemplateExclusiveTransaction = undefined
+  ;(globalThis as { __beforeTemplateUpdate?: (database: unknown) => void })
+    .__beforeTemplateUpdate = undefined
   await db.delete(transactions).run()
   await db.delete(transactionTemplates).run()
+  await db.delete(categories).run()
 }
 
 const beforeNextExclusiveTransaction = (callback: () => void | Promise<void>) => {
   ;(globalThis as { __beforeTemplateExclusiveTransaction?: () => void | Promise<void> })
     .__beforeTemplateExclusiveTransaction = callback
+}
+
+const beforeNextTemplateUpdate = (callback: (database: {
+  prepare: (sql: string) => { run: (...params: unknown[]) => unknown }
+}) => void) => {
+  ;(globalThis as { __beforeTemplateUpdate?: typeof callback })
+    .__beforeTemplateUpdate = callback
 }
 
 describe('template repository', () => {
@@ -169,19 +190,52 @@ describe('template repository', () => {
     expect((await listTemplates({ type: 'scheduled' })).map(({ name }) => name)).toEqual(['Monthly Rent'])
     expect((await listTemplates({ type: 'manual' })).map(({ name }) => name).sort()).toEqual(['Bus pass', 'Morning Coffee'])
     expect((await listTemplates({ category: 'Travel' })).map(({ name }) => name)).toEqual(['Bus pass'])
+    expect((await listTemplates({ category: 'travel' })).map(({ name }) => name)).toEqual(['Bus pass'])
+    expect((await listTemplates({ category: 'TRAVEL' })).map(({ name }) => name)).toEqual(['Bus pass'])
   })
 
-  it('sorts by latest active linked transaction and then update time', async () => {
+  it('unions active template-only, transaction, and preset categories without duplicates', async () => {
+    await createTemplate(validDraft({ category: 'Template Secret' }))
+    await db.insert(transactions).values({
+      id: 'category-transaction', amount: -1, transactionDate: 1, description: 'One',
+      category: 'Transaction Only', templateId: null, verified: 0, notes: null,
+      deletedAt: null, createdAt: 1, updatedAt: 1,
+    }).run()
+    await db.insert(categories).values({
+      id: 'preset-category', name: 'Preset Only', icon: 'tag', color: '#000000',
+      is_preset: true, sort_order: 1, createdAt: 1,
+    }).run()
+
+    expect(await listTemplateCategories()).toEqual([
+      'Preset Only',
+      'Template Secret',
+      'Transaction Only',
+    ])
+  })
+
+  it('sorts by linked use, updatedAt, createdAt, then normalized name', async () => {
     const first = await createTemplate(validDraft({ name: 'First' }), 10)
     const second = await createTemplate(validDraft({ name: 'Second' }), 20)
-    const third = await createTemplate(validDraft({ name: 'Third' }), 30)
+    const olderFallback = await createTemplate(validDraft({ name: 'Zulu' }), 30)
+    const betaFallback = await createTemplate(validDraft({ name: 'Beta' }), 40)
+    const alphaFallback = await createTemplate(validDraft({ name: 'Alpha' }), 40)
+    await db.update(transactionTemplates)
+      .set({ updatedAt: 50 })
+      .where(sql`${transactionTemplates.id} IN (${olderFallback.id}, ${betaFallback.id}, ${alphaFallback.id})`)
+      .run()
     await db.insert(transactions).values([
       { id: 'old', amount: -5, transactionDate: 100, description: 'First', category: 'Food', templateId: first.id, verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
       { id: 'new', amount: -5, transactionDate: 200, description: 'Second', category: 'Food', templateId: second.id, verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
       { id: 'deleted-newest', amount: -5, transactionDate: 300, description: 'First', category: 'Food', templateId: first.id, verified: 0, notes: null, deletedAt: 301, createdAt: 1, updatedAt: 1 },
     ]).run()
 
-    expect((await listTemplates()).map(({ id }) => id)).toEqual([second.id, first.id, third.id])
+    expect((await listTemplates()).map(({ id }) => id)).toEqual([
+      second.id,
+      first.id,
+      alphaFallback.id,
+      betaFallback.id,
+      olderFallback.id,
+    ])
   })
 
   it('uses defaults and source linkage for Quick Add without moving a scheduled cursor', async () => {
@@ -220,7 +274,7 @@ describe('template repository', () => {
 
   it('rejects resuming an incomplete migrated schedule without mutating it', async () => {
     await db.insert(transactionTemplates).values({
-      id: 'migrated-incomplete', name: 'Legacy', normalizedName: 'legacy', amount: 0,
+      id: 'migrated-incomplete', name: 'Legacy', normalizedName: 'legacy', amount: null,
       transactionType: 'expense', description: 'Legacy', category: 'Other', notes: null,
       verified: null, recurrenceValue: '0 0 1 * *', startDate: 1, scheduleCursorAt: 1,
       scheduleActive: 0, deletedAt: null, createdAt: 1, updatedAt: 1,
@@ -248,14 +302,26 @@ describe('template repository', () => {
     expect(await db.select().from(transactionTemplates).where(eq(transactionTemplates.id, 'whitespace-recurrence')).get()).toEqual(before)
   })
 
-  it('resumes a complete valid scheduled template from now', async () => {
+  it('keeps a future start as the hard floor when resuming', async () => {
     const template = await createTemplate(scheduledDraft())
     await pauseTemplate(template.id, 50)
 
     await expect(resumeTemplate(template.id, 70)).resolves.toEqual(expect.objectContaining({
       scheduleActive: 1,
-      scheduleCursorAt: 70,
+      scheduleCursorAt: template.startDate,
       updatedAt: 70,
+    }))
+  })
+
+  it('updates updatedAt when pausing', async () => {
+    const template = await createTemplate(scheduledDraft(), 10)
+    await expect(pauseTemplate(template.id, 50)).resolves.toEqual(expect.objectContaining({
+      scheduleActive: 0,
+      updatedAt: 50,
+    }))
+    expect(await getTemplate(template.id)).toEqual(expect.objectContaining({
+      scheduleActive: 0,
+      updatedAt: 50,
     }))
   })
 
@@ -266,7 +332,10 @@ describe('template repository', () => {
     await expect(quickAddTemplate(template.id, 60)).resolves.toEqual(expect.objectContaining({ templateId: template.id }))
 
     await resumeTemplate(template.id, 70)
-    expect(await getTemplate(template.id)).toEqual(expect.objectContaining({ scheduleActive: 1, scheduleCursorAt: 70 }))
+    expect(await getTemplate(template.id)).toEqual(expect.objectContaining({
+      scheduleActive: 1,
+      scheduleCursorAt: template.startDate,
+    }))
 
     await convertTemplateToManual(template.id, 80)
     expect(await getTemplate(template.id)).toEqual(expect.objectContaining({
@@ -283,7 +352,37 @@ describe('template repository', () => {
     expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(template.startDate)
 
     await updateTemplate(template.id, scheduledDraft({ name: 'Updated rent', recurrenceValue: '0 0 2 * *' }), 60)
-    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(60)
+    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(template.startDate)
+  })
+
+  it('uses max(edit time, new start) for schedule edits', async () => {
+    const template = await createTemplate(scheduledDraft())
+    const futureStart = template.startDate! + 10_000
+
+    await updateTemplate(template.id, scheduledDraft({
+      recurrenceValue: '0 0 2 * *',
+      startDate: futureStart,
+    }), template.startDate! + 1_000)
+    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(futureStart)
+
+    await updateTemplate(template.id, scheduledDraft({
+      recurrenceValue: '0 0 3 * *',
+      startDate: futureStart,
+    }), futureStart + 5_000)
+    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(futureStart + 5_000)
+  })
+
+  it('preserves an existing cursor later than now and start when resuming', async () => {
+    const template = await createTemplate(scheduledDraft())
+    const laterCursor = template.startDate! + 20_000
+    await db.update(transactionTemplates)
+      .set({ scheduleCursorAt: laterCursor, scheduleActive: 0, updatedAt: 50 })
+      .where(eq(transactionTemplates.id, template.id))
+      .run()
+
+    await expect(resumeTemplate(template.id, template.startDate! + 10_000)).resolves.toEqual(
+      expect.objectContaining({ scheduleCursorAt: laterCursor, scheduleActive: 1 }),
+    )
   })
 
   it('resets the cursor when an edit activates an inactive schedule alongside other changes', async () => {
@@ -298,26 +397,26 @@ describe('template repository', () => {
       name: 'Activated and edited rent',
       category: 'Bills',
       scheduleActive: 1,
-      scheduleCursorAt: 70,
+      scheduleCursorAt: template.startDate,
       updatedAt: 70,
     }))
   })
 
-  it('excludes incomplete active schedule rows before processing without mutating them', async () => {
+  it('keeps incomplete paused schedule rows representable and out of automatic processing', async () => {
     const base = {
       transactionType: 'expense' as const,
       category: 'Other',
       notes: null,
       verified: null,
       recurrenceValue: '0 0 1 * *',
-      scheduleActive: 1,
+      scheduleActive: 0,
       deletedAt: null,
       createdAt: 1,
       updatedAt: 1,
     }
     await db.insert(transactionTemplates).values([
       { ...base, id: 'missing-amount', name: 'Missing amount', normalizedName: 'missing amount', amount: null, description: 'One', startDate: 1, scheduleCursorAt: 1 },
-      { ...base, id: 'zero-amount', name: 'Zero amount', normalizedName: 'zero amount', amount: 0, description: 'Two', startDate: 2, scheduleCursorAt: 2 },
+      { ...base, id: 'invalid-amount', name: 'Invalid amount', normalizedName: 'invalid amount', amount: null, description: 'Two', startDate: 2, scheduleCursorAt: 2 },
       { ...base, id: 'missing-description', name: 'Missing description', normalizedName: 'missing description', amount: 3, description: null, startDate: 3, scheduleCursorAt: 3 },
       { ...base, id: 'missing-start', name: 'Missing start', normalizedName: 'missing start', amount: 4, description: 'Four', startDate: null, scheduleCursorAt: 4 },
       { ...base, id: 'missing-cursor', name: 'Missing cursor', normalizedName: 'missing cursor', amount: 5, description: 'Five', startDate: 5, scheduleCursorAt: null },
@@ -328,6 +427,116 @@ describe('template repository', () => {
 
     expect(await db.select().from(transactions).all()).toEqual([])
     expect(await db.select().from(transactionTemplates).all()).toEqual(before)
+  })
+
+  it('does not let a stale inactive-to-active edit overwrite a concurrent manual conversion', async () => {
+    const template = await createTemplate(scheduledDraft(), 10)
+    await pauseTemplate(template.id, 20)
+    beforeNextTemplateUpdate((database) => {
+      database.prepare(`
+        UPDATE transaction_templates
+        SET recurrence_value = NULL,
+            start_date = NULL,
+            schedule_cursor_at = NULL,
+            schedule_active = 0,
+            updated_at = 30
+        WHERE id = ?
+      `).run(template.id)
+    })
+
+    await expect(updateTemplate(template.id, scheduledDraft({ scheduleActive: true }), 40))
+      .resolves.toBeNull()
+    expect(await db.select().from(transactionTemplates).where(eq(transactionTemplates.id, template.id)).get())
+      .toEqual(expect.objectContaining({
+        recurrenceValue: null,
+        startDate: null,
+        scheduleCursorAt: null,
+        scheduleActive: 0,
+        updatedAt: 30,
+      }))
+  })
+
+  it('does not let a stale schedule edit overwrite a concurrent schedule edit', async () => {
+    const template = await createTemplate(scheduledDraft(), 10)
+    beforeNextTemplateUpdate((database) => {
+      database.prepare(`
+        UPDATE transaction_templates
+        SET recurrence_value = '0 0 4 * *', updated_at = 30
+        WHERE id = ?
+      `).run(template.id)
+    })
+
+    await expect(updateTemplate(template.id, scheduledDraft({ recurrenceValue: '0 0 2 * *' }), 40))
+      .resolves.toBeNull()
+    expect(await db.select().from(transactionTemplates).where(eq(transactionTemplates.id, template.id)).get())
+      .toEqual(expect.objectContaining({
+        recurrenceValue: '0 0 4 * *',
+        scheduleCursorAt: template.startDate,
+        updatedAt: 30,
+      }))
+  })
+
+  it.each([
+    {
+      name: 'manual conversion',
+      mutate: async (id: string) => {
+        await db.update(transactionTemplates).set({
+          recurrenceValue: null,
+          startDate: null,
+          scheduleCursorAt: null,
+          scheduleActive: 0,
+          updatedAt: 100,
+        }).where(eq(transactionTemplates.id, id)).run()
+      },
+      expected: { recurrenceValue: null, scheduleActive: 0 },
+    },
+    {
+      name: 'soft deletion',
+      mutate: async (id: string) => {
+        await db.update(transactionTemplates).set({ deletedAt: 101, updatedAt: 101 })
+          .where(eq(transactionTemplates.id, id)).run()
+      },
+      expected: { deletedAt: 101, scheduleActive: 0 },
+    },
+    {
+      name: 'invalid schedule edit',
+      mutate: async (id: string) => {
+        await db.update(transactionTemplates).set({ recurrenceValue: 'not a cron', updatedAt: 102 })
+          .where(eq(transactionTemplates.id, id)).run()
+      },
+      expected: { recurrenceValue: 'not a cron', scheduleActive: 0 },
+    },
+  ])('re-reads after a concurrent $name before resume and never activates invalid state', async ({ mutate, expected }) => {
+    const template = await createTemplate(scheduledDraft())
+    await pauseTemplate(template.id, 50)
+    beforeNextExclusiveTransaction(() => mutate(template.id))
+
+    await resumeTemplate(template.id, 70).catch(() => null)
+
+    expect(await db.select().from(transactionTemplates).where(eq(transactionTemplates.id, template.id)).get())
+      .toEqual(expect.objectContaining(expected))
+  })
+
+  it('requires exactly one guarded row update when resuming', async () => {
+    const template = await createTemplate(scheduledDraft())
+    await pauseTemplate(template.id, 50)
+    const database = (globalThis as unknown as {
+      __templateRepositoryDatabase: { exec: (source: string) => void }
+    }).__templateRepositoryDatabase
+    database.exec(`
+      CREATE TRIGGER ignore_resume_activation
+      BEFORE UPDATE OF schedule_active ON transaction_templates
+      WHEN OLD.schedule_active = 0 AND NEW.schedule_active = 1
+      BEGIN
+        SELECT RAISE(IGNORE);
+      END;
+    `)
+
+    await expect(resumeTemplate(template.id, 70))
+      .rejects.toThrow('Scheduled template changed while resuming')
+    database.exec('DROP TRIGGER ignore_resume_activation')
+    expect((await db.select().from(transactionTemplates).where(eq(transactionTemplates.id, template.id)).get())?.scheduleActive)
+      .toBe(0)
   })
 
   it.each([
@@ -413,6 +622,21 @@ describe('template repository', () => {
     expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(Math.max(...inserted.map(({ transactionDate }) => transactionDate)))
   })
 
+  it('backfills a complete inactive schedule and preserves its paused state', async () => {
+    const now = Date.parse('2026-04-15T00:00:00.000Z')
+    const template = await createTemplate(scheduledDraft({ scheduleActive: false }))
+
+    await expect(backfillTemplate(template.id, now)).resolves.toBe(3)
+
+    const inserted = await db.select().from(transactions).where(eq(transactions.templateId, template.id)).all()
+    expect(inserted).toHaveLength(3)
+    expect(new Set(inserted.map(({ id }) => id)).size).toBe(3)
+    expect(await getTemplate(template.id)).toEqual(expect.objectContaining({
+      scheduleActive: 0,
+      scheduleCursorAt: Math.max(...inserted.map(({ transactionDate }) => transactionDate)),
+    }))
+  })
+
   it.each([
     {
       name: 'pause',
@@ -474,8 +698,8 @@ describe('template repository', () => {
     expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(template.scheduleCursorAt)
   })
 
-  it('rolls back occurrence insertion and cursor update together when backfill fails', async () => {
-    const template = await createTemplate(scheduledDraft())
+  it('rolls back inactive occurrence insertion and cursor update together when backfill fails', async () => {
+    const template = await createTemplate(scheduledDraft({ scheduleActive: false }))
     const database = (globalThis as unknown as {
       __templateRepositoryDatabase: { exec: (source: string) => void }
     }).__templateRepositoryDatabase
@@ -493,7 +717,41 @@ describe('template repository', () => {
     database.exec('DROP TRIGGER fail_second_occurrence')
 
     expect(await db.select().from(transactions).all()).toEqual([])
-    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(template.startDate)
+    expect(await getTemplate(template.id)).toEqual(expect.objectContaining({
+      scheduleActive: 0,
+      scheduleCursorAt: template.startDate,
+    }))
+  })
+
+  it('never logs template names, search text, category values, or full filters', async () => {
+    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined)
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    const secretName = 'PRIVATE TEMPLATE NAME'
+    const secretSearch = 'PRIVATE SEARCH TEXT'
+    const secretCategory = 'PRIVATE CATEGORY'
+
+    await createTemplate(validDraft({
+      name: secretName,
+      description: 'PRIVATE DESCRIPTION',
+      category: secretCategory,
+    }))
+    await listTemplates({
+      search: secretSearch,
+      type: 'manual',
+      categories: [secretCategory],
+    })
+
+    const logged = JSON.stringify([...infoSpy.mock.calls, ...errorSpy.mock.calls])
+    expect(logged).not.toContain(secretName)
+    expect(logged).not.toContain(secretSearch)
+    expect(logged).not.toContain(secretCategory)
+    expect(logged).not.toContain('PRIVATE DESCRIPTION')
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[templates.list][stage=query]',
+      { has_search: true, type: 'manual', category_count: 1 },
+    )
+    infoSpy.mockRestore()
+    errorSpy.mockRestore()
   })
 
   it('uses explicit historical cutoff and excludes linked and active-template matches', async () => {

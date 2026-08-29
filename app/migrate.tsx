@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, Button } from 'react-native';
 import { router } from 'expo-router';
 import {
-  runMigration,
+  runMigrationWithRecovery,
   getLegacyCounts,
   legacyDbExists,
   markMigrationComplete,
   seedPresetCategories,
 } from '@/db/migration';
 import GlassView from '@/components/glass/GlassView';
-import { db } from '@/db';
+import { db, sqlite } from '@/db';
 
 export default function MigrationScreen() {
   const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
@@ -50,7 +50,7 @@ export default function MigrationScreen() {
 
     try {
       console.info('[migration.screen][stage=run_migration] starting legacy migration');
-      const result = await runMigration(db);
+      const result = await runMigrationWithRecovery(db, sqlite);
       if (result.success) {
         setProgress('Migration complete!');
         setStatus('success');
@@ -121,7 +121,7 @@ export default function MigrationScreen() {
                 {counts?.transactions ?? 0} Transactions
               </Text>
               <Text style={styles.stat}>
-                {counts?.recurring ?? 0} Recurring
+                {counts?.recurring ?? 0} Templates
               </Text>
             </View>
             <Text style={styles.description}>

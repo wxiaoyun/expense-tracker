@@ -1,3 +1,4 @@
+import { validateOccurrence } from '@/libs/date';
 import { nextAvailableTemplateName, normalizeTemplateText, type TransactionType } from './template-core';
 
 export type RecurringRowForTemplateMigration = {
@@ -38,23 +39,37 @@ const mapRecurringRow = (
   const baseName = row.description.trim() || `Template ${row.id}`;
   const name = nextAvailableTemplateName(baseName, [...activeNames]);
   const normalizedName = normalizeTemplateText(name);
-  const isZeroAmount = row.amount === 0;
+  const amountMagnitude = Math.abs(row.amount);
+  const amountIsValid = Number.isFinite(amountMagnitude) && amountMagnitude > 0;
+  const scheduleCursorAt = row.lastCharged ?? row.startDate;
+  const startIsValid = Number.isFinite(row.startDate) && Number.isInteger(row.startDate);
+  const cursorIsValid = Number.isFinite(scheduleCursorAt)
+    && Number.isInteger(scheduleCursorAt)
+    && scheduleCursorAt >= row.startDate;
+  const recurrenceIsValid = typeof row.recurrenceValue === 'string'
+    && row.recurrenceValue.trim().length > 0
+    && validateOccurrence(row.recurrenceValue).ok;
+  const scheduleIsComplete = amountIsValid
+    && row.description.trim().length > 0
+    && startIsValid
+    && cursorIsValid
+    && recurrenceIsValid;
   activeNames.add(normalizedName);
 
   return {
     id: row.id,
     name,
     normalizedName,
-    amount: isZeroAmount ? null : Math.abs(row.amount),
-    transactionType: isZeroAmount ? null : row.amount > 0 ? 'income' : 'expense',
+    amount: amountIsValid ? amountMagnitude : null,
+    transactionType: amountIsValid ? row.amount > 0 ? 'income' : 'expense' : null,
     description: row.description,
     category: row.category,
     notes: null,
     verified: null,
     recurrenceValue: row.recurrenceValue,
     startDate: row.startDate,
-    scheduleCursorAt: row.lastCharged ?? row.startDate,
-    scheduleActive: isZeroAmount ? 0 : 1,
+    scheduleCursorAt,
+    scheduleActive: scheduleIsComplete ? 1 : 0,
     deletedAt: null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

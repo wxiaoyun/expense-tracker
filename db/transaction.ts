@@ -107,9 +107,9 @@ export const listTransactions = async (query?: {
     endTs,
     offset,
     limit,
-    categories,
+    category_count: categories.length,
     verified: verified ?? null,
-    search: search ?? null,
+    has_search: Boolean(search),
   });
 
   try {
@@ -130,7 +130,7 @@ export const listTransactions = async (query?: {
       count: items.length,
       categories: categories.length,
       verified: verified ?? null,
-      search: search ?? null,
+      has_search: Boolean(search),
     });
 
     const nextOffset = items.length < limit ? null : offset + limit;
@@ -141,9 +141,9 @@ export const listTransactions = async (query?: {
       endTs,
       offset,
       limit,
-      categories,
+      category_count: categories.length,
       verified: verified ?? null,
-      search: search ?? null,
+      has_search: Boolean(search),
       error: String(error),
     });
     throw error;
@@ -163,7 +163,7 @@ export const summarizeTransactions = async (query?: {
   console.info('[transactions.summary][stage=query] summarizing transactions', {
     startTs,
     endTs,
-    categories,
+    category_count: categories.length,
     verified: verified ?? null,
   });
 
@@ -188,7 +188,7 @@ export const summarizeTransactions = async (query?: {
     console.error('[transactions.summary][stage=query] transaction summary failed', {
       startTs,
       endTs,
-      categories,
+      category_count: categories.length,
       verified: verified ?? null,
       error: String(error),
     });
@@ -340,7 +340,7 @@ export const summarizeByCategory = async (
   console.info('[transactions.summary_by_category][stage=query] summarizing transactions by category', {
     startTs,
     endTs,
-    categories,
+    category_count: categories.length,
   });
 
   try {
@@ -367,7 +367,7 @@ export const summarizeByCategory = async (
     console.error('[transactions.summary_by_category][stage=query] category summary failed', {
       startTs,
       endTs,
-      categories,
+      category_count: categories.length,
       error: String(error),
     });
     throw error;
@@ -381,7 +381,7 @@ export const summarizeByMonth = async (query?: { start?: Date; end?: Date; categ
   console.info('[transactions.summary_by_month][stage=query] summarizing transactions by month', {
     startTs,
     endTs,
-    categories,
+    category_count: categories.length,
   });
 
   try {
@@ -397,7 +397,7 @@ export const summarizeByMonth = async (query?: { start?: Date; end?: Date; categ
     console.error('[transactions.summary_by_month][stage=query] monthly summary failed', {
       startTs,
       endTs,
-      categories,
+      category_count: categories.length,
       error: String(error),
     });
     throw error;

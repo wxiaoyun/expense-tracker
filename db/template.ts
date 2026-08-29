@@ -4,7 +4,12 @@ import { and, eq, gt, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { createId } from '@/libs/id'
 import { db, sqlite } from './index'
 import { getDueOccurrenceDates, templateOccurrenceId } from './recurrence-core'
-import { transactionTemplates, transactions, type TransactionTemplate } from './schema'
+import {
+  categories as categoryPresets,
+  transactionTemplates,
+  transactions,
+  type TransactionTemplate,
+} from './schema'
 import {
   buildTemplateSuggestions,
   mapTemplateToTransaction,
@@ -31,6 +36,19 @@ const info = (operation: string, stage: string, details: Record<string, unknown>
 const failure = (operation: string, stage: string, error: unknown, details: Record<string, unknown> = {}) => {
   console.error(`[templates.${operation}][stage=${stage}] failed`, { ...details, error: String(error) })
 }
+
+const safeFilterDetails = (filter: TemplateListFilter) => ({
+  has_search: Boolean(filter.search?.trim()),
+  type: filter.type ?? 'all',
+  category_count: filter.categories?.length ?? (filter.category ? 1 : 0),
+})
+
+const safeDraftDetails = (draft: TemplateDraft) => ({
+  is_scheduled: Boolean(draft.recurrenceValue?.trim()),
+  schedule_active: Boolean(draft.recurrenceValue?.trim()) && draft.scheduleActive,
+  has_amount: draft.amount !== null,
+  has_description: Boolean(draft.description?.trim()),
+})
 
 const trimNullable = (value: string | null): string | null => {
   const trimmed = value?.trim() ?? ''
@@ -118,6 +136,8 @@ const assertResumableTemplate = (template: TransactionTemplate): void => {
   const recurrenceValue = draft.recurrenceValue?.trim() || null
   const normalizedDraft = { ...draft, recurrenceValue }
   if (
+    template.deletedAt !== null ||
+    template.scheduleActive !== 0 ||
     normalizedDraft.amount === null ||
     !Number.isFinite(normalizedDraft.amount) ||
     normalizedDraft.amount <= 0 ||
@@ -125,8 +145,11 @@ const assertResumableTemplate = (template: TransactionTemplate): void => {
     !normalizedDraft.recurrenceValue ||
     normalizedDraft.startDate === null ||
     !Number.isFinite(normalizedDraft.startDate) ||
+    !Number.isInteger(normalizedDraft.startDate) ||
     normalizedDraft.scheduleCursorAt === null ||
     !Number.isFinite(normalizedDraft.scheduleCursorAt) ||
+    !Number.isInteger(normalizedDraft.scheduleCursorAt) ||
+    normalizedDraft.scheduleCursorAt < normalizedDraft.startDate ||
     !validateTemplateDraft(normalizedDraft).ok
   ) {
     throw new Error('Only complete scheduled templates can be resumed')
@@ -205,34 +228,48 @@ type CompleteScheduledTemplate = TransactionTemplate & {
   recurrenceValue: string
   startDate: number
   scheduleCursorAt: number
-  scheduleActive: 1
+  scheduleActive: 0 | 1
   deletedAt: null
 }
 
 const assertCurrentScheduleSnapshot: (
   selected: TransactionTemplate,
   current: TransactionTemplate | null,
-) => asserts current is CompleteScheduledTemplate = (selected, current) => {
+  requireActive: boolean,
+) => asserts current is CompleteScheduledTemplate = (selected, current, requireActive) => {
   if (
     !current ||
-    current.scheduleActive !== 1 ||
     current.deletedAt !== null ||
+    (current.scheduleActive !== 0 && current.scheduleActive !== 1) ||
+    (requireActive && current.scheduleActive !== 1) ||
     current.amount === null ||
     !Number.isFinite(current.amount) ||
     current.amount <= 0 ||
     !current.description?.trim() ||
-    !current.recurrenceValue ||
+    !current.recurrenceValue?.trim() ||
     current.startDate === null ||
-    current.scheduleCursorAt === null
+    !Number.isFinite(current.startDate) ||
+    !Number.isInteger(current.startDate) ||
+    current.scheduleCursorAt === null ||
+    !Number.isFinite(current.scheduleCursorAt) ||
+    !Number.isInteger(current.scheduleCursorAt) ||
+    current.scheduleCursorAt < current.startDate
   ) {
-    throw new Error('Scheduled template is no longer active and complete')
+    throw new Error('Scheduled template is no longer complete')
   }
 
   assertValidDraft(asDraft(current))
   if (
+    current.amount !== selected.amount ||
+    current.transactionType !== selected.transactionType ||
+    current.description !== selected.description ||
+    current.category !== selected.category ||
+    current.notes !== selected.notes ||
+    current.verified !== selected.verified ||
     current.recurrenceValue !== selected.recurrenceValue ||
     current.startDate !== selected.startDate ||
     current.scheduleCursorAt !== selected.scheduleCursorAt ||
+    current.scheduleActive !== selected.scheduleActive ||
     current.updatedAt !== selected.updatedAt
   ) {
     throw new Error('Scheduled template changed before processing')
@@ -249,7 +286,7 @@ const advanceScheduleCursor = async (
     `UPDATE transaction_templates
      SET schedule_cursor_at = ?, updated_at = ?
      WHERE id = ?
-       AND schedule_active = 1
+       AND schedule_active = ?
        AND deleted_at IS NULL
        AND amount IS NOT NULL
        AND amount > 0
@@ -263,6 +300,7 @@ const advanceScheduleCursor = async (
     nextCursorAt,
     timestamp,
     current.id,
+    current.scheduleActive,
     current.recurrenceValue,
     current.startDate,
     current.scheduleCursorAt,
@@ -279,7 +317,7 @@ const backfillTemplateInTransaction = async (
   now: number,
 ): Promise<number> => {
   const current = await readTemplateInTransaction(transactionDb, selected.id)
-  assertCurrentScheduleSnapshot(selected, current)
+  assertCurrentScheduleSnapshot(selected, current, false)
 
   const dates = getBackfillDates(asDraft(current), now)
   const inserted = await insertOccurrenceRows(transactionDb, current, dates, now)
@@ -295,7 +333,7 @@ const processScheduledTemplateInTransaction = async (
   now: Date,
 ): Promise<number> => {
   const current = await readTemplateInTransaction(transactionDb, selected.id)
-  assertCurrentScheduleSnapshot(selected, current)
+  assertCurrentScheduleSnapshot(selected, current, true)
 
   const dates = getDueOccurrenceDates(
     current.recurrenceValue,
@@ -339,8 +377,46 @@ export async function getTemplate(id: string): Promise<TransactionTemplate | nul
   }
 }
 
+export async function listTemplateCategories(): Promise<string[]> {
+  info('list_categories', 'query')
+  try {
+    const rows = await db.all<{ category: string }>(sql`
+      SELECT category
+      FROM (
+        SELECT category AS category
+        FROM ${transactionTemplates}
+        WHERE ${transactionTemplates.deletedAt} IS NULL
+          AND category IS NOT NULL
+          AND trim(category) <> ''
+        UNION ALL
+        SELECT category AS category
+        FROM ${transactions}
+        WHERE ${transactions.deletedAt} IS NULL
+          AND trim(category) <> ''
+        UNION ALL
+        SELECT name AS category
+        FROM ${categoryPresets}
+        WHERE ${categoryPresets.is_preset} = 1
+          AND trim(name) <> ''
+      )
+      ORDER BY category COLLATE NOCASE, category
+    `)
+    const seen = new Set<string>()
+    return rows.flatMap(({ category }) => {
+      const normalized = normalizeTemplateText(category)
+      if (!normalized || seen.has(normalized)) return []
+      seen.add(normalized)
+      return [category]
+    })
+  } catch (error) {
+    failure('list_categories', 'query', error)
+    throw error
+  }
+}
+
 export async function listTemplates(filter: TemplateListFilter = {}): Promise<TransactionTemplate[]> {
-  info('list', 'query', filter)
+  const filterDetails = safeFilterDetails(filter)
+  info('list', 'query', filterDetails)
   try {
     const templateRows = await db
       .select()
@@ -361,12 +437,13 @@ export async function listTemplates(filter: TemplateListFilter = {}): Promise<Tr
 
     const search = normalizeTemplateText(filter.search ?? '')
     const categories = filter.categories ?? (filter.category ? [filter.category] : [])
+    const normalizedCategories = categories.map(normalizeTemplateText)
     return templateRows
       .filter((template) => {
         const scheduled = template.recurrenceValue !== null
         if (filter.type === 'scheduled' && !scheduled) return false
         if (filter.type === 'manual' && scheduled) return false
-        if (categories.length > 0 && (!template.category || !categories.includes(template.category))) return false
+        if (normalizedCategories.length > 0 && (!template.category || !normalizedCategories.includes(normalizeTemplateText(template.category)))) return false
         if (!search) return true
         return [template.name, template.description, template.category]
           .some((value) => value !== null && normalizeTemplateText(value).includes(search))
@@ -380,16 +457,18 @@ export async function listTemplates(filter: TemplateListFilter = {}): Promise<Tr
           if (rightUse !== leftUse) return rightUse - leftUse
         }
         if (right.updatedAt !== left.updatedAt) return right.updatedAt - left.updatedAt
+        if (right.createdAt !== left.createdAt) return right.createdAt - left.createdAt
         return normalizeTemplateText(left.name).localeCompare(normalizeTemplateText(right.name))
       })
   } catch (error) {
-    failure('list', 'query', error, filter)
+    failure('list', 'query', error, filterDetails)
     throw error
   }
 }
 
 export async function createTemplate(draft: TemplateDraft, now = Date.now()): Promise<TransactionTemplate> {
-  info('create', 'insert', { name: draft.name })
+  const draftDetails = safeDraftDetails(draft)
+  info('create', 'insert', draftDetails)
   try {
     const normalized = normalizeDraft(draft)
     assertValidDraft(normalized)
@@ -418,7 +497,7 @@ export async function createTemplate(draft: TemplateDraft, now = Date.now()): Pr
     return row
   } catch (error) {
     const normalizedError = isUniqueNameError(error) ? new Error('Template name already exists') : error
-    failure('create', 'insert', normalizedError, { name: draft.name })
+    failure('create', 'insert', normalizedError, draftDetails)
     throw normalizedError
   }
 }
@@ -428,7 +507,8 @@ export async function updateTemplate(
   draft: TemplateDraft,
   now = Date.now(),
 ): Promise<TransactionTemplate | null> {
-  info('update', 'update', { id, name: draft.name })
+  const draftDetails = { id, ...safeDraftDetails(draft) }
+  info('update', 'update', draftDetails)
   try {
     const normalized = normalizeDraft(draft)
     assertValidDraft(normalized)
@@ -445,15 +525,21 @@ export async function updateTemplate(
       ${transactionTemplates.recurrenceValue} IS NOT ${normalized.recurrenceValue}
       OR ${transactionTemplates.startDate} IS NOT ${normalized.startDate}
     `
-    // Evaluate activation against the row at UPDATE time so an inactive-to-active edit cannot retain a stale cursor.
+    const scheduleFloor = normalized.startDate === null
+      ? now
+      : Math.max(now, normalized.startDate)
     const scheduleCursorAt = normalized.recurrenceValue
       ? normalized.scheduleActive
         ? sql<number | null>`CASE
-            WHEN ${scheduleDefinitionChanged} OR ${transactionTemplates.scheduleActive} = 0 THEN ${now}
+            WHEN ${scheduleDefinitionChanged} THEN ${scheduleFloor}
+            WHEN ${transactionTemplates.scheduleActive} = 0 THEN max(
+              ${scheduleFloor},
+              coalesce(${transactionTemplates.scheduleCursorAt}, ${scheduleFloor})
+            )
             ELSE ${transactionTemplates.scheduleCursorAt}
           END`
         : sql<number | null>`CASE
-            WHEN ${scheduleDefinitionChanged} THEN ${now}
+            WHEN ${scheduleDefinitionChanged} THEN ${scheduleFloor}
             ELSE ${transactionTemplates.scheduleCursorAt}
           END`
       : null
@@ -472,10 +558,29 @@ export async function updateTemplate(
       scheduleActive: normalized.recurrenceValue && normalized.scheduleActive ? 1 : 0,
       updatedAt: now,
     }
+    const snapshotGuard = sql`
+      ${transactionTemplates.name} IS ${existing.name}
+      AND ${transactionTemplates.normalizedName} IS ${existing.normalizedName}
+      AND ${transactionTemplates.amount} IS ${existing.amount}
+      AND ${transactionTemplates.transactionType} IS ${existing.transactionType}
+      AND ${transactionTemplates.description} IS ${existing.description}
+      AND ${transactionTemplates.category} IS ${existing.category}
+      AND ${transactionTemplates.notes} IS ${existing.notes}
+      AND ${transactionTemplates.verified} IS ${existing.verified}
+      AND ${transactionTemplates.recurrenceValue} IS ${existing.recurrenceValue}
+      AND ${transactionTemplates.startDate} IS ${existing.startDate}
+      AND ${transactionTemplates.scheduleCursorAt} IS ${existing.scheduleCursorAt}
+      AND ${transactionTemplates.scheduleActive} IS ${existing.scheduleActive}
+      AND ${transactionTemplates.updatedAt} IS ${existing.updatedAt}
+    `
     const result = await db
       .update(transactionTemplates)
       .set(set)
-      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
+      .where(and(
+        eq(transactionTemplates.id, id),
+        isNull(transactionTemplates.deletedAt),
+        snapshotGuard,
+      ))
       .run()
     if (result.changes !== 1) return null
     return await db
@@ -485,13 +590,13 @@ export async function updateTemplate(
       .get() ?? null
   } catch (error) {
     const normalizedError = isUniqueNameError(error) ? new Error('Template name already exists') : error
-    failure('update', 'update', normalizedError, { id, name: draft.name })
+    failure('update', 'update', normalizedError, draftDetails)
     throw normalizedError
   }
 }
 
 export async function softDeleteTemplate(id: string, now = Date.now()): Promise<boolean> {
-  info('delete', 'soft_delete', { id, now })
+  info('delete', 'soft_delete', { id })
   try {
     const result = await db
       .update(transactionTemplates)
@@ -500,13 +605,13 @@ export async function softDeleteTemplate(id: string, now = Date.now()): Promise<
       .run()
     return result.changes > 0
   } catch (error) {
-    failure('delete', 'soft_delete', error, { id, now })
+    failure('delete', 'soft_delete', error, { id })
     throw error
   }
 }
 
 export async function pauseTemplate(id: string, now = Date.now()): Promise<TransactionTemplate | null> {
-  info('pause', 'update', { id, now })
+  info('pause', 'update', { id })
   try {
     const existing = await db
       .select()
@@ -514,43 +619,83 @@ export async function pauseTemplate(id: string, now = Date.now()): Promise<Trans
       .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
       .get()
     if (!existing) return null
+    const set = { scheduleActive: 0, updatedAt: now }
     const result = await db
       .update(transactionTemplates)
-      .set({ scheduleActive: 0 })
-      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
+      .set(set)
+      .where(and(
+        eq(transactionTemplates.id, id),
+        isNull(transactionTemplates.deletedAt),
+        sql`${transactionTemplates.scheduleActive} IS ${existing.scheduleActive}`,
+        sql`${transactionTemplates.updatedAt} IS ${existing.updatedAt}`,
+      ))
       .run()
-    return result.changes === 1 ? { ...existing, scheduleActive: 0 } : null
+    return result.changes === 1 ? { ...existing, ...set } : null
   } catch (error) {
-    failure('pause', 'update', error, { id, now })
+    failure('pause', 'update', error, { id })
     throw error
   }
 }
 
 export async function resumeTemplate(id: string, now = Date.now()): Promise<TransactionTemplate | null> {
-  info('resume', 'update', { id, now })
+  info('resume', 'update', { id })
   try {
-    const existing = await db
-      .select()
-      .from(transactionTemplates)
-      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
-      .get()
-    if (!existing) return null
-    assertResumableTemplate(existing)
-    const set = { scheduleActive: 1, scheduleCursorAt: now, updatedAt: now }
-    const result = await db
-      .update(transactionTemplates)
-      .set(set)
-      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
-      .run()
-    return result.changes === 1 ? { ...existing, ...set } : null
+    let resumed: TransactionTemplate | null = null
+    await sqlite.withExclusiveTransactionAsync(async (transactionDb) => {
+      const current = await readTemplateInTransaction(transactionDb, id)
+      if (!current || current.deletedAt !== null) return
+      assertResumableTemplate(current)
+
+      const nextCursorAt = Math.max(now, current.startDate!, current.scheduleCursorAt!)
+      const result = await transactionDb.runAsync(
+        `UPDATE transaction_templates
+         SET schedule_active = 1, schedule_cursor_at = ?, updated_at = ?
+         WHERE id = ?
+           AND deleted_at IS NULL
+           AND schedule_active = 0
+           AND amount IS ?
+           AND transaction_type IS ?
+           AND description IS ?
+           AND category IS ?
+           AND notes IS ?
+           AND verified IS ?
+           AND recurrence_value IS ?
+           AND start_date IS ?
+           AND schedule_cursor_at IS ?
+           AND updated_at IS ?`,
+        nextCursorAt,
+        now,
+        current.id,
+        current.amount,
+        current.transactionType,
+        current.description,
+        current.category,
+        current.notes,
+        current.verified,
+        current.recurrenceValue,
+        current.startDate,
+        current.scheduleCursorAt,
+        current.updatedAt,
+      )
+      if (result.changes !== 1) {
+        throw new Error('Scheduled template changed while resuming')
+      }
+      resumed = {
+        ...current,
+        scheduleActive: 1,
+        scheduleCursorAt: nextCursorAt,
+        updatedAt: now,
+      }
+    })
+    return resumed
   } catch (error) {
-    failure('resume', 'update', error, { id, now })
+    failure('resume', 'update', error, { id })
     throw error
   }
 }
 
 export async function convertTemplateToManual(id: string, now = Date.now()): Promise<TransactionTemplate | null> {
-  info('convert_to_manual', 'update', { id, now })
+  info('convert_to_manual', 'update', { id })
   try {
     const existing = await db
       .select()
@@ -568,17 +713,25 @@ export async function convertTemplateToManual(id: string, now = Date.now()): Pro
     const result = await db
       .update(transactionTemplates)
       .set(set)
-      .where(and(eq(transactionTemplates.id, id), isNull(transactionTemplates.deletedAt)))
+      .where(and(
+        eq(transactionTemplates.id, id),
+        isNull(transactionTemplates.deletedAt),
+        sql`${transactionTemplates.recurrenceValue} IS ${existing.recurrenceValue}`,
+        sql`${transactionTemplates.startDate} IS ${existing.startDate}`,
+        sql`${transactionTemplates.scheduleCursorAt} IS ${existing.scheduleCursorAt}`,
+        sql`${transactionTemplates.scheduleActive} IS ${existing.scheduleActive}`,
+        sql`${transactionTemplates.updatedAt} IS ${existing.updatedAt}`,
+      ))
       .run()
     return result.changes === 1 ? { ...existing, ...set } : null
   } catch (error) {
-    failure('convert_to_manual', 'update', error, { id, now })
+    failure('convert_to_manual', 'update', error, { id })
     throw error
   }
 }
 
 export async function quickAddTemplate(id: string, now = Date.now()): Promise<Transaction> {
-  info('quick_add', 'insert_transaction', { id, now })
+  info('quick_add', 'insert_transaction', { id })
   try {
     const template = await db
       .select()
@@ -592,23 +745,24 @@ export async function quickAddTemplate(id: string, now = Date.now()): Promise<Tr
     if (!transaction) throw new Error('Quick Add transaction was not created')
     return transaction
   } catch (error) {
-    failure('quick_add', 'insert_transaction', error, { id, now })
+    failure('quick_add', 'insert_transaction', error, { id })
     throw error
   }
 }
 
 export async function previewTemplateBackfill(draft: TemplateDraft, now = Date.now()): Promise<number> {
-  info('preview_backfill', 'calculate', { name: draft.name, now })
+  const draftDetails = safeDraftDetails(draft)
+  info('preview_backfill', 'calculate', draftDetails)
   try {
     return getBackfillDates(draft, now).length
   } catch (error) {
-    failure('preview_backfill', 'calculate', error, { name: draft.name, now })
+    failure('preview_backfill', 'calculate', error, draftDetails)
     throw error
   }
 }
 
 export async function backfillTemplate(id: string, now = Date.now()): Promise<number> {
-  info('backfill', 'commit_occurrences', { id, now })
+  info('backfill', 'commit_occurrences', { id })
   try {
     const template = await db
       .select()
@@ -622,7 +776,7 @@ export async function backfillTemplate(id: string, now = Date.now()): Promise<nu
     })
     return inserted
   } catch (error) {
-    failure('backfill', 'commit_occurrences', error, { id, now })
+    failure('backfill', 'commit_occurrences', error, { id })
     throw error
   }
 }
@@ -630,7 +784,7 @@ export async function backfillTemplate(id: string, now = Date.now()): Promise<nu
 export async function processScheduledTemplates(
   now = new Date(),
 ): Promise<Array<{ id: string, incurred: number | null }>> {
-  info('process_scheduled', 'query', { now: now.getTime() })
+  info('process_scheduled', 'query')
   try {
     const scheduled = await db
       .select()
@@ -646,6 +800,9 @@ export async function processScheduledTemplates(
         isNotNull(transactionTemplates.recurrenceValue),
         isNotNull(transactionTemplates.startDate),
         isNotNull(transactionTemplates.scheduleCursorAt),
+        sql`typeof(${transactionTemplates.startDate}) = 'integer'`,
+        sql`typeof(${transactionTemplates.scheduleCursorAt}) = 'integer'`,
+        sql`${transactionTemplates.scheduleCursorAt} >= ${transactionTemplates.startDate}`,
       ))
       .all()
     const results: Array<{ id: string, incurred: number | null }> = []
@@ -658,17 +815,14 @@ export async function processScheduledTemplates(
         })
         results.push({ id: template.id, incurred: inserted })
       } catch (error) {
-        failure('process_scheduled', 'process_template', error, {
-          id: template.id,
-          recurrenceValue: template.recurrenceValue,
-        })
+        failure('process_scheduled', 'process_template', error, { id: template.id })
         results.push({ id: template.id, incurred: null })
       }
     }
 
     return results
   } catch (error) {
-    failure('process_scheduled', 'query', error, { now: now.getTime() })
+    failure('process_scheduled', 'query', error)
     throw error
   }
 }
@@ -677,7 +831,7 @@ export async function listHistoricalTemplateSuggestions(
   lookback: SuggestionLookback,
   now = Date.now(),
 ) {
-  info('historical_suggestions', 'query', { lookback, now })
+  info('historical_suggestions', 'query', { lookback })
   try {
     const startDate = suggestionLookbackStart(lookback, now)
     const [rows, activeTemplates] = await Promise.all([
@@ -690,7 +844,7 @@ export async function listHistoricalTemplateSuggestions(
     ])
     return buildTemplateSuggestions(rows, activeTemplates.map(asDraft))
   } catch (error) {
-    failure('historical_suggestions', 'query', error, { lookback, now })
+    failure('historical_suggestions', 'query', error, { lookback })
     throw error
   }
 }

@@ -1,6 +1,8 @@
 /** @jest-environment node */
 
 import { DatabaseSync } from 'node:sqlite';
+import { getTableConfig } from 'drizzle-orm/sqlite-core';
+import { transactionTemplates } from '../schema';
 import { DATABASE_NAME, DATABASE_SCHEMA_SQL } from '../schema-sql';
 
 describe('latest database schema', () => {
@@ -75,6 +77,93 @@ describe('latest database schema', () => {
     ]));
     expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
 
+    database.close();
+  });
+
+  it('declares the same template checks in the Drizzle schema', () => {
+    expect(getTableConfig(transactionTemplates).checks.map(({ name }) => name).sort()).toEqual([
+      'chk_templates_active_schedule',
+      'chk_templates_amount',
+      'chk_templates_manual_schedule',
+      'chk_templates_reusable_field',
+      'chk_templates_schedule_active',
+      'chk_templates_transaction_type',
+      'chk_templates_verified',
+    ]);
+  });
+
+  it('enforces template invariants while allowing incomplete paused legacy schedules', () => {
+    const database = new DatabaseSync(':memory:');
+    database.exec(DATABASE_SCHEMA_SQL);
+    const insert = database.prepare(`
+      INSERT INTO transaction_templates (
+        id, name, normalized_name, amount, transaction_type, description, category,
+        notes, verified, recurrence_value, start_date, schedule_cursor_at,
+        schedule_active, deleted_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 1)
+    `);
+    const row = (overrides: Partial<{
+      id: string;
+      amount: number | null;
+      transactionType: string | null;
+      description: string | null;
+      category: string | null;
+      notes: string | null;
+      verified: number | null;
+      recurrenceValue: string | null;
+      startDate: number | null;
+      cursor: number | null;
+      active: number;
+    }> = {}) => ({
+      id: 'template',
+      amount: 10,
+      transactionType: 'expense',
+      description: 'Description',
+      category: null,
+      notes: null,
+      verified: null,
+      recurrenceValue: null,
+      startDate: null,
+      cursor: null,
+      active: 0,
+      ...overrides,
+    });
+    const run = (value: ReturnType<typeof row>) => insert.run(
+      value.id,
+      value.id,
+      value.id,
+      value.amount,
+      value.transactionType,
+      value.description,
+      value.category,
+      value.notes,
+      value.verified,
+      value.recurrenceValue,
+      value.startDate,
+      value.cursor,
+      value.active,
+    );
+
+    expect(() => run(row({ id: 'zero', amount: 0 }))).toThrow(/chk_templates_amount/);
+    expect(() => run(row({ id: 'infinite', amount: Number.POSITIVE_INFINITY }))).toThrow(/chk_templates_amount/);
+    expect(() => run(row({
+      id: 'empty', amount: null, transactionType: null, description: null,
+    }))).toThrow(/chk_templates_reusable_field/);
+    expect(() => run(row({
+      id: 'manual-with-cursor', recurrenceValue: null, startDate: 1, cursor: 1,
+    }))).toThrow(/chk_templates_manual_schedule/);
+    expect(() => run(row({
+      id: 'active-incomplete', recurrenceValue: '0 0 1 * *', startDate: 1,
+      cursor: 1, active: 1, description: '   ',
+    }))).toThrow(/chk_templates_active_schedule/);
+
+    expect(() => run(row({
+      id: 'paused-incomplete', amount: null, transactionType: null,
+      description: '   ', category: null, recurrenceValue: 'not a cron',
+      startDate: 1.5, cursor: null, active: 0,
+    }))).not.toThrow();
+    expect(database.prepare('SELECT schedule_active FROM transaction_templates WHERE id = ?')
+      .get('paused-incomplete')).toEqual({ schedule_active: 0 });
     database.close();
   });
 

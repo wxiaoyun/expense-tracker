@@ -41,18 +41,22 @@ import { getDefaultStore } from 'jotai'
 
 import { db, settings } from '@/db'
 import {
+  currencyAtom,
   loadPreferences,
   PREFERENCE_KEYS,
+  resetPreferencesToDefaults,
   savePreference,
   savePreferenceAndApply,
   SUGGESTION_LOOKBACK_OPTIONS,
   suggestionLookbackAtom,
+  themeAtom,
+  weekStartAtom,
 } from '../preferences'
 
 describe('template suggestion lookback preference', () => {
   beforeEach(async () => {
     await db.delete(settings).run()
-    getDefaultStore().set(suggestionLookbackAtom, '3m')
+    resetPreferencesToDefaults(getDefaultStore())
   })
 
   afterEach(() => {
@@ -63,6 +67,33 @@ describe('template suggestion lookback preference', () => {
     loadPreferences()
     expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
   })
+
+  it('resets and reloads every preference after database replacement', async () => {
+    const store = getDefaultStore();
+    store.set(currencyAtom, 'STALE');
+    store.set(themeAtom, 'dark');
+    store.set(weekStartAtom, 'monday');
+    store.set(suggestionLookbackAtom, '12m');
+
+    resetPreferencesToDefaults();
+    expect(store.get(currencyAtom)).toBe('USD');
+    expect(store.get(themeAtom)).toBe('system');
+    expect(store.get(weekStartAtom)).toBe('sunday');
+    expect(store.get(suggestionLookbackAtom)).toBe('3m');
+
+    await db.insert(settings).values([
+      { key: PREFERENCE_KEYS.currency, value: 'EUR' },
+      { key: PREFERENCE_KEYS.theme, value: 'light' },
+      { key: PREFERENCE_KEYS.weekStart, value: 'monday' },
+      { key: PREFERENCE_KEYS.suggestionLookback, value: '6m' },
+    ]).run();
+    loadPreferences();
+
+    expect(store.get(currencyAtom)).toBe('EUR');
+    expect(store.get(themeAtom)).toBe('light');
+    expect(store.get(weekStartAtom)).toBe('monday');
+    expect(store.get(suggestionLookbackAtom)).toBe('6m');
+  });
 
   it('exposes the exact Settings labels and values', () => {
     expect(SUGGESTION_LOOKBACK_OPTIONS).toEqual([

@@ -12,6 +12,13 @@ import {
   type LegacyTransaction,
 } from './migration-core';
 import { backupLegacyDatabase } from './migration-backup';
+import {
+  runRecoverableDatabaseOperation,
+  withRecoverySnapshot,
+} from '@/libs/backup-core';
+
+const migrationRecoveryName = () => `expense_tracker_migration_recovery_${Date.now()}.db`;
+const migrationRecoveryPathFor = (name: string) => `${SQLite.defaultDatabaseDirectory}/${name}`;
 
 export { generateMigrationUUID } from './migration-core';
 
@@ -235,10 +242,27 @@ export const backupLegacyDb = async (legacyDb: SQLite.SQLiteDatabase): Promise<s
   }
 };
 
+export type MigrationStats = {
+  transactionsMigrated: number;
+  templatesMigrated: number;
+  backupPath: string;
+  expectedTransactions: number;
+  expectedTemplates: number;
+};
+
+export type MigrationResult = {
+  success: boolean;
+  error?: string;
+  stats?: MigrationStats;
+};
+
 /**
- * Run full migration from legacy to new schema
+ * Run full migration from legacy to new schema.
+ *
+ * Callers writing to the live database must use runMigrationWithRecovery so a
+ * false result after partial writes receives the same rollback as a throw.
  */
-export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<{ success: boolean; error?: string; stats?: any }> => {
+export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<MigrationResult> => {
   let legacyDb: SQLite.SQLiteDatabase | null = null;
   try {
     console.info('[migration][stage=start] starting migration');
@@ -304,10 +328,10 @@ export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<{
       success: true,
       stats: {
         transactionsMigrated: txMigrated,
-        recurringMigrated: recMigrated,
+        templatesMigrated: recMigrated,
         backupPath,
         expectedTransactions: counts.transactions,
-        expectedRecurring: counts.recurring,
+        expectedTemplates: counts.recurring,
       },
     };
   } catch (error) {
@@ -321,5 +345,65 @@ export const runMigration = async (newDb: ReturnType<typeof drizzle>): Promise<{
         console.error('[migration][stage=close_legacy] legacy database close failed', { error: String(closeError) });
       }
     }
+  }
+};
+
+const assertDatabaseIntegrity = (database: SQLite.SQLiteDatabase): void => {
+  const integrity = database.getFirstSync<{ integrity_check: string }>('PRAGMA integrity_check');
+  if (integrity?.integrity_check !== 'ok') {
+    throw new Error('Migration recovery database integrity check failed');
+  }
+};
+
+const copyDatabase = async (
+  sourceDatabase: SQLite.SQLiteDatabase,
+  destDatabase: SQLite.SQLiteDatabase,
+) => {
+  await SQLite.backupDatabaseAsync({ sourceDatabase, destDatabase });
+};
+
+/**
+ * First-launch recovery boundary for integer-ID migration. The snapshot covers
+ * seeded rows, copied rows, count verification, legacy backup, and migration
+ * marker persistence. Rollback-failure snapshots are intentionally preserved.
+ */
+export const runMigrationWithRecovery = async (
+  newDb: ReturnType<typeof drizzle>,
+  liveDatabase: SQLite.SQLiteDatabase,
+): Promise<MigrationResult> => {
+  const recoveryName = migrationRecoveryName();
+  const recoveryPath = migrationRecoveryPathFor(recoveryName);
+  try {
+    return await withRecoverySnapshot({
+      removeStaleRecovery: async () => {
+        // Recovery names are unique per attempt so a preserved rollback-failure
+        // snapshot from an earlier attempt is never overwritten or deleted here.
+      },
+      openRecovery: () => SQLite.openDatabaseSync(
+        recoveryName,
+        {},
+        SQLite.defaultDatabaseDirectory,
+      ),
+      closeRecovery: async (recovery) => {
+        await recovery.closeAsync();
+      },
+      deleteRecovery: async () => {
+        await FileSystem.deleteAsync(recoveryPath, { idempotent: true });
+      },
+      operation: (recovery) => runRecoverableDatabaseOperation({
+        destination: liveDatabase,
+        recovery,
+        copyDatabase,
+        validateRecovery: assertDatabaseIntegrity,
+        validateDestination: assertDatabaseIntegrity,
+        operation: () => runMigration(newDb),
+        isSuccess: (result) => result.success,
+      }),
+    });
+  } catch (error) {
+    console.error('[migration][stage=recovery_boundary] migration failed', {
+      error: String(error),
+    });
+    return { success: false, error: String(error) };
   }
 };

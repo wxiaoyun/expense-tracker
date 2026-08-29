@@ -378,6 +378,31 @@ describe('TemplateEditDrawer', () => {
     expect(mockDismiss).toHaveBeenCalled();
   });
 
+  it('confirms and completes explicit backfill for an inactive schedule', async () => {
+    mockPreviewTemplateBackfill.mockResolvedValue(2);
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const screen = await render(<TemplateEditDrawer />);
+    await fillRequiredFields(screen);
+    await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
+    await fireEvent(screen.getByRole('switch', { name: 'Schedule active' }), 'valueChange', false);
+    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await waitFor(() => screen.getByText('Saving will create 2 past transactions.'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
+      'Create 2 past transactions?',
+      expect.any(String),
+      expect.any(Array),
+    ));
+
+    const confirmation = alertSpy.mock.calls.find((call) => call[0] === 'Create 2 past transactions?')!;
+    await act(async () => confirmation[2]![1].onPress?.());
+
+    await waitFor(() => expect(mockBackfillTemplate).toHaveBeenCalledWith('created-1', expect.any(Number)));
+    expect(mockCreateTemplate).toHaveBeenCalledWith(expect.objectContaining({ scheduleActive: false }));
+    expect(mockDismiss).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalledWith('Template saved, backfill failed', expect.any(String));
+  });
+
   it('explains that inactive schedules do not retry automatically after backfill failure', async () => {
     mockPreviewTemplateBackfill.mockResolvedValue(2);
     mockBackfillTemplate.mockRejectedValue(new Error('backfill unavailable'));

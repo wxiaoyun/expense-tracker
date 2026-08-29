@@ -9,6 +9,7 @@ import {
   DatabaseRollbackError,
   detectBackupSchemaVersion,
   restoreRecognizedBackup,
+  runRecoverableDatabaseOperation,
   withRecoverySnapshot,
   V2_REQUIRED_COLUMNS,
   V3_REQUIRED_COLUMNS,
@@ -194,6 +195,60 @@ describe('recovery snapshot lifecycle', () => {
       },
     );
     expect(JSON.stringify(errorLog.mock.calls)).not.toContain('details must not be logged');
+  });
+});
+
+describe('result-based migration recovery', () => {
+  beforeEach(() => copyDatabase.mockClear());
+
+  it('restores the original live target when a migration returns failure after writes', async () => {
+    const destination = createV3Database('original');
+    const recovery = createEmptyDatabase();
+
+    await expect(runRecoverableDatabaseOperation({
+      destination,
+      recovery,
+      copyDatabase,
+      validateRecovery: validateIntegrity,
+      validateDestination: validateV3,
+      operation: async () => {
+        destination.database.prepare('DELETE FROM transactions').run();
+        destination.database.prepare('INSERT INTO settings VALUES (?, ?)').run('partial.marker', '1');
+        return { success: false, error: 'forced marker failure' };
+      },
+      isSuccess: (result) => result.success,
+    })).resolves.toEqual({ success: false, error: 'forced marker failure' });
+
+    expect(destination.database.prepare('SELECT id FROM transactions').all()).toEqual([
+      { id: 'original-tx' },
+    ]);
+    expect(destination.database.prepare("SELECT value FROM settings WHERE key = 'partial.marker'").get()).toBeUndefined();
+    expect(copyDatabase).toHaveBeenCalledTimes(2);
+    closeAll(destination, recovery);
+  });
+
+  it('commits the migrated live target when the operation succeeds', async () => {
+    const destination = createV3Database('original');
+    const recovery = createEmptyDatabase();
+
+    await expect(runRecoverableDatabaseOperation({
+      destination,
+      recovery,
+      copyDatabase,
+      validateRecovery: validateIntegrity,
+      validateDestination: validateV3,
+      operation: async () => {
+        destination.database.prepare('DELETE FROM transactions').run();
+        destination.database.prepare('INSERT INTO settings VALUES (?, ?)').run('app.migrated', '1');
+        return { success: true };
+      },
+      isSuccess: (result) => result.success,
+    })).resolves.toEqual({ success: true });
+
+    expect(destination.database.prepare('SELECT id FROM transactions').all()).toEqual([]);
+    expect(destination.database.prepare("SELECT value FROM settings WHERE key = 'app.migrated'").get()).toEqual({ value: '1' });
+    expect(copyDatabase).toHaveBeenCalledTimes(1);
+    closeAll(destination, recovery);
   });
 });
 

@@ -1,29 +1,33 @@
 import React, { useEffect } from 'react';
 import '@/libs/background';
 import { Stack, router, usePathname } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Provider } from 'jotai';
 
 import { db } from '@/db';
 import { settings } from '@/db/schema';
 import { sql } from 'drizzle-orm';
-import { processScheduledTemplates } from '@/db/template';
 import { AppRoot } from '@/components/app-root';
-import { loadPreferences } from '@/libs/preferences';
+import {
+  appQueryClient,
+  hasProcessedLaunchTemplates,
+  isLaunchTemplateProcessing,
+  processLaunchTemplatesOnce,
+  waitForLaunchTemplateProcessing,
+} from '@/libs/app-runtime';
+import { loadPreferences, preferenceStore } from '@/libs/preferences';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-    },
-  },
-});
-
-let templateProcessingStarted = false;
+export {
+  appQueryClient,
+  processLaunchTemplatesOnce,
+  reinitializeAppRuntime,
+  resetLaunchTemplateProcessing,
+  waitForLaunchTemplateProcessing,
+} from '@/libs/app-runtime';
 
 export async function initializeApp() {
-  if (templateProcessingStarted) return;
+  if (hasProcessedLaunchTemplates()) return;
+  if (isLaunchTemplateProcessing()) return waitForLaunchTemplateProcessing();
 
   try {
     console.info('[app.init][stage=check_migration] checking migration status');
@@ -38,23 +42,14 @@ export async function initializeApp() {
     return;
   }
 
-  if (templateProcessingStarted) return;
-  templateProcessingStarted = true;
-  try {
-    console.info('[app.init][stage=process_templates] processing scheduled templates');
-    await processScheduledTemplates();
-  } catch (error) {
-    console.error('[app.init][stage=process_templates] scheduled template processing failed', {
-      error: String(error),
-    });
-  }
+  await processLaunchTemplatesOnce();
 }
 
 export default function RootLayout() {
   const pathname = usePathname();
 
   useEffect(() => {
-    loadPreferences();
+    loadPreferences(preferenceStore);
   }, []);
 
   useEffect(() => {
@@ -63,8 +58,8 @@ export default function RootLayout() {
 
   return (
     <AppRoot>
-      <Provider>
-        <QueryClientProvider client={queryClient}>
+      <Provider store={preferenceStore}>
+        <QueryClientProvider client={appQueryClient}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="migrate" options={{ headerShown: false }} />

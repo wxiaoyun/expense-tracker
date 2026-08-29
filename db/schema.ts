@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
   integer,
   real,
@@ -51,6 +52,57 @@ export const transactionTemplates = sqliteTable(
       .where(sql`${table.deletedAt} IS NULL`),
     categoryIdx: index('idx_templates_category').on(table.category),
     scheduleIdx: index('idx_templates_schedule').on(table.scheduleActive, table.deletedAt),
+    amountCheck: check(
+      'chk_templates_amount',
+      sql`${table.amount} IS NULL OR (
+        typeof(${table.amount}) IN ('integer', 'real')
+        AND ${table.amount} > 0
+        AND ${table.amount} < 9e999
+      )`,
+    ),
+    transactionTypeCheck: check(
+      'chk_templates_transaction_type',
+      sql`${table.transactionType} IS NULL OR ${table.transactionType} IN ('income', 'expense')`,
+    ),
+    verifiedCheck: check(
+      'chk_templates_verified',
+      sql`${table.verified} IS NULL OR ${table.verified} IN (0, 1)`,
+    ),
+    scheduleActiveCheck: check(
+      'chk_templates_schedule_active',
+      sql`${table.scheduleActive} IN (0, 1)`,
+    ),
+    reusableFieldCheck: check(
+      'chk_templates_reusable_field',
+      sql`${table.amount} IS NOT NULL
+        OR ${table.transactionType} IS NOT NULL
+        OR (${table.description} IS NOT NULL AND trim(${table.description}) <> '')
+        OR (${table.category} IS NOT NULL AND trim(${table.category}) <> '')
+        OR (${table.notes} IS NOT NULL AND trim(${table.notes}) <> '')
+        OR ${table.verified} IS NOT NULL
+        OR (${table.scheduleActive} = 0 AND ${table.recurrenceValue} IS NOT NULL)`,
+    ),
+    manualScheduleCheck: check(
+      'chk_templates_manual_schedule',
+      sql`${table.recurrenceValue} IS NOT NULL OR (
+        ${table.startDate} IS NULL
+        AND ${table.scheduleCursorAt} IS NULL
+        AND ${table.scheduleActive} = 0
+      )`,
+    ),
+    activeScheduleCheck: check(
+      'chk_templates_active_schedule',
+      sql`${table.scheduleActive} = 0 OR (
+        ${table.recurrenceValue} IS NOT NULL
+        AND trim(${table.recurrenceValue}) <> ''
+        AND ${table.amount} IS NOT NULL
+        AND ${table.description} IS NOT NULL
+        AND trim(${table.description}) <> ''
+        AND typeof(${table.startDate}) = 'integer'
+        AND typeof(${table.scheduleCursorAt}) = 'integer'
+        AND ${table.scheduleCursorAt} >= ${table.startDate}
+      )`,
+    ),
   }),
 );
 

@@ -26,7 +26,10 @@ const logMutation = (stage: string, templateId: string | null) => {
 
 const useInvalidateTemplateQueries = () => {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() });
+  return () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories.all() }),
+  ]);
 };
 
 const useInvalidateTransactionAndTemplateQueries = () => {

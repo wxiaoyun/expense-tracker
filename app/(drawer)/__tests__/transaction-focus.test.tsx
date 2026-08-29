@@ -44,7 +44,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@/hooks/useQueryClient', () => ({
-  useInvalidateTransactions: () => mockInvalidateTransactions,
+  useInvalidateTransactionsAndTemplates: () => mockInvalidateTransactions,
 }));
 
 jest.mock('@/db', () => ({
@@ -244,6 +244,7 @@ describe('TransactionDrawer template population and focus', () => {
       templateId: 'template-1',
       deletedAt: null,
     }));
+    expect(mockInvalidateTransactions).toHaveBeenCalledTimes(1);
   });
 
   it('validates positive finite amount only on save and focuses amount on error', async () => {
@@ -293,6 +294,7 @@ describe('TransactionDrawer template population and focus', () => {
 
     expect(mockGetTemplate).not.toHaveBeenCalled();
     await waitFor(() => expect(mockUpdateTransaction).toHaveBeenCalledWith(expect.objectContaining({ templateId: null })));
+    expect(mockInvalidateTransactions).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith(
       '[transaction.form][stage=resolve_source] failed',
       {

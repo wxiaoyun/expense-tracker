@@ -17,10 +17,13 @@ import {
   type WeekStart,
 } from '@/libs/preferences';
 import Feather from '@expo/vector-icons/Feather';
-import { useQueryClient } from '@tanstack/react-query';
 import { eq } from 'drizzle-orm';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
+import {
+  reinitializeAppRuntime,
+  waitForLaunchTemplateProcessing,
+} from '@/libs/app-runtime';
 import * as Sharing from 'expo-sharing';
 import { useAtom } from 'jotai';
 // eslint-disable-next-line import/no-unresolved
@@ -75,7 +78,6 @@ function PreferenceRow({
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
   const [currency, setCurrency] = useAtom(currencyAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [suggestionLookback, setSuggestionLookback] = useAtom(suggestionLookbackAtom);
@@ -179,13 +181,14 @@ export default function SettingsScreen() {
               setRestoring(true);
               try {
                 const sourceUri = result.assets[0].uri;
+                await waitForLaunchTemplateProcessing();
                 const recoveryPath = await createLocalBackup();
                 console.info('[backup.import][stage=create_recovery] pre-restore snapshot created', { recovery_path: recoveryPath });
                 const importResult = await importDatabase(sourceUri);
                 console.info('[backup.import][stage=sqlite_backup] database imported', {
                   mode: importResult.mode,
                 });
-                queryClient.clear();
+                await reinitializeAppRuntime({ processImportedSchedules: true });
                 router.replace('/(tabs)');
                 Alert.alert(
                   'Import Complete',
@@ -220,7 +223,9 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              await waitForLaunchTemplateProcessing();
               await resetAllData();
+              await reinitializeAppRuntime();
               router.replace('/migrate');
             } catch (error) {
               const stage = error instanceof ResetDataError ? error.stage : 'unknown';

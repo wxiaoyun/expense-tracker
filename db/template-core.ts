@@ -135,6 +135,14 @@ export const validateTemplateDraft = (draft: TemplateDraft): TemplateValidationR
       }
     }
 
+    if (!Number.isFinite(startDate) || !Number.isInteger(startDate)) {
+      return {
+        ok: false,
+        field: 'startDate',
+        message: 'Start date is invalid',
+      }
+    }
+
     return { ok: true }
   }
 

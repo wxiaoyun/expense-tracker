@@ -8,10 +8,18 @@ export type { SuggestionLookback } from '@/db/template-core';
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type WeekStart = 'sunday' | 'monday';
 
-export const currencyAtom = atom('USD');
-export const themeAtom = atom<ThemePreference>('system');
-export const weekStartAtom = atom<WeekStart>('sunday');
-export const suggestionLookbackAtom = atom<SuggestionLookback>('3m');
+export const DEFAULT_PREFERENCES = {
+  currency: 'USD',
+  theme: 'system' as ThemePreference,
+  weekStart: 'sunday' as WeekStart,
+  suggestionLookback: '3m' as SuggestionLookback,
+} as const;
+
+export const currencyAtom = atom(DEFAULT_PREFERENCES.currency as string);
+export const themeAtom = atom<ThemePreference>(DEFAULT_PREFERENCES.theme);
+export const weekStartAtom = atom<WeekStart>(DEFAULT_PREFERENCES.weekStart);
+export const suggestionLookbackAtom = atom<SuggestionLookback>(DEFAULT_PREFERENCES.suggestionLookback);
+export const preferenceStore = getDefaultStore();
 
 const PREF_KEYS = {
   currency: 'pref.currency',
@@ -46,20 +54,38 @@ function readSetting(key: string): string | null {
   }
 }
 
-export function loadPreferences() {
-  const store = getDefaultStore();
+export function resetPreferencesToDefaults(store = preferenceStore) {
+  store.set(currencyAtom, DEFAULT_PREFERENCES.currency);
+  store.set(themeAtom, DEFAULT_PREFERENCES.theme);
+  store.set(weekStartAtom, DEFAULT_PREFERENCES.weekStart);
+  store.set(suggestionLookbackAtom, DEFAULT_PREFERENCES.suggestionLookback);
+}
+
+export function loadPreferences(store = preferenceStore) {
   const currency = readSetting(PREF_KEYS.currency);
   const theme = readSetting(PREF_KEYS.theme);
   const weekStart = readSetting(PREF_KEYS.weekStart);
   const suggestionLookback = readSetting(PREF_KEYS.suggestionLookback);
-  if (currency) store.set(currencyAtom, currency);
-  if (theme === 'light' || theme === 'dark' || theme === 'system') {
-    store.set(themeAtom, theme);
-  }
-  if (weekStart === 'sunday' || weekStart === 'monday') {
-    store.set(weekStartAtom, weekStart);
-  }
-  store.set(suggestionLookbackAtom, isSuggestionLookback(suggestionLookback) ? suggestionLookback : '3m');
+
+  store.set(currencyAtom, currency || DEFAULT_PREFERENCES.currency);
+  store.set(
+    themeAtom,
+    theme === 'light' || theme === 'dark' || theme === 'system'
+      ? theme
+      : DEFAULT_PREFERENCES.theme,
+  );
+  store.set(
+    weekStartAtom,
+    weekStart === 'sunday' || weekStart === 'monday'
+      ? weekStart
+      : DEFAULT_PREFERENCES.weekStart,
+  );
+  store.set(
+    suggestionLookbackAtom,
+    isSuggestionLookback(suggestionLookback)
+      ? suggestionLookback
+      : DEFAULT_PREFERENCES.suggestionLookback,
+  );
 }
 
 export async function savePreference(key: string, value: string) {

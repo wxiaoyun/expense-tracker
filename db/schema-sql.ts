@@ -1,6 +1,50 @@
 export const LEGACY_DATABASE_NAME = 'expense_tracker.db';
 export const DATABASE_NAME = 'expense_tracker_v2.db';
 
+export const TRANSACTION_TEMPLATE_CONSTRAINTS_SQL = `
+    CONSTRAINT chk_templates_amount CHECK (
+      amount IS NULL OR (
+        typeof(amount) IN ('integer', 'real')
+        AND amount > 0
+        AND amount < 9e999
+      )
+    ),
+    CONSTRAINT chk_templates_transaction_type CHECK (
+      transaction_type IS NULL OR transaction_type IN ('income', 'expense')
+    ),
+    CONSTRAINT chk_templates_verified CHECK (
+      verified IS NULL OR verified IN (0, 1)
+    ),
+    CONSTRAINT chk_templates_schedule_active CHECK (schedule_active IN (0, 1)),
+    CONSTRAINT chk_templates_reusable_field CHECK (
+      amount IS NOT NULL
+      OR transaction_type IS NOT NULL
+      OR (description IS NOT NULL AND trim(description) <> '')
+      OR (category IS NOT NULL AND trim(category) <> '')
+      OR (notes IS NOT NULL AND trim(notes) <> '')
+      OR verified IS NOT NULL
+      OR (schedule_active = 0 AND recurrence_value IS NOT NULL)
+    ),
+    CONSTRAINT chk_templates_manual_schedule CHECK (
+      recurrence_value IS NOT NULL OR (
+        start_date IS NULL
+        AND schedule_cursor_at IS NULL
+        AND schedule_active = 0
+      )
+    ),
+    CONSTRAINT chk_templates_active_schedule CHECK (
+      schedule_active = 0 OR (
+        recurrence_value IS NOT NULL
+        AND trim(recurrence_value) <> ''
+        AND amount IS NOT NULL
+        AND description IS NOT NULL
+        AND trim(description) <> ''
+        AND typeof(start_date) = 'integer'
+        AND typeof(schedule_cursor_at) = 'integer'
+        AND schedule_cursor_at >= start_date
+      )
+    )`;
+
 export const DATABASE_SCHEMA_DEFINITION_SQL = `
   CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY NOT NULL,
@@ -28,7 +72,8 @@ export const DATABASE_SCHEMA_DEFINITION_SQL = `
     schedule_active INTEGER NOT NULL DEFAULT 0,
     deleted_at INTEGER,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    ${TRANSACTION_TEMPLATE_CONSTRAINTS_SQL}
   );
   CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_active_name
     ON transaction_templates (normalized_name) WHERE deleted_at IS NULL;

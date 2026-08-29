@@ -204,6 +204,46 @@ export async function replaceDatabaseWithRecovery<Database, Result>({
   }
 }
 
+class UnsuccessfulDatabaseOperation<Result> extends Error {
+  constructor(readonly result: Result) {
+    super('Database operation returned an unsuccessful result');
+    this.name = 'UnsuccessfulDatabaseOperation';
+  }
+}
+
+type RecoverableDatabaseOperationOptions<Database, Result> = Omit<
+  ReplaceDatabaseWithRecoveryOptions<Database, Result>,
+  'operation'
+> & {
+  operation: () => Promise<Result>;
+  isSuccess: (result: Result) => boolean;
+};
+
+/**
+ * Extends the recovery boundary to result-based APIs. An unsuccessful result is
+ * treated exactly like a throw so every live write is rolled back before the
+ * original result is returned.
+ */
+export async function runRecoverableDatabaseOperation<Database, Result>({
+  operation,
+  isSuccess,
+  ...recoveryOptions
+}: RecoverableDatabaseOperationOptions<Database, Result>): Promise<Result> {
+  try {
+    return await replaceDatabaseWithRecovery({
+      ...recoveryOptions,
+      operation: async () => {
+        const result = await operation();
+        if (!isSuccess(result)) throw new UnsuccessfulDatabaseOperation(result);
+        return result;
+      },
+    });
+  } catch (error) {
+    if (error instanceof UnsuccessfulDatabaseOperation) return error.result;
+    throw error;
+  }
+}
+
 type RestoreRecognizedBackupOptions<Database> = {
   sourceVersion: BackupSchemaVersion;
   source: Database;

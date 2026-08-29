@@ -11,6 +11,7 @@ const mockPush = jest.fn();
 const mockUseQuery = jest.fn();
 const mockUseInfiniteTransactionListQuery = jest.fn();
 const mockInvalidateTransactions = jest.fn();
+const mockInvalidateTransactionsAndTemplates = jest.fn();
 const mockSetVerification = jest.fn();
 const mockSoftDeleteTransaction = jest.fn();
 const mockShowConfirmDialog = jest.fn();
@@ -37,6 +38,7 @@ jest.mock('@/hooks/useTransactionsQuery', () => ({
 
 jest.mock('@/hooks/useQueryClient', () => ({
   useInvalidateTransactions: () => mockInvalidateTransactions,
+  useInvalidateTransactionsAndTemplates: () => mockInvalidateTransactionsAndTemplates,
 }));
 
 jest.mock('@/hooks/useFilter', () => ({
@@ -261,6 +263,7 @@ describe('HomeScreen transaction action menu integration', () => {
     });
     mockShowConfirmDialog.mockResolvedValue(true);
     mockSoftDeleteTransaction.mockResolvedValue(true);
+    mockSetVerification.mockResolvedValue(true);
   });
 
   it('routes Save as Template and View Template with object pathname params from active template availability', async () => {
@@ -320,6 +323,31 @@ describe('HomeScreen transaction action menu integration', () => {
     errorSpy.mockRestore();
   });
 
+  it('uses structured stages for verification and edit actions', async () => {
+    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    const screen = await render(<HomeScreen />);
+
+    await fireEvent.press(screen.getByRole('checkbox', { name: 'Mark Coffee verified' }));
+    await waitFor(() => expect(mockSetVerification).toHaveBeenCalledWith('txn-1', 1));
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[transactions.ui][stage=update_verification]',
+      { transaction_id: 'txn-1', stage: 'update_verification', verified: true },
+    );
+    expect(mockInvalidateTransactions).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(screen.getByTestId('menu-action-edit'));
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[transactions.ui][stage=navigate_edit]',
+      { transaction_id: 'txn-1', stage: 'navigate_edit' },
+    );
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(drawer)/transaction',
+      params: { id: 'txn-1' },
+    });
+
+    infoSpy.mockRestore();
+  });
+
   it('confirms then soft deletes, logging structured stages and invalidating after success', async () => {
     const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
 
@@ -336,8 +364,8 @@ describe('HomeScreen transaction action menu integration', () => {
       { transaction_id: 'txn-1', stage: 'soft_delete' },
     );
     expect(infoSpy.mock.invocationCallOrder[0]).toBeLessThan(mockSoftDeleteTransaction.mock.invocationCallOrder[0]);
-    expect(mockInvalidateTransactions).toHaveBeenCalledTimes(1);
-    expect(mockSoftDeleteTransaction.mock.invocationCallOrder[0]).toBeLessThan(mockInvalidateTransactions.mock.invocationCallOrder[0]);
+    expect(mockInvalidateTransactionsAndTemplates).toHaveBeenCalledTimes(1);
+    expect(mockSoftDeleteTransaction.mock.invocationCallOrder[0]).toBeLessThan(mockInvalidateTransactionsAndTemplates.mock.invocationCallOrder[0]);
 
     infoSpy.mockRestore();
   });
@@ -355,7 +383,7 @@ describe('HomeScreen transaction action menu integration', () => {
       { transaction_id: 'txn-1', stage: 'soft_delete', reason: 'not_deleted' },
     ));
     expect(alertSpy).toHaveBeenCalledWith('Error', 'Failed to delete transaction');
-    expect(mockInvalidateTransactions).not.toHaveBeenCalled();
+    expect(mockInvalidateTransactionsAndTemplates).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
     errorSpy.mockRestore();
@@ -374,7 +402,7 @@ describe('HomeScreen transaction action menu integration', () => {
       { transaction_id: 'txn-1', stage: 'soft_delete', error: 'Error: delete failed' },
     ));
     expect(alertSpy).toHaveBeenCalledWith('Error', 'Failed to delete transaction');
-    expect(mockInvalidateTransactions).not.toHaveBeenCalled();
+    expect(mockInvalidateTransactionsAndTemplates).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
     errorSpy.mockRestore();

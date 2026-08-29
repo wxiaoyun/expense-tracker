@@ -134,7 +134,7 @@ describe('latest schema migration', () => {
     database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run('rule-3', -30, '   ', 'Bills', 300, null, '0 0 1 * *', 50, 60);
     database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run('rule-4', 0, '\t', 'Other', 400, 450, '0 0 1 * *', 70, 80);
+      .run('rule-4', 0, '\t', '   ', 400, 450, '0 0 1 * *', 70, 80);
     database.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run('tx-3', -30, 300, 'Whitespace one', 'Bills', 'rule-3', 0, null, 51, 52);
     database.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -144,7 +144,7 @@ describe('latest schema migration', () => {
 
     expect(database.prepare('SELECT count(*) AS count FROM transaction_templates').get()).toEqual({ count: 4 });
     expect(database.prepare(`
-      SELECT id, name, description, amount, transaction_type, schedule_cursor_at, schedule_active
+      SELECT id, name, description, category, amount, transaction_type, schedule_cursor_at, schedule_active
       FROM transaction_templates
       WHERE id IN ('rule-3', 'rule-4')
       ORDER BY id
@@ -153,15 +153,17 @@ describe('latest schema migration', () => {
         id: 'rule-3',
         name: 'Template rule-3',
         description: '   ',
+        category: 'Bills',
         amount: 30,
         transaction_type: 'expense',
         schedule_cursor_at: 300,
-        schedule_active: 1,
+        schedule_active: 0,
       },
       {
         id: 'rule-4',
         name: 'Template rule-4',
         description: '\t',
+        category: '   ',
         amount: null,
         transaction_type: null,
         schedule_cursor_at: 450,
@@ -175,6 +177,35 @@ describe('latest schema migration', () => {
       { id: 'tx-4', template_id: 'rule-4' },
     ]);
     expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    database.close();
+  });
+
+  it('pauses invalid cron, start, cursor, and nonfinite V2 rules without dropping rows', () => {
+    const database = createV2Database();
+    database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('bad-cron', -10, 'Bad cron', 'Other', 100, 100, 'not a cron', 50, 50);
+    database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('bad-start', -10, 'Bad start', 'Other', 100.5, null, '0 0 1 * *', 60, 60);
+    database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('bad-cursor', -10, 'Bad cursor', 'Other', 200, 100, '0 0 1 * *', 70, 70);
+    database.prepare('INSERT INTO recurring_transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('bad-amount', Number.POSITIVE_INFINITY, 'Bad amount', 'Other', 300, 300, '0 0 1 * *', 80, 80);
+
+    runSchemaMigrations(asExpoDatabase(new ExpoSQLiteSyncAdapter(database)));
+
+    expect(database.prepare(`
+      SELECT id, amount, description, recurrence_value, start_date,
+             schedule_cursor_at, schedule_active
+      FROM transaction_templates
+      WHERE id LIKE 'bad-%'
+      ORDER BY id
+    `).all()).toEqual([
+      { id: 'bad-amount', amount: null, description: 'Bad amount', recurrence_value: '0 0 1 * *', start_date: 300, schedule_cursor_at: 300, schedule_active: 0 },
+      { id: 'bad-cron', amount: 10, description: 'Bad cron', recurrence_value: 'not a cron', start_date: 100, schedule_cursor_at: 100, schedule_active: 0 },
+      { id: 'bad-cursor', amount: 10, description: 'Bad cursor', recurrence_value: '0 0 1 * *', start_date: 200, schedule_cursor_at: 100, schedule_active: 0 },
+      { id: 'bad-start', amount: 10, description: 'Bad start', recurrence_value: '0 0 1 * *', start_date: 100.5, schedule_cursor_at: 100.5, schedule_active: 0 },
+    ]);
+    expect(database.prepare('SELECT count(*) AS count FROM transaction_templates').get()).toEqual({ count: 6 });
     database.close();
   });
 

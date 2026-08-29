@@ -25,8 +25,8 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: () => mockUseCategoryQuery(),
 }));
 
-jest.mock('@/db/transaction', () => ({
-  listCategories: jest.fn(),
+jest.mock('@/db/template', () => ({
+  listTemplateCategories: jest.fn(),
 }));
 
 jest.mock('@/hooks/useTemplatesQuery', () => ({

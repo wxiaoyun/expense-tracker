@@ -75,6 +75,32 @@ describe('migration core', () => {
     });
   });
 
+  it.each([
+    { label: 'blank description', amount: -10, description: '   ', start: 10, cursor: 10, cron: '0 0 1 * *' },
+    { label: 'zero amount', amount: 0, description: 'Zero', start: 10, cursor: 10, cron: '0 0 1 * *' },
+    { label: 'invalid cron', amount: -10, description: 'Cron', start: 10, cursor: 10, cron: 'not a cron' },
+    { label: 'invalid start', amount: -10, description: 'Start', start: 10.5, cursor: null, cron: '0 0 1 * *' },
+    { label: 'invalid cursor', amount: -10, description: 'Cursor', start: 20, cursor: 10, cron: '0 0 1 * *' },
+  ])('pauses integer-ID legacy rules with $label', ({ amount, description, start, cursor, cron }) => {
+    expect(mapLegacyRecurring({
+      id: 90,
+      amount,
+      description,
+      category: 'Other',
+      start_date: start,
+      last_charged: cursor,
+      recurrence_value: cron,
+      created_at: 1,
+      updated_at: 2,
+    }, new Set())).toEqual(expect.objectContaining({
+      description,
+      recurrenceValue: cron,
+      startDate: start,
+      scheduleCursorAt: cursor ?? start,
+      scheduleActive: 0,
+    }));
+  });
+
   it('suffixes duplicate legacy template names across batches', () => {
     const activeNames = new Set<string>();
     const source = {

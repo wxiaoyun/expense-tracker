@@ -78,7 +78,9 @@ cd ..
 npx expo run:ios
 ```
 
-## Verification
+## Current Usage and Verification
+
+The active transaction and template editors render `@react-native-community/datetimepicker`. The `react-native-date-picker` dependency and patch are retained for v3 branch compatibility; the dependency may still be loaded by compatible v3 code paths even though it is not the date control on the current editor screens.
 
 Confirm generated module-provider code does not contain `RNDatePickerManager`:
 
@@ -93,9 +95,8 @@ Then verify:
 1. iOS build succeeds.
 2. App process remains running after launch.
 3. No new `VibeTracker` crash report appears in `~/Library/Logs/DiagnosticReports`.
-4. Date picker still renders when its screen is opened.
 
-This fix was validated locally with `react-native-date-picker` 5.0.13 and React Native 0.86.2 on an iPhone 17 Pro simulator.
+This fix was validated locally with `react-native-date-picker` 5.0.13 and React Native 0.86.2 on an iPhone 17 Pro simulator. That validation covered patch application, native generation, build, and launch stability. Rendering a `react-native-date-picker` control on a current screen was not part of the accepted verification.
 
 ## Upgrade Note
 

@@ -8,8 +8,7 @@ import { toast } from 'sonner-native';
 import { AddTemplateButton } from '@/components/templates/add-template-button';
 import { TemplateFilterBar } from '@/components/templates/template-filter-bar';
 import { TemplateList } from '@/components/templates/template-list';
-import type { TemplateListFilter } from '@/db/template';
-import { listCategories } from '@/db/transaction';
+import { listTemplateCategories, type TemplateListFilter } from '@/db/template';
 import {
   queryKeys,
   useDeleteTemplateMutation,
@@ -49,7 +48,7 @@ export default function TemplatesScreen() {
   const templateQuery = useTemplateListQuery(filter);
   const categoryQuery = useQuery({
     queryKey: queryKeys.categories.list(),
-    queryFn: listCategories,
+    queryFn: listTemplateCategories,
   });
   const deleteTemplate = useDeleteTemplateMutation();
   const pauseTemplate = usePauseTemplateMutation();

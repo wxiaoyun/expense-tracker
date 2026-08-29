@@ -1,5 +1,8 @@
 import type * as SQLite from 'expo-sqlite';
-import { DATABASE_SCHEMA_DEFINITION_SQL } from './schema-sql';
+import {
+  DATABASE_SCHEMA_DEFINITION_SQL,
+  TRANSACTION_TEMPLATE_CONSTRAINTS_SQL,
+} from './schema-sql';
 import {
   mapRecurringRowsToTemplates,
   type RecurringRowForTemplateMigration,
@@ -109,7 +112,8 @@ const migrateV2ToV3 = (
         schedule_active INTEGER NOT NULL DEFAULT 0,
         deleted_at INTEGER,
         created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        updated_at INTEGER NOT NULL,
+        ${TRANSACTION_TEMPLATE_CONSTRAINTS_SQL}
       );
     `);
 

@@ -10,7 +10,10 @@ import { listTemplates } from '@/db/template';
 import { useQuery } from '@tanstack/react-query';
 import { computeDateRange, endOfDay, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
 import { queryKeys, useInfiniteTransactionListQuery } from '@/hooks/useTransactionsQuery';
-import { useInvalidateTransactions } from '@/hooks/useQueryClient';
+import {
+  useInvalidateTransactions,
+  useInvalidateTransactionsAndTemplates,
+} from '@/hooks/useQueryClient';
 import { showConfirmDialog } from '@/libs/dialog';
 import { AddExpenseButton } from '@/components/transactions/add-expense-button';
 import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
@@ -101,6 +104,7 @@ export default function HomeScreen() {
   }, [setDateRange]);
 
   const invalidateTransactionQueries = useInvalidateTransactions();
+  const invalidateTransactionAndTemplateQueries = useInvalidateTransactionsAndTemplates();
 
   const {
     data,
@@ -127,12 +131,17 @@ export default function HomeScreen() {
 
   const handleToggleVerified = useCallback(
     async (id: string, verified: boolean) => {
-      console.log(`Toggle verification for transaction ${id}: ${verified}`);
+      console.info('[transactions.ui][stage=update_verification]', {
+        transaction_id: id,
+        stage: 'update_verification',
+        verified,
+      });
       try {
-        await setVerification(id, verified ? 1 : 0);
-        invalidateTransactionQueries();
+        const updated = await setVerification(id, verified ? 1 : 0);
+        if (!updated) throw new Error('Transaction verification was not updated');
+        await invalidateTransactionQueries();
       } catch (error) {
-        console.error('Failed to update verification:', error);
+        logFailure('update_verification', error, id);
         Alert.alert('Error', 'Failed to update transaction verification');
       }
     },
@@ -141,11 +150,19 @@ export default function HomeScreen() {
 
   const handleEdit = useCallback(
     (id: string) => {
-      console.log(`Edit transaction ${id}`);
-      router.push({
-        pathname: '/(drawer)/transaction',
-        params: { id },
+      console.info('[transactions.ui][stage=navigate_edit]', {
+        transaction_id: id,
+        stage: 'navigate_edit',
       });
+      try {
+        router.push({
+          pathname: '/(drawer)/transaction',
+          params: { id },
+        });
+      } catch (error) {
+        logFailure('navigate_edit', error, id);
+        Alert.alert('Error', 'Failed to open transaction');
+      }
     },
     [router],
   );
@@ -197,13 +214,13 @@ export default function HomeScreen() {
           Alert.alert('Error', 'Failed to delete transaction');
           return;
         }
-        invalidateTransactionQueries();
+        await invalidateTransactionAndTemplateQueries();
       } catch (error) {
         logFailure('soft_delete', error, id);
         Alert.alert('Error', 'Failed to delete transaction');
       }
     },
-    [invalidateTransactionQueries],
+    [invalidateTransactionAndTemplateQueries],
   );
 
   if (isLoading) {
