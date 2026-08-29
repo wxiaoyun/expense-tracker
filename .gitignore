@@ -6,3 +6,5 @@ android/
 build/
 
 **/.DS_Store
+
+.agents/
