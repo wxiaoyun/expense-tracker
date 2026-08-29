@@ -101,7 +101,7 @@ export default function SettingsScreen() {
       setAutoBackup(enabled);
     } catch (error) {
       console.error('[backup.settings][stage=save] preference save failed', { enabled, error: String(error) });
-      Alert.alert('Auto-backup Failed', String(error));
+      Alert.alert('Auto backup failed', String(error));
     }
   };
 
@@ -151,7 +151,7 @@ export default function SettingsScreen() {
       console.info('[backup.export][stage=share_db] database shared');
     } catch (err) {
       console.error('[backup.export][stage=share_db] export failed', { error: String(err) });
-      Alert.alert('Export Failed', String(err));
+      Alert.alert('Export failed', String(err));
     }
   };
 
@@ -170,7 +170,7 @@ export default function SettingsScreen() {
       await validateSqliteFile(result.assets[0].uri);
 
       Alert.alert(
-        'Import Database',
+        'Import database',
         'This will replace your current data. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
@@ -191,14 +191,14 @@ export default function SettingsScreen() {
                 await reinitializeAppRuntime({ processImportedSchedules: true });
                 router.replace('/(tabs)');
                 Alert.alert(
-                  'Import Complete',
+                  'Import complete',
                   importResult.mode === 'migrate'
                     ? 'Legacy database migrated and app data reloaded.'
                     : 'Database restored and app data reloaded.',
                 );
               } catch (e) {
                 console.error('[backup.import][stage=copy_db] import failed', { error: String(e) });
-                Alert.alert('Import Failed', String(e));
+                Alert.alert('Import failed', String(e));
               } finally {
                 setRestoring(false);
               }
@@ -208,13 +208,13 @@ export default function SettingsScreen() {
       );
     } catch (err) {
       console.error('[backup.import][stage=pick_db] import failed', { error: String(err) });
-      Alert.alert('Import Failed', String(err));
+      Alert.alert('Import failed', String(err));
     }
   };
 
   const handleReset = () => {
     Alert.alert(
-      'Reset All Data',
+      'Reset all data',
       'This will delete ALL transactions, templates, and categories. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -230,7 +230,7 @@ export default function SettingsScreen() {
             } catch (error) {
               const stage = error instanceof ResetDataError ? error.stage : 'unknown';
               console.error('[settings.reset] reset failed', { stage, error: String(error) });
-              Alert.alert('Reset Failed', String(error));
+              Alert.alert('Reset failed', String(error));
             }
           },
         },
@@ -271,35 +271,36 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Backup</Text>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Auto-backup</Text>
-          <Switch value={autoBackup} onValueChange={handleAutoBackup} accessibilityLabel="Daily auto-backup" />
+          <Text style={styles.rowLabel}>Auto backup</Text>
+          <Switch value={autoBackup} onValueChange={handleAutoBackup} accessibilityLabel="Daily auto backup" />
       </View>
         <TouchableOpacity style={styles.row} onPress={async () => {
           try {
-            const path = await createLocalBackup();
-            Alert.alert('Backup Created', path);
+            await createLocalBackup();
+            console.info('[backup.settings][stage=create_now] backup created');
+            Alert.alert('Backup created');
           } catch (error) {
             console.error('[backup.settings][stage=create_now] backup failed', { error: String(error) });
-            Alert.alert('Backup Failed', String(error));
+            Alert.alert('Backup failed', String(error));
           }
         }}>
-          <Text style={styles.rowLabel}>Back Up Now</Text>
+          <Text style={styles.rowLabel}>Back up now</Text>
           <Feather name="database" size={20} color="#007AFF" />
       </TouchableOpacity>
         <TouchableOpacity style={styles.row} onPress={handleExport}>
-          <Text style={styles.rowLabel}>Export Database</Text>
+          <Text style={styles.rowLabel}>Export database</Text>
           <Feather name="upload" size={20} color="#007AFF" />
       </TouchableOpacity>
         <TouchableOpacity style={[styles.row, { borderBottomWidth: 0 }]} onPress={handleImport}>
-          <Text style={styles.rowLabel}>Import Database</Text>
+          <Text style={styles.rowLabel}>Import database</Text>
           <Feather name="download" size={20} color="#007AFF" />
       </TouchableOpacity>
     </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
+        <Text style={styles.sectionTitle}>Danger zone</Text>
         <TouchableOpacity style={[styles.row, { borderBottomWidth: 0 }]} onPress={handleReset}>
-          <Text style={[styles.rowLabel, { color: '#FF3B30' }]}>Reset All Data</Text>
+          <Text style={[styles.rowLabel, { color: '#FF3B30' }]}>Reset all data</Text>
       </TouchableOpacity>
     </View>
     </ScrollView>

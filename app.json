@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.wxiaoyun.vibetracker",
       "infoPlist": {
         "UIBackgroundModes": [
-          "fetch"
+          "processing"
         ],
         "UISupportsDocumentBrowser": true,
         "UIFileSharingEnabled": true,

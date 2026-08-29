@@ -12,6 +12,7 @@ const mockImportDatabase = jest.fn();
 const mockResetAllData = jest.fn();
 const mockWaitForLaunchProcessing = jest.fn();
 const mockReinitializeRuntime = jest.fn();
+const mockSetAutoBackup = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: { replace: (...args: unknown[]) => mockReplace(...args) },
@@ -48,7 +49,9 @@ jest.mock('@/db/reset', () => {
   };
 });
 
-jest.mock('@/libs/background', () => ({ setAutoBackup: jest.fn() }));
+jest.mock('@/libs/background', () => ({
+  setAutoBackup: (...args: unknown[]) => mockSetAutoBackup(...args),
+}));
 
 jest.mock('@/libs/backup', () => ({
   createLocalBackup: (...args: unknown[]) => mockCreateLocalBackup(...args),
@@ -83,6 +86,7 @@ describe('Settings database runtime orchestration', () => {
     mockResetAllData.mockResolvedValue(undefined);
     mockWaitForLaunchProcessing.mockResolvedValue(undefined);
     mockReinitializeRuntime.mockResolvedValue(undefined);
+    mockSetAutoBackup.mockResolvedValue(undefined);
     jest.spyOn(console, 'info').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
@@ -91,17 +95,35 @@ describe('Settings database runtime orchestration', () => {
     jest.restoreAllMocks();
   });
 
+  it('shows a path-free confirmation after creating a local backup', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    const screen = await render(<SettingsScreen />);
+
+    await fireEvent.press(screen.getByText('Back up now'));
+
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Backup created'));
+    expect(mockCreateLocalBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers daily auto backup when enabled', async () => {
+    const screen = await render(<SettingsScreen />);
+
+    await fireEvent(screen.getByLabelText('Daily auto backup'), 'valueChange', true);
+
+    await waitFor(() => expect(mockSetAutoBackup).toHaveBeenCalledWith('daily'));
+  });
+
   it('waits, imports, reinitializes imported state, then returns to normal tabs', async () => {
     const alert = jest.spyOn(Alert, 'alert');
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByText('Import Database'));
+    await fireEvent.press(screen.getByText('Import database'));
     await waitFor(() => expect(alert).toHaveBeenCalledWith(
-      'Import Database',
+      'Import database',
       expect.any(String),
       expect.any(Array),
     ));
-    const confirmation = alert.mock.calls.find(([title]) => title === 'Import Database')!;
+    const confirmation = alert.mock.calls.find(([title]) => title === 'Import database')!;
     await act(async () => confirmation[2]![1].onPress?.());
 
     await waitFor(() => expect(mockReinitializeRuntime)
@@ -119,8 +141,8 @@ describe('Settings database runtime orchestration', () => {
     const alert = jest.spyOn(Alert, 'alert');
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByText('Reset All Data'));
-    const confirmation = alert.mock.calls.find(([title]) => title === 'Reset All Data')!;
+    await fireEvent.press(screen.getByText('Reset all data'));
+    const confirmation = alert.mock.calls.find(([title]) => title === 'Reset all data')!;
     await act(async () => confirmation[2]![1].onPress?.());
 
     await waitFor(() => expect(mockReinitializeRuntime).toHaveBeenCalledWith());
