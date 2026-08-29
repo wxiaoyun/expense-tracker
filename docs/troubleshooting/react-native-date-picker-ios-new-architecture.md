@@ -1,5 +1,9 @@
 # react-native-date-picker iOS New Architecture Crash
 
+> **Resolved:** the active date controls now render `@expo/ui/community/datetime-picker` (drop-in
+> for `@react-native-community/datetimepicker`). `react-native-date-picker` was unused and has been
+> removed along with `patches/react-native-date-picker+5.0.13.patch`.
+
 ## Symptoms
 
 The iOS app builds successfully, then crashes immediately at launch when using:
@@ -80,9 +84,11 @@ npx expo run:ios
 
 ## Current Usage and Verification
 
-The active transaction and template editors render `@react-native-community/datetimepicker`. The `react-native-date-picker` dependency and patch are retained for v3 branch compatibility; the dependency may still be loaded by compatible v3 code paths even though it is not the date control on the current editor screens.
+The active transaction and template editors render `@expo/ui/community/datetime-picker` (the
+Expo drop-in for `@react-native-community/datetimepicker`). `react-native-date-picker` has been
+removed from dependencies; no patch is carried.
 
-Confirm generated module-provider code does not contain `RNDatePickerManager`:
+Confirm the generated module-provider code does not contain `RNDatePickerManager`:
 
 ```bash
 rg "RNDatePickerManager" ios/build/generated/ios/ReactCodegen/RCTModuleProviders.mm

@@ -64,14 +64,75 @@ jest.mock('@/libs/app-runtime', () => ({
   waitForLaunchTemplateProcessing: (...args: unknown[]) => mockWaitForLaunchProcessing(...args),
 }));
 
-jest.mock('react-native-ios-context-menu', () => {
+jest.mock('@expo/ui', () => {
   const React = jest.requireActual('react');
-  const { View } = jest.requireActual('react-native');
-  return {
-    ContextMenuButton: ({ children }: { children: React.ReactNode }) =>
-      React.createElement(View, null, children),
+  const { Pressable, Switch: RNSwitch, Text: RNText, View } = jest.requireActual('react-native');
+
+  const Text = ({ children, textStyle, onPress, testID }: {
+    children?: React.ReactNode;
+    textStyle?: { color?: string };
+    onPress?: () => void;
+    testID?: string;
+  }) => React.createElement(RNText, { testID, style: textStyle, onPress }, children);
+
+  const Switch = ({ value, onValueChange, testID }: {
+    value?: boolean;
+    onValueChange?: (value: boolean) => void;
+    testID?: string;
+  }) => React.createElement(RNSwitch, { testID, value, onValueChange });
+
+  const Button = ({ label, children, onPress, testID }: {
+    label?: string;
+    children?: React.ReactNode;
+    onPress?: () => void;
+    testID?: string;
+  }) => React.createElement(
+    Pressable,
+    { testID, onPress },
+    children ?? React.createElement(RNText, null, label),
+  );
+
+  const Picker = ({ children, testID }: { children?: React.ReactNode; testID?: string }) =>
+    React.createElement(View, { testID }, children);
+  Picker.Item = function PickerItem() {
+    return null;
   };
-}, { virtual: true });
+
+  const Row = ({ children, testID }: { children?: React.ReactNode; testID?: string }) =>
+    React.createElement(View, { testID }, children);
+  const Column = Row;
+  const Spacer = () => null;
+  const Host = ({ children }: { children?: React.ReactNode }) =>
+    React.createElement(View, null, children);
+
+  const FieldGroup = ({ children }: { children?: React.ReactNode }) =>
+    React.createElement(View, null, children);
+  FieldGroup.Section = function FieldGroupSection({
+    children,
+    title,
+  }: {
+    children?: React.ReactNode;
+    title?: string;
+  }) {
+    return React.createElement(View, null, React.createElement(RNText, null, title), children);
+  };
+  FieldGroup.SectionHeader = function FieldGroupSectionHeader({
+    children,
+  }: {
+    children?: React.ReactNode;
+  }) {
+    return React.createElement(View, null, children);
+  };
+  FieldGroup.SectionFooter = function FieldGroupSectionFooter({
+    children,
+  }: {
+    children?: React.ReactNode;
+  }) {
+    return React.createElement(View, null, children);
+  };
+
+  return { Host, FieldGroup, Switch, Text, Button, Picker, Row, Column, Spacer };
+});
 
 describe('Settings database runtime orchestration', () => {
   beforeEach(() => {
@@ -99,7 +160,7 @@ describe('Settings database runtime orchestration', () => {
     const alert = jest.spyOn(Alert, 'alert');
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByText('Back up now'));
+    await fireEvent.press(screen.getByTestId('backup-now'));
 
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Backup created'));
     expect(mockCreateLocalBackup).toHaveBeenCalledTimes(1);
@@ -108,7 +169,7 @@ describe('Settings database runtime orchestration', () => {
   it('registers daily auto backup when enabled', async () => {
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent(screen.getByLabelText('Daily auto backup'), 'valueChange', true);
+    await fireEvent(screen.getByTestId('auto-backup'), 'valueChange', true);
 
     await waitFor(() => expect(mockSetAutoBackup).toHaveBeenCalledWith('daily'));
   });
@@ -117,7 +178,7 @@ describe('Settings database runtime orchestration', () => {
     const alert = jest.spyOn(Alert, 'alert');
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByText('Import database'));
+    await fireEvent.press(screen.getByTestId('import-database'));
     await waitFor(() => expect(alert).toHaveBeenCalledWith(
       'Import database',
       expect.any(String),
@@ -141,7 +202,7 @@ describe('Settings database runtime orchestration', () => {
     const alert = jest.spyOn(Alert, 'alert');
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByText('Reset all data'));
+    await fireEvent.press(screen.getByTestId('reset-all-data'));
     const confirmation = alert.mock.calls.find(([title]) => title === 'Reset all data')!;
     await act(async () => confirmation[2]![1].onPress?.());
 

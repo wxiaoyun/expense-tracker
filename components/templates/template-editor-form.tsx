@@ -1,5 +1,5 @@
 import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import type { TemplateSuggestion, TransactionType } from '@/db/template-core';
@@ -284,11 +284,12 @@ export function TemplateEditorForm({
 
             <Text style={styles.label}>Start date</Text>
             <DateTimePicker
-              accessibilityLabel="Template start date"
+              testID="template-start-date"
               value={startDate}
               mode="date"
               display="compact"
-              onChange={(_, date) => date && setStartDate(date)}
+              presentation="inline"
+              onValueChange={(_, date) => setStartDate(date)}
             />
 
             <View style={styles.toggleRow}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { MenuView, type NativeActionEvent } from '@react-native-menu/menu';
+import { MenuView, type MenuAction, type NativeActionEvent } from '@expo/ui/community/menu';
 import { format } from 'date-fns';
 
 import type { TransactionTemplate } from '@/db/schema';
@@ -58,15 +58,22 @@ export function TemplateRow({
     )[0]
     : undefined;
 
-  const actions = [
+  const actions: MenuAction[] = [
     { id: 'edit', title: 'Edit', image: 'pencil' },
-    ...(scheduled ? [{
+  ];
+  if (scheduled) {
+    actions.push({
       id: paused ? 'resume' : 'pause',
       title: paused ? 'Resume' : 'Pause',
       image: paused ? 'play.fill' : 'pause.fill',
-    }] : []),
-    { id: 'delete', title: 'Delete', image: 'trash', attributes: { destructive: true } },
-  ];
+    });
+  }
+  actions.push({
+    id: 'delete',
+    title: 'Delete',
+    image: 'trash',
+    attributes: { destructive: true },
+  });
 
   const handleMenuAction = ({ nativeEvent }: NativeActionEvent) => {
     switch (nativeEvent.event) {
@@ -114,7 +121,7 @@ export function TemplateRow({
             </View>
           </View>
         </Pressable>
-        <MenuView actions={actions} onPressAction={handleMenuAction} isAnchoredToRight>
+        <MenuView actions={actions} onPressAction={handleMenuAction}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`More actions for ${template.name}`}

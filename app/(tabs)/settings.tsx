@@ -1,6 +1,16 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, StyleSheet, Text as RNText, View } from 'react-native';
+import {
+  Button,
+  Column,
+  FieldGroup,
+  Host,
+  Picker,
+  Row,
+  Spacer,
+  Switch,
+  Text,
+} from '@expo/ui';
 import { db } from '@/db';
 import { settings } from '@/db/schema';
 import { resetAllData, ResetDataError } from '@/db/reset';
@@ -16,7 +26,6 @@ import {
   type SuggestionLookback,
   type WeekStart,
 } from '@/libs/preferences';
-import Feather from '@expo/vector-icons/Feather';
 import { eq } from 'drizzle-orm';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
@@ -26,8 +35,6 @@ import {
 } from '@/libs/app-runtime';
 import * as Sharing from 'expo-sharing';
 import { useAtom } from 'jotai';
-// eslint-disable-next-line import/no-unresolved
-import { ContextMenuButton, type MenuConfig } from 'react-native-ios-context-menu';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
 const WEEK_STARTS: { value: WeekStart; label: string }[] = [
@@ -39,45 +46,34 @@ type PickerOption = { value: string; label: string };
 
 function PreferenceRow({
   label,
-  valueLabel,
+  selectedValue,
   options,
   onSelect,
-  last,
 }: {
   label: string;
-  valueLabel: string;
+  selectedValue: string;
   options: PickerOption[];
   onSelect: (value: string) => void;
-  last?: boolean;
 }) {
-  const menuConfig: MenuConfig = {
-    menuTitle: label,
-    menuItems: options.map((option) => ({
-      actionKey: option.value,
-      actionTitle: option.label,
-      menuState: option.value === valueLabel || option.label === valueLabel ? 'on' : 'off',
-    })),
-  };
-
+  const testIdSuffix = label.toLowerCase().replace(/\s+/g, '-');
   return (
-    <View style={[styles.row, last && { borderBottomWidth: 0 }]}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <ContextMenuButton
-        isMenuPrimaryAction
-        menuConfig={menuConfig}
-        onPressMenuItem={({ nativeEvent }) => onSelect(nativeEvent.actionKey)}
+    <Row alignment="center" spacing={12} testID={`preference-${testIdSuffix}`}>
+      <Text textStyle={{ fontSize: 16, color: '#000' }}>{label}</Text>
+      <Spacer flexible />
+      <Picker
+        selectedValue={selectedValue}
+        onValueChange={onSelect}
+        testID={`picker-${testIdSuffix}`}
       >
-        <View style={styles.rowValueWrap}>
-          <Text style={styles.rowValue}>{valueLabel}</Text>
-          <Feather name="chevron-down" size={16} color="#C7C7CC" />
-        </View>
-      </ContextMenuButton>
-    </View>
+        {options.map((option) => (
+          <Picker.Item key={option.value} label={option.label} value={option.value} />
+        ))}
+      </Picker>
+    </Row>
   );
 }
 
 export default function SettingsScreen() {
-  const insets = useSafeAreaInsets();
   const [currency, setCurrency] = useAtom(currencyAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [suggestionLookback, setSuggestionLookback] = useAtom(suggestionLookbackAtom);
@@ -102,6 +98,17 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('[backup.settings][stage=save] preference save failed', { enabled, error: String(error) });
       Alert.alert('Auto backup failed', String(error));
+    }
+  };
+
+  const handleBackupNow = async () => {
+    try {
+      await createLocalBackup();
+      console.info('[backup.settings][stage=create_now] backup created');
+      Alert.alert('Backup created');
+    } catch (error) {
+      console.error('[backup.settings][stage=create_now] backup failed', { error: String(error) });
+      Alert.alert('Backup failed', String(error));
     }
   };
 
@@ -240,72 +247,65 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-    <ScrollView pointerEvents={restoring ? 'none' : 'auto'} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Settings</Text>
-        <Text style={styles.pageSubtitle}>Preferences, backup, and data</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <PreferenceRow
-          label="Currency"
-          valueLabel={currency}
-          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-          onSelect={changeCurrency}
-        />
-        <PreferenceRow
-          label="Week starts"
-          valueLabel={WEEK_STARTS.find((w) => w.value === weekStart)?.label ?? 'Sunday'}
-          options={WEEK_STARTS}
-          onSelect={changeWeekStart}
-        />
-        <PreferenceRow
-          label="Template suggestion history"
-          valueLabel={SUGGESTION_LOOKBACK_OPTIONS.find((option) => option.value === suggestionLookback)?.label ?? '3 months'}
-          options={[...SUGGESTION_LOOKBACK_OPTIONS]}
-          onSelect={changeSuggestionLookback}
-          last
-        />
-      </View>
+      <Host style={{ flex: 1 }}>
+        <FieldGroup>
+          <Column style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
+            <Text textStyle={{ fontSize: 34, fontWeight: '700', color: '#000' }}>Settings</Text>
+            <Text textStyle={{ fontSize: 15, color: '#6E6E73' }}>Preferences, backup, and data</Text>
+          </Column>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Backup</Text>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Auto backup</Text>
-          <Switch value={autoBackup} onValueChange={handleAutoBackup} accessibilityLabel="Daily auto backup" />
-      </View>
-        <TouchableOpacity style={styles.row} onPress={async () => {
-          try {
-            await createLocalBackup();
-            console.info('[backup.settings][stage=create_now] backup created');
-            Alert.alert('Backup created');
-          } catch (error) {
-            console.error('[backup.settings][stage=create_now] backup failed', { error: String(error) });
-            Alert.alert('Backup failed', String(error));
-          }
-        }}>
-          <Text style={styles.rowLabel}>Back up now</Text>
-          <Feather name="database" size={20} color="#007AFF" />
-      </TouchableOpacity>
-        <TouchableOpacity style={styles.row} onPress={handleExport}>
-          <Text style={styles.rowLabel}>Export database</Text>
-          <Feather name="upload" size={20} color="#007AFF" />
-      </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, { borderBottomWidth: 0 }]} onPress={handleImport}>
-          <Text style={styles.rowLabel}>Import database</Text>
-          <Feather name="download" size={20} color="#007AFF" />
-      </TouchableOpacity>
-    </View>
+          <FieldGroup.Section title="Preferences">
+            <PreferenceRow
+              label="Currency"
+              selectedValue={currency}
+              options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+              onSelect={changeCurrency}
+            />
+            <PreferenceRow
+              label="Week starts"
+              selectedValue={weekStart}
+              options={WEEK_STARTS}
+              onSelect={changeWeekStart}
+            />
+            <PreferenceRow
+              label="Template suggestion history"
+              selectedValue={suggestionLookback}
+              options={[...SUGGESTION_LOOKBACK_OPTIONS]}
+              onSelect={changeSuggestionLookback}
+            />
+          </FieldGroup.Section>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger zone</Text>
-        <TouchableOpacity style={[styles.row, { borderBottomWidth: 0 }]} onPress={handleReset}>
-          <Text style={[styles.rowLabel, { color: '#FF3B30' }]}>Reset all data</Text>
-      </TouchableOpacity>
+          <FieldGroup.Section title="Backup">
+            <Switch
+              label="Auto backup"
+              value={autoBackup}
+              onValueChange={handleAutoBackup}
+              testID="auto-backup"
+            />
+            <Button label="Back up now" onPress={handleBackupNow} variant="text" testID="backup-now" />
+            <Button label="Export database" onPress={handleExport} variant="text" testID="export-database" />
+            <Button label="Import database" onPress={handleImport} variant="text" testID="import-database" />
+          </FieldGroup.Section>
+
+          <FieldGroup.Section title="Danger zone">
+            <Text
+              textStyle={{ fontSize: 16, color: '#FF3B30' }}
+              onPress={handleReset}
+              testID="reset-all-data"
+            >
+              Reset all data
+            </Text>
+          </FieldGroup.Section>
+        </FieldGroup>
+      </Host>
+
+      {restoring && (
+        <View style={styles.restoreOverlay}>
+          <ActivityIndicator size="large" />
+          <RNText style={styles.restoreText}>Restoring database</RNText>
+        </View>
+      )}
     </View>
-    </ScrollView>
-    {restoring && <View style={styles.restoreOverlay}><ActivityIndicator size="large" /><Text style={styles.restoreText}>Restoring database</Text></View>}
-  </View>
   );
 }
 
@@ -324,59 +324,5 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-  },
-  content: {
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  pageHeader: {
-    marginBottom: 4,
-    marginHorizontal: 16,
-  },
-  pageTitle: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: '#000',
-  },
-  pageSubtitle: {
-    fontSize: 15,
-    color: '#6E6E73',
-    marginTop: 4,
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginTop: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    paddingVertical: 4,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 4,
-    marginHorizontal: 16,
-    textTransform: 'uppercase',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#c8c8cc',
-  },
-  rowLabel: {
-    fontSize: 16,
-  },
-  rowValue: {
-    fontSize: 16,
-    color: '#666',
-  },
-  rowValueWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
 });

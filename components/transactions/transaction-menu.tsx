@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { MenuView, type MenuAction, type NativeActionEvent } from '@react-native-menu/menu';
+import { MenuView, type MenuAction, type NativeActionEvent } from '@expo/ui/community/menu';
 
 type TransactionMenuProps = {
   transactionId: string;
@@ -55,7 +55,6 @@ export function TransactionMenu({
       actions={actions}
       onPressAction={handleMenuAction}
       shouldOpenOnLongPress={false}
-      isAnchoredToRight
     >
       <Pressable
         accessibilityRole="button"

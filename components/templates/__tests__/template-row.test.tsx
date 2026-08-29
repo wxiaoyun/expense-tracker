@@ -6,7 +6,7 @@ import { TemplateRow } from '../template-row';
 
 jest.mock('@/libs/intl', () => ({ formatCurrency: (amount: number) => `$${amount.toFixed(2)}` }));
 
-jest.mock('@react-native-menu/menu', () => {
+jest.mock('@expo/ui/community/menu', () => {
   const React = jest.requireActual('react');
   const { View } = jest.requireActual('react-native');
   return {

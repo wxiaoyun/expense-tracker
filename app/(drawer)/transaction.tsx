@@ -7,7 +7,7 @@ import { getTransactionInitialFocus } from '@/db/template-core';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
 import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -393,11 +393,12 @@ export default function TransactionDrawer() {
 
         <Text style={styles.label}>Date</Text>
         <DateTimePicker
-          accessibilityLabel="Transaction date"
+          testID="transaction-date"
           value={transactionDate}
           mode="date"
           display="compact"
-          onChange={(_, date) => date && setTransactionDate(date)}
+          presentation="inline"
+          onValueChange={(_, date) => setTransactionDate(date)}
         />
 
         <View style={styles.toggleRow}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import type { DateRangePreset } from '@/hooks/useFilter';
 
 type ExpenseFilterBarProps = {
@@ -88,18 +88,20 @@ export function ExpenseFilterBar({
       {preset === 'custom' && (
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <DateTimePicker
-            accessibilityLabel="Custom start date"
+            testID="custom-start-date"
             value={customStart ?? new Date()}
             mode="date"
             display="compact"
-            onChange={(_, date) => date && onCustomStartChange?.(date)}
+            presentation="inline"
+            onValueChange={(_, date) => onCustomStartChange?.(date)}
           />
           <DateTimePicker
-            accessibilityLabel="Custom end date"
+            testID="custom-end-date"
             value={customEnd ?? new Date()}
             mode="date"
             display="compact"
-            onChange={(_, date) => date && onCustomEndChange?.(date)}
+            presentation="inline"
+            onValueChange={(_, date) => onCustomEndChange?.(date)}
           />
         </View>
       )}

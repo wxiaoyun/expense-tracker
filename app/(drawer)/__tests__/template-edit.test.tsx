@@ -75,24 +75,23 @@ jest.mock('@/db/transaction', () => ({
   getTransaction: (...args: unknown[]) => mockGetTransaction(...args),
 }));
 
-jest.mock('@react-native-community/datetimepicker', () => {
+jest.mock('@expo/ui/community/datetime-picker', () => {
   const React = jest.requireActual('react');
   const { Pressable, Text } = jest.requireActual('react-native');
-  return function MockDatePicker({ value, onChange, accessibilityLabel }: {
+  const MockDatePicker = ({ value, onValueChange, testID }: {
     value: Date;
-    onChange: (event: unknown, date?: Date) => void;
-    accessibilityLabel: string;
-  }) {
-    return React.createElement(
-      Pressable,
-      {
-        accessibilityRole: 'button',
-        accessibilityLabel,
-        onPress: () => onChange({}, new Date('2025-01-01T00:00:00.000Z')),
-      },
-      React.createElement(Text, null, value.toISOString()),
-    );
-  };
+    onValueChange: (event: unknown, date: Date) => void;
+    testID: string;
+  }) => React.createElement(
+    Pressable,
+    {
+      accessibilityRole: 'button',
+      testID,
+      onPress: () => onValueChange({}, new Date('2025-01-01T00:00:00.000Z')),
+    },
+    React.createElement(Text, null, value.toISOString()),
+  );
+  return { DateTimePicker: MockDatePicker };
 });
 
 const draft = (overrides: Partial<TemplateDraft> = {}): TemplateDraft => ({
@@ -301,7 +300,7 @@ describe('TemplateEditDrawer', () => {
 
     expect(screen.getByRole('button', { name: 'Recurrence preset Daily' })).toBeTruthy();
     expect(screen.getByLabelText('Cron expression')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Template start date' })).toBeTruthy();
+    expect(screen.getByTestId('template-start-date')).toBeTruthy();
     await waitFor(() => expect(screen.getAllByTestId('next-occurrence')).toHaveLength(3));
   });
 
@@ -358,7 +357,7 @@ describe('TemplateEditDrawer', () => {
     const screen = await render(<TemplateEditDrawer />);
     await fillRequiredFields(screen);
     await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
-    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await fireEvent.press(screen.getByTestId('template-start-date'));
     await waitFor(() => screen.getByText('Saving will create 2 past transactions.'));
     await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
@@ -385,7 +384,7 @@ describe('TemplateEditDrawer', () => {
     await fillRequiredFields(screen);
     await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
     await fireEvent(screen.getByRole('switch', { name: 'Schedule active' }), 'valueChange', false);
-    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await fireEvent.press(screen.getByTestId('template-start-date'));
     await waitFor(() => screen.getByText('Saving will create 2 past transactions.'));
     await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
@@ -411,7 +410,7 @@ describe('TemplateEditDrawer', () => {
     await fillRequiredFields(screen);
     await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
     await fireEvent(screen.getByRole('switch', { name: 'Schedule active' }), 'valueChange', false);
-    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await fireEvent.press(screen.getByTestId('template-start-date'));
     await waitFor(() => screen.getByText('Saving will create 2 past transactions.'));
     await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
@@ -435,7 +434,7 @@ describe('TemplateEditDrawer', () => {
     const screen = await render(<TemplateEditDrawer />);
     await fillRequiredFields(screen);
     await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
-    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await fireEvent.press(screen.getByTestId('template-start-date'));
 
     await waitFor(() => expect(screen.getByText('Saving will create 7 past transactions.')).toBeTruthy());
     await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
@@ -460,7 +459,7 @@ describe('TemplateEditDrawer', () => {
     const screen = await render(<TemplateEditDrawer />);
     await fillRequiredFields(screen);
     await fireEvent(screen.getByRole('switch', { name: 'Repeat automatically' }), 'valueChange', true);
-    await fireEvent.press(screen.getByRole('button', { name: 'Template start date' }));
+    await fireEvent.press(screen.getByTestId('template-start-date'));
     await waitFor(() => screen.getByText('Saving will create 2 past transactions.'));
     mockPreviewTemplateBackfill.mockClear();
 

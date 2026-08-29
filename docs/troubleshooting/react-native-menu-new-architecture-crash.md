@@ -1,5 +1,10 @@
 # react-native-menu New Architecture Crash
 
+> **Resolved:** migrated to the `@expo/ui/community/menu` drop-in replacement.
+> `@react-native-menu/menu` and its `patches/@react-native-menu+menu+1.2.2.patch` were removed.
+> The drop-in renders `MenuView` via SwiftUI (iOS) and Jetpack Compose (Android) with no codegen
+> provider patch required.
+
 ## Symptom
 
 On iOS with React Native New Architecture, rendering `MenuView` crashes the app:

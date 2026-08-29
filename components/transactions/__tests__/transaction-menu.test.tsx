@@ -84,7 +84,7 @@ jest.mock('@shopify/flash-list', () => {
   };
 });
 
-jest.mock('@react-native-menu/menu', () => {
+jest.mock('@expo/ui/community/menu', () => {
   const React = jest.requireActual('react');
   const { Pressable, Text, View } = jest.requireActual('react-native');
   return {
