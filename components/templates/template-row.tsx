@@ -147,7 +147,7 @@ export function TemplateRow({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F2F2F7',
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
