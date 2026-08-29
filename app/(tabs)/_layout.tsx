@@ -8,9 +8,9 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Expenses</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet', selected: 'list.bullet' }} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="recurring">
-        <NativeTabs.Trigger.Label>Recurring</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'arrow.triangle.2.circlepath', selected: 'arrow.triangle.2.circlepath' }} />
+      <NativeTabs.Trigger name="templates">
+        <NativeTabs.Trigger.Label>Templates</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'doc.on.doc', selected: 'doc.on.doc.fill' }} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="summary">
         <NativeTabs.Trigger.Label>Summary</NativeTabs.Trigger.Label>

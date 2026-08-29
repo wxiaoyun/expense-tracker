@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { listTransactions, summarizeByCategory, summarizeByMonth, summarizeTransactions } from '@/db/transaction';
+import type { TemplateListFilter } from '@/db/template';
+import type { SuggestionLookback } from '@/db/template-core';
 
 export type TransactionOrderKey = 'transactionDate' | 'amount' | 'category' | 'description' | 'createdAt' | 'updatedAt';
 export type TransactionOrderDirection = 'ASC' | 'DESC';
@@ -25,7 +27,9 @@ export const queryKeys = {
   },
   templates: {
     all: () => ['templates'] as const,
-    list: () => ['templates', 'list'] as const,
+    list: (filter: TemplateListFilter = {}) => ['templates', 'list', filter] as const,
+    detail: (id: string) => ['templates', 'detail', id] as const,
+    suggestions: (lookback: SuggestionLookback) => ['templates', 'suggestions', lookback] as const,
   },
   categories: {
     all: () => ['categories'] as const,
