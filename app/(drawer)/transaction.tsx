@@ -1,16 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getTransaction, createTransaction, updateTransaction } from '@/db/transaction';
+import { getTemplate } from '@/db/template';
+import { getTransactionInitialFocus } from '@/db/template-core';
 import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
 import { useInvalidateTransactions } from '@/hooks/useQueryClient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
+
+const logTransactionFormError = (stage: string, details: Record<string, unknown>) => {
+  console.error(`[transaction.form][stage=${stage}] failed`, { stage, ...details });
+};
+
 export default function TransactionDrawer() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string | string[], templateId?: string | string[] }>();
+  const id = firstRouteParam(params.id);
+  const routeTemplateId = firstRouteParam(params.templateId);
   const isEdit = !!id;
+  const sourceTemplateId = isEdit ? undefined : routeTemplateId;
   const invalidateTransactions = useInvalidateTransactions();
+
+  const amountRef = useRef<TextInput>(null);
+  const descriptionRef = useRef<TextInput>(null);
 
   const [amount, setAmount] = useState('');
   const [isIncome, setIsIncome] = useState(false);
@@ -20,8 +34,18 @@ export default function TransactionDrawer() {
   const [verified, setVerified] = useState(false);
   const [transactionDate, setTransactionDate] = useState(new Date());
   const [availableCategories, setAvailableCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
-  const [loading, setLoading] = useState(isEdit);
+  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(isEdit || !!sourceTemplateId);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id || !routeTemplateId) return;
+    logTransactionFormError('resolve_source', {
+      transaction_id_present: true,
+      template_id_present: true,
+      error: 'Conflicting route sources',
+    });
+  }, [id, routeTemplateId]);
 
   // Load categories
   useEffect(() => {
@@ -31,6 +55,7 @@ export default function TransactionDrawer() {
         setAvailableCategories(cats);
       } catch (err) {
         console.error('[transaction.form][stage=load_categories] category query failed', {
+          stage: 'load_categories',
           error: String(err),
         });
       }
@@ -41,10 +66,19 @@ export default function TransactionDrawer() {
   // Load existing transaction if editing
   useEffect(() => {
     if (!isEdit || !id) return;
+    let active = true;
     
     const loadTransaction = async () => {
+      setLoading(true);
+      setLoadedTemplateId(null);
+      console.info('[transaction.form][stage=load_transaction] loading transaction', {
+        stage: 'load_transaction',
+        transaction_id: id,
+        template_id: null,
+      });
       try {
         const tx = await getTransaction(id);
+        if (!active) return;
         if (tx) {
           setAmount(String(Math.abs(tx.amount)));
           setIsIncome(tx.amount > 0);
@@ -55,23 +89,112 @@ export default function TransactionDrawer() {
           setTransactionDate(new Date(tx.transactionDate));
         }
       } catch (err) {
-        console.error('[transaction.form][stage=load_transaction] transaction query failed', {
-          id,
+        if (!active) return;
+        logTransactionFormError('load_transaction', {
+          transaction_id: id,
+          template_id: null,
           error: String(err),
         });
         setError(String(err));
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     loadTransaction();
+    return () => {
+      active = false;
+    };
   }, [id, isEdit]);
 
+  // Load active template for reviewed transaction creation.
+  useEffect(() => {
+    if (isEdit || !sourceTemplateId) return;
+
+    let active = true;
+
+    const loadTemplate = async () => {
+      setLoading(true);
+      setLoadedTemplateId(null);
+      setError(null);
+      console.info('[transaction.form][stage=load_template] loading template', {
+        stage: 'load_template',
+        transaction_id: null,
+        template_id: sourceTemplateId,
+      });
+      try {
+        const template = await getTemplate(sourceTemplateId);
+        if (!active) return;
+        if (!template) {
+          console.info('[transaction.form][stage=load_template] skipped template population', {
+            stage: 'load_template',
+            template_id: sourceTemplateId,
+            reason: 'not_found',
+          });
+          setError('Template not found');
+          return;
+        }
+
+        setAmount(template.amount === null || !Number.isFinite(template.amount) ? '' : String(Math.abs(template.amount)));
+        setIsIncome(template.transactionType === 'income');
+        setDescription(template.description?.trim() ?? '');
+        setCategory(template.category?.trim() ?? '');
+        setNotes(template.notes?.trim() ?? '');
+        setVerified(template.verified === 1);
+        setTransactionDate(new Date());
+        setLoadedTemplateId(template.id);
+      } catch (err) {
+        if (!active) return;
+        logTransactionFormError('load_template', {
+          transaction_id: null,
+          template_id: sourceTemplateId,
+          error: String(err),
+        });
+        setError(String(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadTemplate();
+    return () => {
+      active = false;
+    };
+  }, [isEdit, sourceTemplateId]);
+
+  useEffect(() => {
+    if (loading || isEdit || !sourceTemplateId || !loadedTemplateId) return;
+
+    const initialFocus = getTransactionInitialFocus({
+      isEdit,
+      fromTemplate: true,
+      amount,
+      description,
+    });
+    if (!initialFocus) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (initialFocus === 'amount') {
+        amountRef.current?.focus();
+      } else {
+        descriptionRef.current?.focus();
+      }
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [amount, description, isEdit, loadedTemplateId, loading, sourceTemplateId]);
+
   const handleSave = async () => {
+    let stage = 'validate';
     try {
-      const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount)) {
-        setError('Invalid amount');
+      if (sourceTemplateId && !loadedTemplateId) {
+        setError('Template not found');
+        return;
+      }
+
+      const parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        setError('Amount must be greater than zero');
+        amountRef.current?.focus();
         return;
       }
 
@@ -79,21 +202,29 @@ export default function TransactionDrawer() {
 
       if (!description.trim()) {
         setError('Description is required');
+        descriptionRef.current?.focus();
         return;
       }
 
-      console.info('[transaction.form][stage=save] saving transaction', {
-        mode: isEdit ? 'edit' : 'create',
-        id: id ?? null,
-        category: category.trim() || 'Other',
-      });
-
       if (isEdit && id) {
+        stage = 'lookup_transaction_for_update';
+        console.info('[transaction.form][stage=lookup_transaction_for_update] loading transaction before update', {
+          stage,
+          transaction_id: id,
+          template_id: null,
+        });
         const existing = await getTransaction(id);
         if (!existing) {
           setError('Transaction not found');
           return;
         }
+
+        stage = 'update_transaction';
+        console.info('[transaction.form][stage=update_transaction] updating transaction', {
+          stage,
+          transaction_id: id,
+          template_id: existing.templateId ?? null,
+        });
         await updateTransaction({
           ...existing,
           amount: signedAmount,
@@ -104,6 +235,13 @@ export default function TransactionDrawer() {
           transactionDate: transactionDate.getTime(),
         });
       } else {
+        const createTemplateId = loadedTemplateId ?? null;
+        stage = 'create_transaction';
+        console.info('[transaction.form][stage=create_transaction] creating transaction', {
+          stage,
+          transaction_id: null,
+          template_id: createTemplateId,
+        });
         await createTransaction({
           amount: signedAmount,
           description: description.trim(),
@@ -111,7 +249,7 @@ export default function TransactionDrawer() {
           notes: notes.trim() || null,
           verified: verified ? 1 : 0,
           transactionDate: transactionDate.getTime(),
-          templateId: null,
+          templateId: createTemplateId,
           deletedAt: null,
         });
       }
@@ -119,13 +257,15 @@ export default function TransactionDrawer() {
       invalidateTransactions();
       router.dismiss();
       console.info('[transaction.form][stage=save] transaction saved', {
+        stage: 'save',
         mode: isEdit ? 'edit' : 'create',
-        id: id ?? null,
+        transaction_id: id ?? null,
+        template_id: isEdit ? null : loadedTemplateId,
       });
     } catch (err) {
-      console.error('[transaction.form][stage=save] transaction save failed', {
-        mode: isEdit ? 'edit' : 'create',
-        id: id ?? null,
+      logTransactionFormError(stage, {
+        transaction_id: id ?? null,
+        template_id: isEdit ? null : loadedTemplateId,
         error: String(err),
       });
       setError(String(err));
@@ -133,7 +273,7 @@ export default function TransactionDrawer() {
   };
 
   const handleCancel = () => {
-    console.info('[transaction.form][stage=cancel] dismissing transaction form');
+    console.info('[transaction.form][stage=cancel] dismissing transaction form', { stage: 'cancel' });
     router.dismiss();
   };
 
@@ -183,12 +323,15 @@ export default function TransactionDrawer() {
 
         <Text style={styles.label}>Amount</Text>
         <TextInput
+          ref={amountRef}
+          accessibilityLabel="Amount"
           style={styles.input}
           value={amount}
           onChangeText={setAmount}
           placeholder="0.00"
           keyboardType="decimal-pad"
           placeholderTextColor="#999"
+          autoFocus={!isEdit && !sourceTemplateId}
         />
 
         <View style={styles.typeRow}>
@@ -211,6 +354,8 @@ export default function TransactionDrawer() {
 
         <Text style={styles.label}>Description</Text>
         <TextInput
+          ref={descriptionRef}
+          accessibilityLabel="Description"
           style={styles.input}
           value={description}
           onChangeText={setDescription}
@@ -238,6 +383,7 @@ export default function TransactionDrawer() {
        </View>
 
         <TextInput
+          accessibilityLabel="Custom category"
           style={styles.input}
           value={category}
           onChangeText={setCategory}
@@ -257,6 +403,7 @@ export default function TransactionDrawer() {
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Verified</Text>
           <Switch
+            accessibilityLabel="Verified"
             value={verified}
             onValueChange={setVerified}
             trackColor={{ false: '#767577', true: '#34C759' }}
@@ -265,6 +412,7 @@ export default function TransactionDrawer() {
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
+          accessibilityLabel="Notes"
           style={[styles.input, styles.notesInput]}
           value={notes}
           onChangeText={setNotes}
