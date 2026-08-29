@@ -1,11 +1,11 @@
 /** @jest-environment node */
 
-import { getDueOccurrenceDates, recurringOccurrenceId } from '../recurrence-core';
+import { getDueOccurrenceDates, templateOccurrenceId } from '../recurrence-core';
 
 describe('recurring scheduler', () => {
   it('creates deterministic, occurrence-specific ids', () => {
-    expect(recurringOccurrenceId('rule', 123)).toBe(recurringOccurrenceId('rule', 123));
-    expect(recurringOccurrenceId('rule', 123)).not.toBe(recurringOccurrenceId('rule', 124));
+    expect(templateOccurrenceId('rule', 123)).toBe(templateOccurrenceId('rule', 123));
+    expect(templateOccurrenceId('rule', 123)).not.toBe(templateOccurrenceId('rule', 124));
   });
   it('returns every monthly occurrence after last charge through now', () => {
     const due = getDueOccurrenceDates(

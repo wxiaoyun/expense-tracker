@@ -1,6 +1,16 @@
+import { subMonths } from 'date-fns'
+
 import { validateOccurrence } from '../libs/date'
 
 export type TransactionType = 'income' | 'expense'
+export type SuggestionLookback = '1m' | '3m' | '6m' | '12m' | 'all'
+
+export const suggestionLookbackStart = (value: SuggestionLookback, now: number): number => {
+  if (value === 'all') return 0
+
+  const months = Number(value.slice(0, -1))
+  return subMonths(new Date(now), months).getTime()
+}
 
 export type TemplateDraft = {
   name: string

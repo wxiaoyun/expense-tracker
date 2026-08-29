@@ -2,7 +2,7 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { db, sqlite } from './index';
 import { transactionTemplates } from './schema';
 import type { NewTransaction } from './transaction';
-import { getDueOccurrenceDates, recurringOccurrenceId } from './recurrence-core';
+import { getDueOccurrenceDates, templateOccurrenceId } from './recurrence-core';
 import {
   mapRecurringToScheduledTemplate,
   mapScheduledTemplateToRecurring,
@@ -151,7 +151,7 @@ export const incurRecurringTransaction = async (id: string): Promise<number | nu
       for (const transaction of toCreate) {
         const result = await transactionDb.runAsync(
           'INSERT OR IGNORE INTO transactions (id, amount, transaction_date, description, category, template_id, verified, notes, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)',
-          recurringOccurrenceId(recurring.id, transaction.transactionDate),
+          templateOccurrenceId(recurring.id, transaction.transactionDate),
           transaction.amount,
           transaction.transactionDate,
           transaction.description,

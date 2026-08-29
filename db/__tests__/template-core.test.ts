@@ -4,6 +4,7 @@ import {
   mapTemplateToTransaction,
   nextAvailableTemplateName,
   normalizeTemplateText,
+  suggestionLookbackStart,
   validateTemplateDraft,
   type TemplateDraft,
 } from '../template-core'
@@ -26,6 +27,13 @@ const draft = (overrides: Partial<TemplateDraft> = {}): TemplateDraft => ({
 describe('template core', () => {
   it('normalizes names without changing display text', () => {
     expect(normalizeTemplateText(' Weekly   Groceries ')).toBe('weekly groceries')
+  })
+
+  it('calculates deterministic calendar lookback cutoffs', () => {
+    const now = new Date(2026, 7, 31, 12).getTime()
+    expect(suggestionLookbackStart('3m', now)).toBe(new Date(2026, 4, 31, 12).getTime())
+    expect(suggestionLookbackStart('6m', now)).toBe(new Date(2026, 1, 28, 12).getTime())
+    expect(suggestionLookbackStart('all', now)).toBe(0)
   })
 
   it('requires a template name', () => {
