@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import type { DateRangePreset } from '@/hooks/useFilter';
+import { selectionFeedback } from '@/libs/haptics';
 
 type ExpenseFilterBarProps = {
   search?: string;
@@ -70,7 +71,10 @@ export function ExpenseFilterBar({
               accessibilityRole="button"
               accessibilityLabel={item.accessibilityLabel}
               accessibilityState={{ selected }}
-              onPress={() => onPresetChange(item.value)}
+              onPress={() => {
+                if (!selected) selectionFeedback();
+                onPresetChange(item.value);
+              }}
               style={{
                 borderRadius: 15,
                 backgroundColor: selected ? '#007AFF' : '#F2F2F7',
@@ -91,14 +95,22 @@ export function ExpenseFilterBar({
             <CompactDatePicker
               testID="custom-start-date"
               value={customStart ?? new Date()}
-              onValueChange={(date) => onCustomStartChange?.(date)}
+              onValueChange={(date) => {
+                if (!onCustomStartChange || date.getTime() === customStart?.getTime()) return;
+                selectionFeedback();
+                onCustomStartChange(date);
+              }}
             />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-start' }}>
             <CompactDatePicker
               testID="custom-end-date"
               value={customEnd ?? new Date()}
-              onValueChange={(date) => onCustomEndChange?.(date)}
+              onValueChange={(date) => {
+                if (!onCustomEndChange || date.getTime() === customEnd?.getTime()) return;
+                selectionFeedback();
+                onCustomEndChange(date);
+              }}
             />
           </View>
         </View>
@@ -106,7 +118,11 @@ export function ExpenseFilterBar({
       {showCategories && categories.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {categories.map(category => {
           const selected = selectedCategories.includes(category);
-          return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Filter ${category}`} accessibilityState={{ selected }} onPress={() => onCategoriesChange?.(selected ? selectedCategories.filter(item => item !== category) : [...selectedCategories, category])} style={{ borderRadius: 15, borderWidth: 1, borderColor: selected ? '#007AFF' : '#D1D1D6', paddingHorizontal: 12, paddingVertical: 6 }}><Text style={{ color: selected ? '#007AFF' : '#3C3C43' }}>{category}</Text></Pressable>;
+          return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Filter ${category}`} accessibilityState={{ selected }} onPress={() => {
+            if (!onCategoriesChange) return;
+            selectionFeedback();
+            onCategoriesChange(selected ? selectedCategories.filter(item => item !== category) : [...selectedCategories, category]);
+          }} style={{ borderRadius: 15, borderWidth: 1, borderColor: selected ? '#007AFF' : '#D1D1D6', paddingHorizontal: 12, paddingVertical: 6 }}><Text style={{ color: selected ? '#007AFF' : '#3C3C43' }}>{category}</Text></Pressable>;
         })}
       </ScrollView>}
     </View>

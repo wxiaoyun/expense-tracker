@@ -3,6 +3,7 @@ import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import type { TemplateSuggestion, TransactionType } from '@/db/template-core';
+import { selectionFeedback } from '@/libs/haptics';
 
 export const RECURRENCE_PRESETS = [
   { label: 'Daily', value: '0 0 * * *' },
@@ -129,7 +130,10 @@ export function TemplateEditorForm({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Use suggested name ${suggestedName}`}
-                onPress={onUseSuggestedName}
+                onPress={() => {
+                  selectionFeedback();
+                  onUseSuggestedName();
+                }}
               >
                 <Text style={styles.suggestionAction}>Use “{suggestedName}”</Text>
               </Pressable>
@@ -147,7 +151,10 @@ export function TemplateEditorForm({
                   accessibilityRole="button"
                   accessibilityLabel={`Use suggestion ${suggestion.name}`}
                   style={styles.chip}
-                  onPress={() => onApplySuggestion(suggestion)}
+                  onPress={() => {
+                    selectionFeedback();
+                    onApplySuggestion(suggestion);
+                  }}
                 >
                   <Text>{suggestion.name}</Text>
                 </Pressable>
@@ -188,7 +195,11 @@ export function TemplateEditorForm({
                 accessibilityLabel={`Transaction type: ${label}`}
                 accessibilityState={{ selected }}
                 style={[styles.typeButton, selected && styles.typeButtonSelected]}
-                onPress={() => setTransactionType(type)}
+                onPress={() => {
+                  if (selected) return;
+                  selectionFeedback();
+                  setTransactionType(type);
+                }}
               >
                 <Text style={[styles.typeButtonText, selected && styles.typeButtonTextSelected]}>{label}</Text>
               </Pressable>
@@ -219,7 +230,11 @@ export function TemplateEditorForm({
                 { borderColor: item.color },
                 category === item.name && { backgroundColor: `${item.color}20` },
               ]}
-              onPress={() => setCategory(item.name)}
+              onPress={() => {
+                if (category === item.name) return;
+                selectionFeedback();
+                setCategory(item.name);
+              }}
             >
               <Text>{item.name}</Text>
             </Pressable>
@@ -235,7 +250,14 @@ export function TemplateEditorForm({
 
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Verified</Text>
-          <Switch accessibilityLabel="Verified" value={verified} onValueChange={setVerified} />
+          <Switch
+            accessibilityLabel="Verified"
+            value={verified}
+            onValueChange={(value) => {
+              selectionFeedback();
+              setVerified(value);
+            }}
+          />
         </View>
 
         <Text style={styles.label}>Notes</Text>
@@ -264,7 +286,11 @@ export function TemplateEditorForm({
                   accessibilityLabel={`Recurrence preset ${preset.label}`}
                   accessibilityState={{ selected: recurrenceValue === preset.value }}
                   style={[styles.chip, recurrenceValue === preset.value && styles.selectedChip]}
-                  onPress={() => setRecurrenceValue(preset.value)}
+                  onPress={() => {
+                    if (recurrenceValue === preset.value) return;
+                    selectionFeedback();
+                    setRecurrenceValue(preset.value);
+                  }}
                 >
                   <Text style={recurrenceValue === preset.value ? styles.selectedChipText : undefined}>{preset.label}</Text>
                 </Pressable>
@@ -289,12 +315,23 @@ export function TemplateEditorForm({
               mode="date"
               display="compact"
               presentation="inline"
-              onValueChange={(_, date) => setStartDate(date)}
+              onValueChange={(_, date) => {
+                if (date.getTime() === startDate.getTime()) return;
+                selectionFeedback();
+                setStartDate(date);
+              }}
             />
 
             <View style={styles.toggleRow}>
               <Text style={styles.label}>Schedule active</Text>
-              <Switch accessibilityLabel="Schedule active" value={scheduleActive} onValueChange={setScheduleActive} />
+              <Switch
+                accessibilityLabel="Schedule active"
+                value={scheduleActive}
+                onValueChange={(value) => {
+                  selectionFeedback();
+                  setScheduleActive(value);
+                }}
+              />
             </View>
 
             {nextOccurrences.length > 0 && (

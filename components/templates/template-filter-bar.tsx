@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import type { TemplateListFilter } from '@/db/template';
+import { selectionFeedback } from '@/libs/haptics';
 
 type TemplateType = NonNullable<TemplateListFilter['type']>;
 
@@ -56,7 +57,10 @@ export function TemplateFilterBar({
               accessibilityRole="button"
               accessibilityLabel={item.label}
               accessibilityState={{ selected }}
-              onPress={() => onTypeChange(item.value)}
+              onPress={() => {
+                if (!selected) selectionFeedback();
+                onTypeChange(item.value);
+              }}
               style={{
                 borderRadius: 15,
                 backgroundColor: selected ? '#007AFF' : '#F2F2F7',
@@ -81,11 +85,15 @@ export function TemplateFilterBar({
                 accessibilityRole="button"
                 accessibilityLabel={`Filter ${category}`}
                 accessibilityState={{ selected }}
-                onPress={() => onCategoriesChange?.(
-                  selected
-                    ? selectedCategories.filter((item) => item !== category)
-                    : [...selectedCategories, category],
-                )}
+                onPress={() => {
+                  if (!onCategoriesChange) return;
+                  selectionFeedback();
+                  onCategoriesChange(
+                    selected
+                      ? selectedCategories.filter((item) => item !== category)
+                      : [...selectedCategories, category],
+                  );
+                }}
                 style={{
                   borderRadius: 15,
                   borderWidth: 1,

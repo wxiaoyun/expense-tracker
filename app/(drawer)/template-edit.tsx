@@ -27,6 +27,12 @@ import {
 import { getTransaction } from '@/db/transaction';
 import { useTemplateSuggestionsQuery } from '@/hooks/useTemplatesQuery';
 import { getNextOccurrences } from '@/libs/date';
+import {
+  actionFeedback,
+  errorFeedback,
+  selectionFeedback,
+  warningFeedback,
+} from '@/libs/haptics';
 
 const DEFAULT_CRON = DEFAULT_TEMPLATE_CRON;
 
@@ -269,6 +275,7 @@ export default function TemplateEditDrawer() {
   };
 
   const disableRepeat = () => {
+    selectionFeedback();
     setRepeatAutomatically(false);
     setRecurrenceValue(DEFAULT_CRON);
     setStartDate(new Date());
@@ -278,6 +285,7 @@ export default function TemplateEditDrawer() {
 
   const handleRepeatChange = (enabled: boolean) => {
     if (enabled) {
+      selectionFeedback();
       setRepeatAutomatically(true);
       setScheduleActive(true);
       if (!repeatAutomatically) setStartDate(new Date());
@@ -330,6 +338,7 @@ export default function TemplateEditDrawer() {
         } catch (backfillError) {
           logError('backfill_template', backfillError, saved.id);
           await invalidateSavedQueries();
+          warningFeedback();
           router.dismiss();
           Alert.alert(
             'Template saved, backfill failed',
@@ -342,10 +351,12 @@ export default function TemplateEditDrawer() {
       }
 
       await invalidateSavedQueries();
+      actionFeedback();
       router.dismiss();
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : String(saveError);
       logError(id ? 'update_template' : 'create_template', saveError);
+      errorFeedback();
       if (message === 'Template name already exists') {
         setError(message);
         try {
@@ -386,6 +397,7 @@ export default function TemplateEditDrawer() {
           setBackfillCount(exactBackfillCount);
         } catch (previewError) {
           logError('confirm_backfill_preview', previewError);
+          errorFeedback();
           setError('Could not calculate past transactions');
           return;
         }

@@ -17,6 +17,7 @@ import {
 import { showConfirmDialog } from '@/libs/dialog';
 import { AddExpenseButton } from '@/components/transactions/add-expense-button';
 import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
+import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
 
 const logFailure = (stage: string, error: unknown, transactionId?: string) => {
   console.error(`[transactions.ui][stage=${stage}] failed`, {
@@ -140,8 +141,10 @@ export default function HomeScreen() {
         const updated = await setVerification(id, verified ? 1 : 0);
         if (!updated) throw new Error('Transaction verification was not updated');
         await invalidateTransactionQueries();
+        selectionFeedback();
       } catch (error) {
         logFailure('update_verification', error, id);
+        errorFeedback();
         Alert.alert('Error', 'Failed to update transaction verification');
       }
     },
@@ -211,12 +214,15 @@ export default function HomeScreen() {
             stage: 'soft_delete',
             reason: 'not_deleted',
           });
+          errorFeedback();
           Alert.alert('Error', 'Failed to delete transaction');
           return;
         }
         await invalidateTransactionAndTemplateQueries();
+        actionFeedback();
       } catch (error) {
         logFailure('soft_delete', error, id);
+        errorFeedback();
         Alert.alert('Error', 'Failed to delete transaction');
       }
     },

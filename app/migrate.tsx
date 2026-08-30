@@ -10,6 +10,7 @@ import {
 } from '@/db/migration';
 import GlassView from '@/components/glass/GlassView';
 import { db, sqlite } from '@/db';
+import { actionFeedback, errorFeedback, successFeedback } from '@/libs/haptics';
 
 export default function MigrationScreen() {
   const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
@@ -44,6 +45,7 @@ export default function MigrationScreen() {
   }, []);
 
   const handleMigrate = async () => {
+    actionFeedback();
     setStatus('migrating');
     setProgress('Opening databases...');
     setError(null);
@@ -54,11 +56,13 @@ export default function MigrationScreen() {
       if (result.success) {
         setProgress('Migration complete!');
         setStatus('success');
+        successFeedback();
       } else {
         const migrationError = result.error || 'Migration failed';
         console.error('[migration.screen][stage=run_migration] legacy migration failed', {
           error: migrationError,
         });
+        errorFeedback();
         setError(migrationError);
         setStatus('error');
       }
@@ -66,6 +70,7 @@ export default function MigrationScreen() {
       console.error('[migration.screen][stage=run_migration] legacy migration failed', {
         error: String(err),
       });
+      errorFeedback();
       setError(String(err));
       setStatus('error');
     }

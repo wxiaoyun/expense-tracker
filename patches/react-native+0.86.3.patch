@@ -1,0 +1,21 @@
+diff --git a/node_modules/react-native/scripts/replace-rncore-version.js b/node_modules/react-native/scripts/replace-rncore-version.js
+index 2684d32..2f6716b 100644
+--- a/node_modules/react-native/scripts/replace-rncore-version.js
++++ b/node_modules/react-native/scripts/replace-rncore-version.js
+@@ -44,14 +44,8 @@ function shouldReplaceRnCoreConfiguration(configuration /*: string */) {
+     }
+   }
+ 
+-  // Assumption: if there is no stored last build, we assume that it was build for debug.
+-  if (!fileExists && configuration === 'Debug') {
+-    console.log(
+-      'No previous build detected, but Debug Configuration. No need to replace React-Core-prebuilt',
+-    );
+-    return false;
+-  }
+-
++  // CocoaPods installs the Release binary first, so a missing marker must not
++  // skip the initial Debug swap.
+   return true;
+ }
+ 

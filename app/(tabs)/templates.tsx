@@ -19,6 +19,7 @@ import {
   useUndoQuickAddMutation,
 } from '@/hooks/useTemplatesQuery';
 import { showConfirmDialog } from '@/libs/dialog';
+import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
 
 type TemplateType = NonNullable<TemplateListFilter['type']>;
 
@@ -97,14 +98,17 @@ export default function TemplatesScreen() {
     setPendingQuickAddIds((current) => current.includes(id) ? current : [...current, id]);
     try {
       const created = await quickAddTemplate.mutateAsync(id);
+      actionFeedback();
       toast.success('Transaction added', {
         action: {
           label: 'Undo',
           onClick: async () => {
             try {
               await undoQuickAdd.mutateAsync({ transactionId: created.id, templateId: id });
+              selectionFeedback();
             } catch (error) {
               logFailure(id, 'undo_quick_add', error);
+              errorFeedback();
               setOperationError('Could not undo the added transaction');
               toast.error('Could not undo transaction');
             }
@@ -113,6 +117,7 @@ export default function TemplatesScreen() {
       });
     } catch (error) {
       logFailure(id, 'quick_add', error);
+      errorFeedback();
       setOperationError('Could not add the transaction');
       toast.error('Could not add transaction');
     } finally {
@@ -124,8 +129,10 @@ export default function TemplatesScreen() {
     setOperationError(null);
     try {
       await pauseTemplate.mutateAsync(id);
+      selectionFeedback();
     } catch (error) {
       logFailure(id, 'pause_template', error);
+      errorFeedback();
       setOperationError('Could not pause the template');
       toast.error('Could not pause template');
     }
@@ -135,8 +142,10 @@ export default function TemplatesScreen() {
     setOperationError(null);
     try {
       await resumeTemplate.mutateAsync(id);
+      selectionFeedback();
     } catch (error) {
       logFailure(id, 'resume_template', error);
+      errorFeedback();
       setOperationError('Could not resume the template');
       toast.error('Could not resume template');
     }
@@ -152,8 +161,10 @@ export default function TemplatesScreen() {
       );
       if (!confirmed) return;
       await deleteTemplate.mutateAsync(id);
+      actionFeedback();
     } catch (error) {
       logFailure(id, 'delete_template', error);
+      errorFeedback();
       setOperationError('Could not delete the template');
       toast.error('Could not delete template');
     }

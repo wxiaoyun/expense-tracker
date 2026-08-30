@@ -8,6 +8,12 @@ import {
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
 import {
+  actionFeedback,
+  errorFeedback,
+  selectionFeedback,
+  successFeedback,
+} from '@/libs/haptics';
+import {
   currencyAtom,
   PREFERENCE_KEYS,
   savePreferenceAndApply,
@@ -140,19 +146,24 @@ export default function SettingsScreen() {
       await registerAutoBackup(enabled ? 'daily' : null);
       await db.insert(settings).values({ key: 'backup.cadence', value: enabled ? 'daily' : 'off' }).onConflictDoUpdate({ target: settings.key, set: { value: enabled ? 'daily' : 'off' } }).run();
       setAutoBackup(enabled);
+      selectionFeedback();
     } catch (error) {
       console.error('[backup.settings][stage=save] preference save failed', { enabled, error: String(error) });
+      errorFeedback();
       Alert.alert('Auto backup failed', String(error));
     }
   };
 
   const handleBackupNow = async () => {
+    actionFeedback();
     try {
       await createLocalBackup();
       console.info('[backup.settings][stage=create_now] backup created');
+      successFeedback();
       Alert.alert('Backup created');
     } catch (error) {
       console.error('[backup.settings][stage=create_now] backup failed', { error: String(error) });
+      errorFeedback();
       Alert.alert('Backup failed', String(error));
     }
   };
@@ -169,29 +180,43 @@ export default function SettingsScreen() {
         key,
         error: String(error),
       });
+      errorFeedback();
       Alert.alert('Preference Not Saved', 'Your previous setting was kept.');
     }
   }, []);
 
   const changeCurrency = useCallback((value: string) => {
-    void persistPreference(PREFERENCE_KEYS.currency, value, () => setCurrency(value));
-  }, [persistPreference, setCurrency]);
+    if (value === currency) return;
+    void persistPreference(PREFERENCE_KEYS.currency, value, () => {
+      setCurrency(value);
+      selectionFeedback();
+    });
+  }, [currency, persistPreference, setCurrency]);
 
   const changeWeekStart = useCallback((value: string) => {
     const next = value as WeekStart;
-    void persistPreference(PREFERENCE_KEYS.weekStart, next, () => setWeekStart(next));
-  }, [persistPreference, setWeekStart]);
+    if (next === weekStart) return;
+    void persistPreference(PREFERENCE_KEYS.weekStart, next, () => {
+      setWeekStart(next);
+      selectionFeedback();
+    });
+  }, [persistPreference, setWeekStart, weekStart]);
 
   const changeSuggestionLookback = useCallback((value: string) => {
     const next = value as SuggestionLookback;
+    if (next === suggestionLookback) return;
     void persistPreference(
       PREFERENCE_KEYS.suggestionLookback,
       next,
-      () => setSuggestionLookback(next),
+      () => {
+        setSuggestionLookback(next);
+        selectionFeedback();
+      },
     );
-  }, [persistPreference, setSuggestionLookback]);
+  }, [persistPreference, setSuggestionLookback, suggestionLookback]);
 
   const handleExport = async () => {
+    actionFeedback();
     try {
       console.info('[backup.export][stage=create_snapshot] creating consistent database snapshot');
       const backupPath = await createLocalBackup();
@@ -201,8 +226,10 @@ export default function SettingsScreen() {
         mimeType: 'application/x-sqlite3',
       });
       console.info('[backup.export][stage=share_db] database shared');
+      successFeedback();
     } catch (err) {
       console.error('[backup.export][stage=share_db] export failed', { error: String(err) });
+      errorFeedback();
       Alert.alert('Export failed', String(err));
     }
   };
@@ -230,6 +257,7 @@ export default function SettingsScreen() {
             text: 'Replace',
             style: 'destructive',
             onPress: async () => {
+              actionFeedback();
               setRestoring(true);
               try {
                 const sourceUri = result.assets[0].uri;
@@ -241,6 +269,7 @@ export default function SettingsScreen() {
                   mode: importResult.mode,
                 });
                 await reinitializeAppRuntime({ processImportedSchedules: true });
+                successFeedback();
                 router.replace('/(tabs)');
                 Alert.alert(
                   'Import complete',
@@ -250,6 +279,7 @@ export default function SettingsScreen() {
                 );
               } catch (e) {
                 console.error('[backup.import][stage=copy_db] import failed', { error: String(e) });
+                errorFeedback();
                 Alert.alert('Import failed', String(e));
               } finally {
                 setRestoring(false);
@@ -274,14 +304,17 @@ export default function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
+            actionFeedback();
             try {
               await waitForLaunchTemplateProcessing();
               await resetAllData();
               await reinitializeAppRuntime();
+              successFeedback();
               router.replace('/migrate');
             } catch (error) {
               const stage = error instanceof ResetDataError ? error.stage : 'unknown';
               console.error('[settings.reset] reset failed', { stage, error: String(error) });
+              errorFeedback();
               Alert.alert('Reset failed', String(error));
             }
           },

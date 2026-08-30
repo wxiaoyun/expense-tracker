@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { categories as categoriesTable } from '@/db/schema';
 import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
+import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -255,6 +256,7 @@ export default function TransactionDrawer() {
       }
 
       await invalidateTransactionsAndTemplates();
+      actionFeedback();
       router.dismiss();
       console.info('[transaction.form][stage=save] transaction saved', {
         stage: 'save',
@@ -268,6 +270,7 @@ export default function TransactionDrawer() {
         template_id: isEdit ? null : loadedTemplateId,
         error: String(err),
       });
+      errorFeedback();
       setError(String(err));
     }
   };
@@ -343,7 +346,11 @@ export default function TransactionDrawer() {
                 accessibilityRole="button"
                 accessibilityLabel={`Transaction type: ${type}`}
                 accessibilityState={{ selected }}
-                onPress={() => setIsIncome(type === 'Income')}
+                onPress={() => {
+                  if (selected) return;
+                  selectionFeedback();
+                  setIsIncome(type === 'Income');
+                }}
                 style={[styles.typeButton, selected && styles.typeButtonSelected]}
               >
                 <Text style={[styles.typeButtonText, selected && styles.typeButtonTextSelected]}>{type}</Text>
@@ -373,7 +380,11 @@ export default function TransactionDrawer() {
                 { borderColor: cat.color },
                 category === cat.name && { backgroundColor: cat.color + '20' },
               ]}
-              onPress={() => setCategory(cat.name)}
+              onPress={() => {
+                if (category === cat.name) return;
+                selectionFeedback();
+                setCategory(cat.name);
+              }}
             >
               <Text style={[styles.chipText, category === cat.name && { color: cat.color }]}>
                 {cat.name}
@@ -396,7 +407,11 @@ export default function TransactionDrawer() {
           <CompactDatePicker
             testID="transaction-date"
             value={transactionDate}
-            onValueChange={setTransactionDate}
+            onValueChange={(date) => {
+              if (date.getTime() === transactionDate.getTime()) return;
+              selectionFeedback();
+              setTransactionDate(date);
+            }}
           />
         </View>
 
@@ -405,7 +420,10 @@ export default function TransactionDrawer() {
           <Switch
             accessibilityLabel="Verified"
             value={verified}
-            onValueChange={setVerified}
+            onValueChange={(value) => {
+              selectionFeedback();
+              setVerified(value);
+            }}
             trackColor={{ false: '#767577', true: '#34C759' }}
           />
        </View>
