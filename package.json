@@ -55,6 +55,7 @@
     "expo-symbols": "~57.0.2",
     "expo-task-manager": "~57.0.14",
     "expo-web-browser": "~57.0.2",
+    "fuse.js": "^7.5.0",
     "jotai": "^2.12.5",
     "lodash": "^4.17.21",
     "patch-package": "^8.0.1",

@@ -49,11 +49,13 @@ jest.mock('expo-sqlite', () => {
 
 import { eq } from 'drizzle-orm';
 
-import { db, transactions } from '../index';
+import { db, categories, transactions } from '../index';
+import { customCategoryColor } from '@/libs/category-color';
 import {
   clearTransactions,
   getTransaction,
   listCategories,
+  listCategoriesByUsage,
   listTemplateSuggestionRows,
   listTransactions,
   setVerification,
@@ -169,5 +171,57 @@ describe('transaction soft delete repository behavior', () => {
       .get();
 
     expect(raw).toEqual({ amount: -20, verified: 0 });
+  });
+});
+
+describe('listCategoriesByUsage', () => {
+  beforeEach(async () => {
+    await clearTransactions();
+    await db.delete(categories).run();
+  });
+
+  afterEach(async () => {
+    await clearTransactions();
+    await db.delete(categories).run();
+  });
+
+  it('sorts by active usage count then sort_order and includes unused categories', async () => {
+    await db.insert(categories).values([
+      { id: 'rent', name: 'Rent', icon: 'icon', color: '#111', is_preset: true, sort_order: 1, createdAt: 1 },
+      { id: 'groceries', name: 'Groceries', icon: 'icon', color: '#222', is_preset: true, sort_order: 2, createdAt: 1 },
+      { id: 'utilities', name: 'Utilities', icon: 'icon', color: '#333', is_preset: true, sort_order: 3, createdAt: 1 },
+    ]).run();
+
+    await db.insert(transactions).values([
+      { id: 't1', amount: -1, transactionDate: 1, description: 'd', category: 'Rent', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't2', amount: -1, transactionDate: 1, description: 'd', category: 'Groceries', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't3', amount: -1, transactionDate: 1, description: 'd', category: 'Groceries', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't4', amount: -1, transactionDate: 1, description: 'd', category: 'Utilities', verified: 0, notes: null, deletedAt: 400, createdAt: 1, updatedAt: 1 },
+    ]).run();
+
+    const names = (await listCategoriesByUsage()).map((category) => category.name);
+    expect(names).toEqual(['Groceries', 'Rent', 'Utilities']);
+  });
+
+  it('includes custom categories from active transactions that are not in the categories table', async () => {
+    await db.insert(categories).values([
+      { id: 'rent', name: 'Rent', icon: 'icon', color: '#111', is_preset: true, sort_order: 1, createdAt: 1 },
+      { id: 'groceries', name: 'Groceries', icon: 'icon', color: '#222', is_preset: true, sort_order: 2, createdAt: 1 },
+    ]).run();
+
+    await db.insert(transactions).values([
+      { id: 't1', amount: -1, transactionDate: 1, description: 'd', category: 'Pets', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't2', amount: -1, transactionDate: 1, description: 'd', category: 'Pets', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't3', amount: -1, transactionDate: 1, description: 'd', category: 'Rent', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't4', amount: -1, transactionDate: 1, description: 'd', category: 'Gifts', verified: 0, notes: null, deletedAt: null, createdAt: 1, updatedAt: 1 },
+      { id: 't5', amount: -1, transactionDate: 1, description: 'd', category: 'Deleted Only', verified: 0, notes: null, deletedAt: 500, createdAt: 1, updatedAt: 1 },
+    ]).run();
+
+    const rows = await listCategoriesByUsage();
+    expect(rows.map((category) => category.name)).toEqual(['Pets', 'Rent', 'Gifts', 'Groceries']);
+
+    const pets = rows.find((category) => category.name === 'Pets');
+    expect(pets).toMatchObject({ is_preset: false, icon: 'tag', color: customCategoryColor('Pets') });
+    expect(rows.find((category) => category.name === 'Deleted Only')).toBeUndefined();
   });
 });

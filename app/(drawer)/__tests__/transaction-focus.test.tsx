@@ -36,7 +36,7 @@ const mockCreateTransaction = jest.fn();
 const mockUpdateTransaction = jest.fn();
 const mockGetTemplate = jest.fn();
 const mockInvalidateTransactions = jest.fn();
-const mockCategoryRows = jest.fn();
+const mockListCategoriesByUsage = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: { dismiss: (...args: unknown[]) => mockDismiss(...args) },
@@ -47,18 +47,11 @@ jest.mock('@/hooks/useQueryClient', () => ({
   useInvalidateTransactionsAndTemplates: () => mockInvalidateTransactions,
 }));
 
-jest.mock('@/db', () => ({
-  db: {
-    select: () => ({
-      from: () => ({ all: () => mockCategoryRows() }),
-    }),
-  },
-}));
-
 jest.mock('@/db/transaction', () => ({
   getTransaction: (...args: unknown[]) => mockGetTransaction(...args),
   createTransaction: (...args: unknown[]) => mockCreateTransaction(...args),
   updateTransaction: (...args: unknown[]) => mockUpdateTransaction(...args),
+  listCategoriesByUsage: (...args: unknown[]) => mockListCategoriesByUsage(...args),
 }));
 
 jest.mock('@/db/template', () => ({
@@ -126,7 +119,7 @@ describe('TransactionDrawer template population and focus', () => {
     jest.clearAllMocks();
     delete mockParams.id;
     delete mockParams.templateId;
-    mockCategoryRows.mockResolvedValue([]);
+    mockListCategoriesByUsage.mockResolvedValue([]);
     mockGetTransaction.mockResolvedValue(null);
     mockGetTemplate.mockResolvedValue(null);
     mockCreateTransaction.mockResolvedValue(transaction({ id: 'created-1' }));
@@ -156,6 +149,28 @@ describe('TransactionDrawer template population and focus', () => {
     await waitFor(() => expect(mockAmountRef.focus).toHaveBeenCalledTimes(1));
     expect(mockDescriptionRef.focus).not.toHaveBeenCalled();
     expect(requestAnimationFrameMock).not.toHaveBeenCalled();
+  });
+
+  it('renders categories in db-provided order and filters the list live', async () => {
+    mockListCategoriesByUsage.mockResolvedValue([
+      { id: 'c2', name: 'Groceries', icon: 'icon', color: '#222', is_preset: true, sort_order: 2, createdAt: 1 },
+      { id: 'c1', name: 'Rent', icon: 'icon', color: '#111', is_preset: true, sort_order: 1, createdAt: 1 },
+      { id: 'c3', name: 'Utilities', icon: 'icon', color: '#333', is_preset: true, sort_order: 3, createdAt: 1 },
+    ]);
+
+    const screen = await renderDrawer();
+    await waitFor(() => expect(screen.getByLabelText('Category: Groceries')).toBeTruthy());
+
+    const chipLabels = screen
+      .getAllByRole('button')
+      .map((node) => node.props.accessibilityLabel)
+      .filter((label) => typeof label === 'string' && label.startsWith('Category: '));
+    expect(chipLabels).toEqual(['Category: Groceries', 'Category: Rent', 'Category: Utilities']);
+
+    await fireEvent.changeText(screen.getByLabelText('Custom category'), 'ren');
+    await waitFor(() => expect(screen.getByLabelText('Category: Rent')).toBeTruthy());
+    expect(screen.queryByLabelText('Category: Groceries')).toBeNull();
+    expect(screen.queryByLabelText('Category: Utilities')).toBeNull();
   });
 
   it('template missing amount focuses amount after lookup state is ready', async () => {

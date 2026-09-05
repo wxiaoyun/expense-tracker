@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getTransaction, createTransaction, updateTransaction } from '@/db/transaction';
+import { getTransaction, createTransaction, updateTransaction, listCategoriesByUsage } from '@/db/transaction';
 import { getTemplate } from '@/db/template';
 import { getTransactionInitialFocus } from '@/db/template-core';
-import { db } from '@/db';
-import { categories as categoriesTable } from '@/db/schema';
+import type { Category } from '@/db/schema';
 import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
+import Fuse from 'fuse.js';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -34,7 +34,8 @@ export default function TransactionDrawer() {
   const [notes, setNotes] = useState('');
   const [verified, setVerified] = useState(false);
   const [transactionDate, setTransactionDate] = useState(new Date());
-  const [availableCategories, setAvailableCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(isEdit || !!sourceTemplateId);
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +49,11 @@ export default function TransactionDrawer() {
     });
   }, [id, routeTemplateId]);
 
-  // Load categories
+  // Load categories sorted by usage frequency
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const cats = await db.select().from(categoriesTable).all();
+        const cats = await listCategoriesByUsage();
         setAvailableCategories(cats);
       } catch (err) {
         console.error('[transaction.form][stage=load_categories] category query failed', {
@@ -183,6 +184,23 @@ export default function TransactionDrawer() {
 
     return () => cancelAnimationFrame(frame);
   }, [amount, description, isEdit, loadedTemplateId, loading, sourceTemplateId]);
+
+  const categoryFuse = useMemo(
+    () =>
+      new Fuse(availableCategories, {
+        keys: ['name'],
+        threshold: 0.3,
+        ignoreLocation: true,
+        shouldSort: true,
+      }),
+    [availableCategories],
+  );
+
+  const visibleCategories = useMemo(() => {
+    const query = categoryFilter.trim();
+    if (!query) return availableCategories;
+    return categoryFuse.search(query).map((result) => result.item);
+  }, [categoryFilter, availableCategories, categoryFuse]);
 
   const handleSave = async () => {
     let stage = 'validate';
@@ -371,19 +389,39 @@ export default function TransactionDrawer() {
         />
 
         <Text style={styles.label}>Category</Text>
-        <View style={styles.chipsContainer}>
-          {availableCategories.map((cat) => (
+        <TextInput
+          accessibilityLabel="Custom category"
+          style={styles.input}
+          value={category}
+          onChangeText={(text) => {
+            setCategory(text);
+            setCategoryFilter(text);
+          }}
+          placeholder="Search or type custom category"
+          placeholderTextColor="#999"
+        />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.chipsScroll}
+          contentContainerStyle={styles.chipsContainer}
+        >
+          {visibleCategories.map((cat) => (
             <Pressable
               key={cat.name}
+              accessibilityRole="button"
+              accessibilityLabel={`Category: ${cat.name}`}
+              accessibilityState={{ selected: category === cat.name }}
               style={[
                 styles.chip,
                 { borderColor: cat.color },
                 category === cat.name && { backgroundColor: cat.color + '20' },
               ]}
               onPress={() => {
-                if (category === cat.name) return;
                 selectionFeedback();
                 setCategory(cat.name);
+                setCategoryFilter('');
               }}
             >
               <Text style={[styles.chipText, category === cat.name && { color: cat.color }]}>
@@ -391,16 +429,7 @@ export default function TransactionDrawer() {
               </Text>
             </Pressable>
           ))}
-       </View>
-
-        <TextInput
-          accessibilityLabel="Custom category"
-          style={styles.input}
-          value={category}
-          onChangeText={setCategory}
-          placeholder="Or type custom category"
-          placeholderTextColor="#999"
-        />
+        </ScrollView>
 
         <Text style={styles.label}>Date</Text>
         <View style={styles.datePickerContainer}>
@@ -527,11 +556,13 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  chipsScroll: {
+    marginTop: 10,
+    marginBottom: 12,
+  },
   chipsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
   },
   chip: {
     backgroundColor: '#fff',

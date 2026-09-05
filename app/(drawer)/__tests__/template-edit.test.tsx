@@ -54,14 +54,6 @@ jest.mock('@/hooks/useTemplatesQuery', () => ({
   }),
 }));
 
-jest.mock('@/db', () => ({
-  db: {
-    select: () => ({
-      from: () => ({ all: () => mockCategoryRows() }),
-    }),
-  },
-}));
-
 jest.mock('@/db/template', () => ({
   getTemplate: (...args: unknown[]) => mockGetTemplate(...args),
   createTemplate: (...args: unknown[]) => mockCreateTemplate(...args),
@@ -73,6 +65,7 @@ jest.mock('@/db/template', () => ({
 
 jest.mock('@/db/transaction', () => ({
   getTransaction: (...args: unknown[]) => mockGetTransaction(...args),
+  listCategoriesByUsage: (...args: unknown[]) => mockCategoryRows(...args),
 }));
 
 jest.mock('@expo/ui/community/datetime-picker', () => {

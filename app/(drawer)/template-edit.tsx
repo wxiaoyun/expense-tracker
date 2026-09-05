@@ -8,8 +8,7 @@ import {
   TemplateEditorForm,
   type TemplateEditorCategory,
 } from '@/components/templates/template-editor-form';
-import { db } from '@/db';
-import { categories as categoriesTable, type TransactionTemplate } from '@/db/schema';
+import type { TransactionTemplate } from '@/db/schema';
 import {
   backfillTemplate,
   createTemplate,
@@ -24,7 +23,7 @@ import {
   type TemplateSuggestion,
   type TransactionType,
 } from '@/db/template-core';
-import { getTransaction } from '@/db/transaction';
+import { getTransaction, listCategoriesByUsage } from '@/db/transaction';
 import { useTemplateSuggestionsQuery } from '@/hooks/useTemplatesQuery';
 import { getNextOccurrences } from '@/libs/date';
 import {
@@ -117,7 +116,7 @@ export default function TemplateEditDrawer() {
     const loadCategories = async () => {
       logInfo('load_categories');
       try {
-        const rows = await db.select().from(categoriesTable).all();
+        const rows = await listCategoriesByUsage();
         if (active) setAvailableCategories(rows);
       } catch (loadError) {
         logError('load_categories', loadError);

@@ -218,7 +218,12 @@ export function TemplateEditorForm({
         />
 
         <Text style={styles.label}>Category</Text>
-        <View style={styles.chipsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chipsContainer}
+        >
           {availableCategories.map((item) => (
             <Pressable
               key={item.name}
@@ -239,7 +244,7 @@ export function TemplateEditorForm({
               <Text>{item.name}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
         <TextInput
           accessibilityLabel="Template category"
           style={styles.input}

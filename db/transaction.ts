@@ -1,7 +1,9 @@
-import { and, asc, between, desc, eq, gte, inArray, isNull, sql, sum } from "drizzle-orm";
+import { and, asc, between, count, desc, eq, gte, inArray, isNull, sql, sum } from "drizzle-orm";
 import { db } from "./index";
-import { transactions } from "./schema";
+import { categories, transactions } from "./schema";
+import type { Category } from "./schema";
 import { createId } from '@/libs/id';
+import { customCategoryColor } from '@/libs/category-color';
 import type { HistoricalTransactionInput } from './template-core';
 
 export type Transaction = typeof transactions.$inferSelect;
@@ -275,6 +277,56 @@ export const softDeleteTransaction = async (id: string, deletedAt = Date.now()):
     return result.changes > 0;
   } catch (error) {
     console.error('[transactions.delete][stage=soft_delete] transaction delete failed', { id, error: String(error) });
+    throw error;
+  }
+};
+
+const CUSTOM_CATEGORY_ICON = 'tag';
+
+/**
+ * Lists every category available for selection: rows from the categories table
+ * (presets) plus any custom category name used on an active transaction that
+ * has no row in the categories table. Sorted by active usage count descending,
+ * then preset sort_order, then name.
+ */
+export const listCategoriesByUsage = async (): Promise<Category[]> => {
+  console.info('[transactions.categories_by_usage][stage=query] listing categories sorted by usage', {});
+  try {
+    const presetRows = await db.select().from(categories).all();
+    const usageRows = await db
+      .select({ category: transactions.category, usage: count(transactions.id) })
+      .from(transactions)
+      .where(isNull(transactions.deletedAt))
+      .groupBy(transactions.category)
+      .all();
+
+    const usageByName = new Map(usageRows.map((row) => [row.category, row.usage]));
+    const knownNames = new Set(presetRows.map((row) => row.name));
+    const customRows: Category[] = usageRows
+      .filter((row) => row.category.trim() !== '' && !knownNames.has(row.category))
+      .map((row) => ({
+        id: `custom:${row.category}`,
+        name: row.category,
+        icon: CUSTOM_CATEGORY_ICON,
+        color: customCategoryColor(row.category),
+        is_preset: false,
+        sort_order: Number.MAX_SAFE_INTEGER,
+        createdAt: 0,
+      }));
+
+    const rows = [...presetRows, ...customRows].sort((a, b) => {
+      const usageDiff = (usageByName.get(b.name) ?? 0) - (usageByName.get(a.name) ?? 0);
+      if (usageDiff !== 0) return usageDiff;
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.name.localeCompare(b.name);
+    });
+    console.info('[transactions.categories_by_usage][stage=query] categories listed', {
+      preset_count: presetRows.length,
+      custom_count: customRows.length,
+    });
+    return rows;
+  } catch (error) {
+    console.error('[transactions.categories_by_usage][stage=query] category usage listing failed', { error: String(error) });
     throw error;
   }
 };
