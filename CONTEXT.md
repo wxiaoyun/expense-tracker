@@ -22,6 +22,22 @@ _Avoid_: Confirmed, reconciled
 A transaction or template hidden from the user but kept in storage. Ignored by lists, summaries, and category usage.
 _Avoid_: Archive, remove
 
+**Source**:
+Where a transaction came from: entered by the user, created by a schedule, or imported from a bank statement.
+_Avoid_: Origin, provider, channel
+
+**Imported Transaction**:
+A transaction created from a bank statement file rather than typed by the user. Lands unverified. Importing the same statement rows again changes nothing.
+_Avoid_: Synced transaction, bank transaction, fetched transaction
+
+**Statement Import**:
+Reading a bank statement file the user picks and creating an Imported Transaction for each row not already present.
+_Avoid_: Sync, pull, fetch, upload
+
+**Top-up**:
+A statement row where money moves from the bank account into a wallet such as PayLah!. Treated as an expense because the wallet's own spending is not visible.
+_Avoid_: Transfer, reload
+
 ### Categories
 
 **Category**:

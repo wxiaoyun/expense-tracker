@@ -5,6 +5,7 @@ android/
 
 build/
 tmp/
+test/data/**/*
 
 **/.DS_Store
 
