@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { CategoryFilterChips } from '@/components/ui/category-picker';
 import type { TemplateListFilter } from '@/db/template';
 import { selectionFeedback } from '@/libs/haptics';
 
@@ -75,39 +76,9 @@ export function TemplateFilterBar({
           );
         })}
       </ScrollView>
-      {categories.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {categories.map((category) => {
-            const selected = selectedCategories.includes(category);
-            return (
-              <Pressable
-                key={category}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter ${category}`}
-                accessibilityState={{ selected }}
-                onPress={() => {
-                  if (!onCategoriesChange) return;
-                  selectionFeedback();
-                  onCategoriesChange(
-                    selected
-                      ? selectedCategories.filter((item) => item !== category)
-                      : [...selectedCategories, category],
-                  );
-                }}
-                style={{
-                  borderRadius: 15,
-                  borderWidth: 1,
-                  borderColor: selected ? '#007AFF' : '#D1D1D6',
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                }}
-              >
-                <Text style={{ color: selected ? '#007AFF' : '#3C3C43' }}>{category}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
+      {onCategoriesChange && (
+        <CategoryFilterChips categories={categories} selected={selectedCategories} onChange={onCategoriesChange} />
+      )}
     </View>
   );
 }

@@ -140,6 +140,12 @@ describe('transaction soft delete repository behavior', () => {
     expect(await listTemplateSuggestionRows(201)).toEqual([]);
   });
 
+  it('search matches description or category, case-insensitively', async () => {
+    expect((await listTransactions({ search: 'linked' })).items.map((row) => row.id)).toEqual(['linked']);
+    expect((await listTransactions({ search: 'food' })).items.map((row) => row.id)).toEqual(['active', 'linked']);
+    expect((await listTransactions({ search: 'travel' })).items).toEqual([]);
+  });
+
   it('soft deletes user transactions without removing the row physically', async () => {
     await expect(softDeleteTransaction('active', 500)).resolves.toBe(true);
 

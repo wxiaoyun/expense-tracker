@@ -25,3 +25,19 @@ npx expo start --clear --dev-client
 ```
 
 Wait for Metro to report that it is running, then reopen the development client. Clean Pods or rebuild the iOS app only when the failure involves native compilation, linking, native module registration, or an actual native crash.
+
+## Archive fails with "virtual filesystem overlay file ... not found"
+
+The archive output ends with several failing targets but no useful message. Search the full `xcodebuild` log for `error:` instead. If it reports:
+
+```text
+error: virtual filesystem overlay file '/old/path/ios/Pods/React-Core-prebuilt/React-VFS.yaml' not found
+```
+
+CocoaPods baked an absolute path into `ios/Pods` and the repository has since moved or been renamed. Regenerate the Pods from the new location:
+
+```bash
+cd ios && pod install
+```
+
+Then archive again. Deleting DerivedData alone does not help because the stale path lives in the generated Pods xcconfig files.

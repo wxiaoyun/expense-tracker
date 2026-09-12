@@ -30,6 +30,7 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@/hooks/useTransactionsQuery', () => ({
   queryKeys: {
+    categories: { list: () => ['categories', 'list'] },
     templates: { list: () => ['templates', 'list', {}] },
     transactions: { all: () => ['transactions'] },
   },
@@ -50,7 +51,7 @@ jest.mock('@/hooks/useFilter', () => ({
 }));
 
 jest.mock('@/db/transaction', () => ({
-  listCategories: jest.fn(),
+  listCategoriesByUsage: jest.fn().mockResolvedValue([]),
   setVerification: (...args: unknown[]) => mockSetVerification(...args),
   softDeleteTransaction: (...args: unknown[]) => mockSoftDeleteTransaction(...args),
 }));

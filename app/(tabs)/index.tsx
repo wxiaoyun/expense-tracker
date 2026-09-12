@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { TransactionList } from '@/components/transactions/List';
-import { listCategories, setVerification, softDeleteTransaction } from '@/db/transaction';
+import { listCategoriesByUsage, setVerification, softDeleteTransaction } from '@/db/transaction';
 import { listTemplates } from '@/db/template';
 import { useQuery } from '@tanstack/react-query';
 import { computeDateRange, endOfDay, useCategoryFilter, useDateRange, useSearch, type DateRangePreset } from '@/hooks/useFilter';
@@ -37,8 +37,8 @@ export default function HomeScreen() {
   const [categories, setCategories] = useCategoryFilter();
   const [search, setSearch] = useSearch();
   const { data: availableCategories = [] } = useQuery({
-    queryKey: ['categories', 'distinct'],
-    queryFn: listCategories,
+    queryKey: queryKeys.categories.list(),
+    queryFn: async () => (await listCategoriesByUsage()).map((row) => row.name),
   });
   const templateQuery = useQuery({
     queryKey: queryKeys.templates.list({}),

@@ -3,6 +3,7 @@ import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import type { TemplateSuggestion, TransactionType } from '@/db/template-core';
+import { CategoryPicker } from '@/components/ui/category-picker';
 import { selectionFeedback } from '@/libs/haptics';
 
 export const RECURRENCE_PRESETS = [
@@ -218,39 +219,12 @@ export function TemplateEditorForm({
         />
 
         <Text style={styles.label}>Category</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.chipsContainer}
-        >
-          {availableCategories.map((item) => (
-            <Pressable
-              key={item.name}
-              accessibilityRole="button"
-              accessibilityLabel={`Category ${item.name}`}
-              accessibilityState={{ selected: category === item.name }}
-              style={[
-                styles.chip,
-                { borderColor: item.color },
-                category === item.name && { backgroundColor: `${item.color}20` },
-              ]}
-              onPress={() => {
-                if (category === item.name) return;
-                selectionFeedback();
-                setCategory(item.name);
-              }}
-            >
-              <Text>{item.name}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-        <TextInput
-          accessibilityLabel="Template category"
-          style={styles.input}
+        <CategoryPicker
+          categories={availableCategories}
           value={category}
-          onChangeText={setCategory}
-          placeholder="Other"
+          onChange={setCategory}
+          inputLabel="Template category"
+          inputStyle={styles.input}
         />
 
         <View style={styles.toggleRow}>

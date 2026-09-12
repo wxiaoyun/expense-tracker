@@ -101,7 +101,11 @@ export const listTransactions = async (query?: {
   const whereConditions = getActiveTransactionConditions({ startTs, endTs, categories, verified });
   
   if (search) {
-    whereConditions.push(sql`${transactions.description} LIKE ${`%${search}%`}`);
+    // SQLite LIKE is case-insensitive for ASCII, so this behaves like ILIKE.
+    const pattern = `%${search}%`;
+    whereConditions.push(
+      sql`(${transactions.description} LIKE ${pattern} OR ${transactions.category} LIKE ${pattern})`,
+    );
   }
 
   console.info('[transactions.list][stage=query] fetching transactions', {
