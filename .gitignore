@@ -9,5 +9,6 @@ tmp/
 **/.DS_Store
 
 .agents/
+.claude/
 docs/superpowers/
 .superpowers/
