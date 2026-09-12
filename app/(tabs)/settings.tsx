@@ -2,11 +2,15 @@ import { db } from '@/db';
 import { resetAllData, ResetDataError } from '@/db/reset';
 import { settings } from '@/db/schema';
 import {
+  appQueryClient,
   reinitializeAppRuntime,
   waitForLaunchTemplateProcessing,
 } from '@/libs/app-runtime';
 import { setAutoBackup as registerAutoBackup } from '@/libs/background';
 import { createLocalBackup, importDatabase, validateSqliteFile } from '@/libs/backup';
+import { parseDbsCsv } from '@/libs/dbs-csv';
+import { importDbsRows } from '@/db/import';
+import { File } from 'expo-file-system';
 import {
   actionFeedback,
   errorFeedback,
@@ -294,6 +298,28 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleImportDbs = async () => {
+    try {
+      console.info('[import.dbs][stage=pick_csv] opening document picker');
+      const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+      if (result.canceled) return;
+      const text = await new File(result.assets[0].uri).text();
+      const parsed = parseDbsCsv(text);
+      const outcome = await importDbsRows(parsed.rows);
+      await appQueryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await appQueryClient.invalidateQueries({ queryKey: ['categories'] });
+      successFeedback();
+      Alert.alert(
+        'Import complete',
+        `${outcome.imported} imported, ${outcome.skipped} already present, ${parsed.unreadable} rows unreadable.`,
+      );
+    } catch (err) {
+      console.error('[import.dbs][stage=import_csv] import failed', { error: String(err) });
+      errorFeedback();
+      Alert.alert('Import failed', String(err));
+    }
+  };
+
   const handleReset = () => {
     Alert.alert(
       'Reset all data',
@@ -387,6 +413,13 @@ export default function SettingsScreen() {
               label="Import database"
               onPress={handleImport}
               testID="import-database"
+            />
+            <SettingsRow
+              icon="doc.text.fill"
+              iconColor="#34C759"
+              label="Import DBS statement (CSV)"
+              onPress={handleImportDbs}
+              testID="import-dbs-csv"
             />
           </FieldGroup.Section>
 

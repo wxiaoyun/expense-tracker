@@ -3,6 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { transactionTemplates } from '../schema';
+import { LATEST_SCHEMA_VERSION } from '../schema-migrations';
 import { DATABASE_NAME, DATABASE_SCHEMA_SQL } from '../schema-sql';
 
 describe('latest database schema', () => {
@@ -45,6 +46,7 @@ describe('latest database schema', () => {
       'deleted_at',
       'created_at',
       'updated_at',
+      'source',
     ]);
     expect(templateColumns).toEqual([
       'id',
@@ -75,7 +77,7 @@ describe('latest database schema', () => {
       'idx_templates_category',
       'idx_templates_schedule',
     ]));
-    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: LATEST_SCHEMA_VERSION });
 
     database.close();
   });

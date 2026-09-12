@@ -13,6 +13,10 @@ const mockResetAllData = jest.fn();
 const mockWaitForLaunchProcessing = jest.fn();
 const mockReinitializeRuntime = jest.fn();
 const mockSetAutoBackup = jest.fn();
+const mockInvalidateQueries = jest.fn();
+const mockReadAsString = jest.fn();
+const mockParseDbsCsv = jest.fn();
+const mockImportDbsRows = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: { replace: (...args: unknown[]) => mockReplace(...args) },
@@ -59,7 +63,22 @@ jest.mock('@/libs/backup', () => ({
   validateSqliteFile: (...args: unknown[]) => mockValidateSqliteFile(...args),
 }));
 
+jest.mock('expo-file-system', () => ({
+  File: function MockFile(this: { text: () => unknown }, uri: string) {
+    this.text = () => mockReadAsString(uri);
+  },
+}));
+
+jest.mock('@/libs/dbs-csv', () => ({
+  parseDbsCsv: (...args: unknown[]) => mockParseDbsCsv(...args),
+}));
+
+jest.mock('@/db/import', () => ({
+  importDbsRows: (...args: unknown[]) => mockImportDbsRows(...args),
+}));
+
 jest.mock('@/libs/app-runtime', () => ({
+  appQueryClient: { invalidateQueries: (...args: unknown[]) => mockInvalidateQueries(...args) },
   reinitializeAppRuntime: (...args: unknown[]) => mockReinitializeRuntime(...args),
   waitForLaunchTemplateProcessing: (...args: unknown[]) => mockWaitForLaunchProcessing(...args),
 }));
@@ -200,6 +219,26 @@ describe('Settings database runtime orchestration', () => {
       .toBeLessThan(mockReinitializeRuntime.mock.invocationCallOrder[0]);
     expect(mockReinitializeRuntime.mock.invocationCallOrder[0])
       .toBeLessThan(mockReplace.mock.invocationCallOrder[0]);
+  });
+
+  it('imports a DBS CSV, refreshes transaction queries, and reports counts', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    mockGetDocument.mockResolvedValueOnce({ canceled: false, assets: [{ uri: 'file:///dbs.csv' }] });
+    mockReadAsString.mockResolvedValueOnce('csv-text');
+    mockParseDbsCsv.mockReturnValueOnce({ rows: [{ id: 'a' }, { id: 'b' }], unreadable: 1 });
+    mockImportDbsRows.mockResolvedValueOnce({ imported: 1, skipped: 1 });
+    const screen = await render(<SettingsScreen />);
+
+    await fireEvent.press(screen.getByTestId('import-dbs-csv'));
+
+    await waitFor(() => expect(alert).toHaveBeenCalledWith(
+      'Import complete',
+      '1 imported, 1 already present, 1 rows unreadable.',
+    ));
+    expect(mockReadAsString).toHaveBeenCalledWith('file:///dbs.csv');
+    expect(mockParseDbsCsv).toHaveBeenCalledWith('csv-text');
+    expect(mockImportDbsRows).toHaveBeenCalledWith([{ id: 'a' }, { id: 'b' }]);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['transactions'] });
   });
 
   it('waits, resets, reinitializes defaults and one-shot state, then opens migration', async () => {

@@ -13,6 +13,7 @@ import {
   withRecoverySnapshot,
   V2_REQUIRED_COLUMNS,
   V3_REQUIRED_COLUMNS,
+  V4_REQUIRED_COLUMNS,
 } from '../backup-core';
 
 type SerializableDatabaseSync = DatabaseSync & {
@@ -87,13 +88,13 @@ const createV2Database = () => {
   return new ExpoSQLiteSyncAdapter(database as SerializableDatabaseSync);
 };
 
-const createV3Database = (label: string) => {
+const createLatestDatabase = (label: string) => {
   const database = new DatabaseSync(':memory:');
   database.exec(DATABASE_SCHEMA_SQL);
   database.prepare('INSERT INTO transaction_templates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .run(`${label}-template`, `${label} template`, `${label} template`, 10, 'expense', label, 'Other', null, 0, null, null, null, 0, null, 1, 1);
-  database.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(`${label}-tx`, -10, 1, label, 'Other', `${label}-template`, 0, null, null, 1, 1);
+  database.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(`${label}-tx`, -10, 1, label, 'Other', `${label}-template`, 0, null, null, 1, 1, 'manual');
   return new ExpoSQLiteSyncAdapter(database as SerializableDatabaseSync);
 };
 
@@ -113,8 +114,8 @@ const validateIntegrity = (database: ExpoSQLiteSyncAdapter) => {
   if (result.integrity_check !== 'ok') throw new Error('integrity failure');
 };
 
-const validateV3 = (database: ExpoSQLiteSyncAdapter) => {
-  if (detectDatabaseVersion(database.database) !== 3) throw new Error('destination is not exact V3');
+const validateLatest = (database: ExpoSQLiteSyncAdapter) => {
+  if (detectDatabaseVersion(database.database) !== 4) throw new Error('destination is not exact latest');
 };
 
 const closeAll = (...adapters: ExpoSQLiteSyncAdapter[]) => {
@@ -202,7 +203,7 @@ describe('result-based migration recovery', () => {
   beforeEach(() => copyDatabase.mockClear());
 
   it('restores the original live target when a migration returns failure after writes', async () => {
-    const destination = createV3Database('original');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
 
     await expect(runRecoverableDatabaseOperation({
@@ -210,7 +211,7 @@ describe('result-based migration recovery', () => {
       recovery,
       copyDatabase,
       validateRecovery: validateIntegrity,
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       operation: async () => {
         destination.database.prepare('DELETE FROM transactions').run();
         destination.database.prepare('INSERT INTO settings VALUES (?, ?)').run('partial.marker', '1');
@@ -228,7 +229,7 @@ describe('result-based migration recovery', () => {
   });
 
   it('commits the migrated live target when the operation succeeds', async () => {
-    const destination = createV3Database('original');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
 
     await expect(runRecoverableDatabaseOperation({
@@ -236,7 +237,7 @@ describe('result-based migration recovery', () => {
       recovery,
       copyDatabase,
       validateRecovery: validateIntegrity,
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       operation: async () => {
         destination.database.prepare('DELETE FROM transactions').run();
         destination.database.prepare('INSERT INTO settings VALUES (?, ?)').run('app.migrated', '1');
@@ -257,6 +258,8 @@ describe('backup schema compatibility', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('recognizes exact shape and supported PRAGMA user_version pairs only', () => {
+    expect(detectBackupSchemaVersion(V4_REQUIRED_COLUMNS, 4)).toBe(4);
+    expect(detectBackupSchemaVersion(V4_REQUIRED_COLUMNS, 3)).toBeNull();
     expect(detectBackupSchemaVersion(V3_REQUIRED_COLUMNS, 3)).toBe(3);
     expect(detectBackupSchemaVersion(V3_REQUIRED_COLUMNS, 0)).toBeNull();
     expect(detectBackupSchemaVersion(V3_REQUIRED_COLUMNS, 2)).toBeNull();
@@ -286,24 +289,24 @@ describe('backup schema compatibility', () => {
     }, 2)).toBeNull();
   });
 
-  it('uses separate databases to restore V3 directly and validates the destination', async () => {
-    const source = createV3Database('source');
+  it('uses separate databases to restore the latest schema directly and validates the destination', async () => {
+    const source = createLatestDatabase('source');
     source.database.prepare('UPDATE transactions SET deleted_at = 123').run();
     source.database.prepare('UPDATE transaction_templates SET deleted_at = 456').run();
-    const destination = createV3Database('original');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
     const migrate = jest.fn();
 
     await expect(restoreRecognizedBackup({
-      sourceVersion: 3,
+      sourceVersion: 4,
       source,
       destination,
       recovery,
       copyDatabase,
       migrate,
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       validateRecovery: validateIntegrity,
-    })).resolves.toEqual({ mode: 'restore', sourceVersion: 3 });
+    })).resolves.toEqual({ mode: 'restore', sourceVersion: 4 });
 
     expect(destination.database.prepare('SELECT id, template_id, deleted_at FROM transactions').all()).toEqual([
       { id: 'source-tx', template_id: 'source-template', deleted_at: 123 },
@@ -318,7 +321,7 @@ describe('backup schema compatibility', () => {
 
   it('uses separate databases and real copy semantics before migrating V2 links', async () => {
     const source = createV2Database();
-    const destination = createV3Database('original');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
 
     await expect(restoreRecognizedBackup({
@@ -328,7 +331,7 @@ describe('backup schema compatibility', () => {
       recovery,
       copyDatabase,
       migrate: (database) => runSchemaMigrations(asExpoDatabase(database)),
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       validateRecovery: validateIntegrity,
     })).resolves.toEqual({ mode: 'migrate', sourceVersion: 2 });
 
@@ -338,14 +341,14 @@ describe('backup schema compatibility', () => {
     expect(destination.database.prepare('SELECT id, deleted_at FROM transaction_templates').all()).toEqual([
       { id: 'rule-1', deleted_at: null },
     ]);
-    expect(detectDatabaseVersion(destination.database)).toBe(3);
+    expect(detectDatabaseVersion(destination.database)).toBe(4);
     expect(copyDatabase).toHaveBeenCalledTimes(2);
     closeAll(source, destination, recovery);
   });
 
   it('restores the original live schema and data after V2 post-copy migration fails', async () => {
     const source = createV2Database();
-    const destination = createV3Database('original');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
 
     await expect(restoreRecognizedBackup({
@@ -355,11 +358,11 @@ describe('backup schema compatibility', () => {
       recovery,
       copyDatabase,
       migrate: () => { throw new Error('forced migration failure'); },
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       validateRecovery: validateIntegrity,
     })).rejects.toThrow('forced migration failure');
 
-    expect(detectDatabaseVersion(destination.database)).toBe(3);
+    expect(detectDatabaseVersion(destination.database)).toBe(4);
     expect(destination.database.prepare('SELECT id, description FROM transactions').all()).toEqual([
       { id: 'original-tx', description: 'original' },
     ]);
@@ -368,8 +371,8 @@ describe('backup schema compatibility', () => {
   });
 
   it('rolls back a replacement copy that mutates the destination and then fails', async () => {
-    const source = createV3Database('source');
-    const destination = createV3Database('original');
+    const source = createLatestDatabase('source');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
     const failingCopy = jest.fn(async (
       from: ExpoSQLiteSyncAdapter,
@@ -380,13 +383,13 @@ describe('backup schema compatibility', () => {
     });
 
     await expect(restoreRecognizedBackup({
-      sourceVersion: 3,
+      sourceVersion: 4,
       source,
       destination,
       recovery,
       copyDatabase: failingCopy,
       migrate: jest.fn(),
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       validateRecovery: validateIntegrity,
     })).rejects.toThrow('forced copy failure');
 
@@ -398,8 +401,8 @@ describe('backup schema compatibility', () => {
   });
 
   it('logs rollback stage and safely surfaces replacement and rollback failures', async () => {
-    const source = createV3Database('source');
-    const destination = createV3Database('original');
+    const source = createLatestDatabase('source');
+    const destination = createLatestDatabase('original');
     const recovery = createEmptyDatabase();
     const errorLog = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const failingCopy = jest.fn(async (
@@ -412,13 +415,13 @@ describe('backup schema compatibility', () => {
     });
 
     const promise = restoreRecognizedBackup({
-      sourceVersion: 3,
+      sourceVersion: 4,
       source,
       destination,
       recovery,
       copyDatabase: failingCopy,
       migrate: jest.fn(),
-      validateDestination: validateV3,
+      validateDestination: validateLatest,
       validateRecovery: validateIntegrity,
     });
 

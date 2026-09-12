@@ -90,7 +90,8 @@ export const DATABASE_SCHEMA_DEFINITION_SQL = `
     notes TEXT,
     deleted_at INTEGER,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    source TEXT NOT NULL DEFAULT 'manual'
   );
   CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (transaction_date);
   CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions (category);
@@ -101,7 +102,7 @@ export const DATABASE_SCHEMA_DEFINITION_SQL = `
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
   );
-  PRAGMA user_version = 3;
+  PRAGMA user_version = 4;
 `;
 
 export const DATABASE_SCHEMA_SQL = `

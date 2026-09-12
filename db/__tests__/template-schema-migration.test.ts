@@ -116,11 +116,11 @@ describe('latest schema migration', () => {
       { template_id: 'rule-1' },
       { template_id: 'rule-2' },
     ]);
-    expect(database.prepare('SELECT notes, deleted_at FROM transactions ORDER BY id').all()).toEqual([
-      { notes: 'first', deleted_at: null },
-      { notes: null, deleted_at: null },
+    expect(database.prepare('SELECT notes, deleted_at, source FROM transactions ORDER BY id').all()).toEqual([
+      { notes: 'first', deleted_at: null, source: 'schedule' },
+      { notes: null, deleted_at: null, source: 'schedule' },
     ]);
-    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: LATEST_SCHEMA_VERSION });
     expect(database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='recurring_transactions'").get()).toBeUndefined();
 
     runSchemaMigrations(asExpoDatabase(new ExpoSQLiteSyncAdapter(database)));
@@ -176,7 +176,7 @@ describe('latest schema migration', () => {
       { id: 'tx-3', template_id: 'rule-3' },
       { id: 'tx-4', template_id: 'rule-4' },
     ]);
-    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: LATEST_SCHEMA_VERSION });
     database.close();
   });
 
@@ -220,7 +220,7 @@ describe('latest schema migration', () => {
       { name: 'transaction_templates' },
       { name: 'transactions' },
     ]);
-    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: LATEST_SCHEMA_VERSION });
     database.close();
   });
 
@@ -231,7 +231,7 @@ describe('latest schema migration', () => {
     runSchemaMigrations(asExpoDatabase(new ExpoSQLiteSyncAdapter(database)));
 
     expect(database.prepare('SELECT count(*) AS count FROM transaction_templates').get()).toEqual({ count: 2 });
-    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(database.prepare('PRAGMA user_version').get()).toEqual({ user_version: LATEST_SCHEMA_VERSION });
     database.close();
   });
 
@@ -248,7 +248,7 @@ describe('latest schema migration', () => {
     expect(database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='transaction_templates'").get()).toBeUndefined();
     expect(errorLog).toHaveBeenCalledWith(
       '[db.schema_migration] migration failed',
-      expect.objectContaining({ stage: 'verify_v2_schema', from_version: 2, to_version: 3 }),
+      expect.objectContaining({ stage: 'verify_v2_schema', from_version: 2, to_version: LATEST_SCHEMA_VERSION }),
     );
     database.close();
   });
@@ -276,7 +276,7 @@ describe('latest schema migration', () => {
       expect.objectContaining({
         stage: 'insert_templates',
         from_version: 2,
-        to_version: 3,
+        to_version: LATEST_SCHEMA_VERSION,
         error: 'Error: forced insert failure',
       }),
     );

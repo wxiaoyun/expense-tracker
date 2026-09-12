@@ -8,7 +8,7 @@ import {
   type RecurringRowForTemplateMigration,
 } from './template-migration-core';
 
-export const LATEST_SCHEMA_VERSION = 3;
+export const LATEST_SCHEMA_VERSION = 4;
 
 const V2_REQUIRED_COLUMNS: Record<string, string[]> = {
   categories: ['id', 'name', 'icon', 'color', 'is_preset', 'sort_order', 'created_at'],
@@ -240,6 +240,17 @@ const migrateV2ToV3 = (
   });
 };
 
+const migrateV3ToV4 = (sqlite: SQLite.SQLiteDatabase, fromVersion: number) => {
+  logInfo('migrate_v3_to_v4', fromVersion);
+  sqlite.withTransactionSync(() => {
+    sqlite.execSync(`
+      ALTER TABLE transactions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
+      UPDATE transactions SET source = 'schedule' WHERE template_id IS NOT NULL;
+      PRAGMA user_version = 4;
+    `);
+  });
+};
+
 export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
   let fromVersion = -1;
   let stage = 'inspect_schema_version';
@@ -253,8 +264,14 @@ export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
       return;
     }
 
-    if (fromVersion > LATEST_SCHEMA_VERSION || (fromVersion !== 0 && fromVersion !== 2)) {
+    if (fromVersion > LATEST_SCHEMA_VERSION || ![0, 2, 3].includes(fromVersion)) {
       throw new Error(`Unsupported database schema version: ${fromVersion}`);
+    }
+
+    if (fromVersion === 3) {
+      stage = 'migrate_v3_to_v4';
+      migrateV3ToV4(sqlite, fromVersion);
+      return;
     }
 
     let existingTables: Set<string> | null = null;
@@ -313,6 +330,9 @@ export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
     migrateV2ToV3(sqlite, fromVersion, (migrationStage) => {
       stage = migrationStage;
     });
+
+    stage = 'migrate_v3_to_v4';
+    migrateV3ToV4(sqlite, fromVersion);
   } catch (error) {
     console.error('[db.schema_migration] migration failed', {
       stage,

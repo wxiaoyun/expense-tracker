@@ -178,7 +178,7 @@ const insertOccurrenceRows = async (
 
   for (const date of dates) {
     const result = await transactionDb.runAsync(
-      'INSERT OR IGNORE INTO transactions (id, amount, transaction_date, description, category, template_id, verified, notes, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)',
+      'INSERT OR IGNORE INTO transactions (id, amount, transaction_date, description, category, template_id, verified, notes, deleted_at, created_at, updated_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, \'schedule\')',
       templateOccurrenceId(template.id, date.getTime()),
       values.amount,
       date.getTime(),

@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import * as FileSystem from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { eq, sql } from "drizzle-orm";
 import { transactions, transactionTemplates, categories, settings } from './schema';
@@ -388,7 +388,8 @@ export const runMigrationWithRecovery = async (
         await recovery.closeAsync();
       },
       deleteRecovery: async () => {
-        await FileSystem.deleteAsync(recoveryPath, { idempotent: true });
+        const recoveryFile = new File(recoveryPath);
+        if (recoveryFile.exists) recoveryFile.delete();
       },
       operation: (recovery) => runRecoverableDatabaseOperation({
         destination: liveDatabase,

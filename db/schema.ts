@@ -120,6 +120,7 @@ export const transactions = sqliteTable(
     deletedAt: integer('deleted_at'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
+    source: text('source').notNull().default('manual'),
   },
   (table) => ({
     dateIdx: index('idx_transactions_date').on(table.transactionDate),

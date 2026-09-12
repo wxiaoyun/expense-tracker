@@ -132,6 +132,7 @@ const transaction = (overrides: Partial<Transaction> = {}): Transaction => ({
   deletedAt: null,
   createdAt: 1,
   updatedAt: 1,
+  source: 'manual',
   ...overrides,
 });
 

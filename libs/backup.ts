@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
 import { DATABASE_NAME } from '@/db/schema-sql';
 import { db, sqlite } from '@/db';
@@ -8,29 +8,32 @@ import {
   backupFilename,
   detectBackupSchemaVersion,
   hasSqliteHeader,
+  LATEST_BACKUP_SCHEMA_VERSION,
   replaceDatabaseWithRecovery,
   restoreRecognizedBackup,
   withRecoverySnapshot,
   type BackupSchemaVersion,
 } from './backup-core';
 
-export const databasePath = `${FileSystem.documentDirectory}SQLite/${DATABASE_NAME}`;
-export const backupDirectory = `${FileSystem.documentDirectory}Backups/`;
+const documentDirectory = Paths.document.uri.endsWith('/') ? Paths.document.uri : `${Paths.document.uri}/`;
+export const databasePath = `${documentDirectory}SQLite/${DATABASE_NAME}`;
+export const backupDirectory = `${documentDirectory}Backups/`;
 const IMPORT_STAGING_NAME = 'expense_tracker_import_candidate.db';
 const RESTORE_STAGING_NAME = 'expense_tracker_restore_candidate.db';
 const RECOVERY_STAGING_NAME = 'expense_tracker_restore_recovery.db';
-const sqliteDirectory = `${FileSystem.documentDirectory}SQLite/`;
+const sqliteDirectory = `${documentDirectory}SQLite/`;
 const importStagingPath = `${sqliteDirectory}${IMPORT_STAGING_NAME}`;
 const recoveryStagingPath = `${sqliteDirectory}${RECOVERY_STAGING_NAME}`;
+
+export const deleteFileIfExists = (path: string) => {
+  const file = new File(path);
+  if (file.exists) file.delete();
+};
 
 export async function validateSqliteFile(uri: string) {
   console.info('[backup.validate][stage=read_header] reading backup header');
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-      length: 16,
-    });
-    const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+    const bytes = await new File(uri).bytes();
     if (!hasSqliteHeader(bytes)) {
       throw new Error('Selected file is not a valid SQLite database');
     }
@@ -46,12 +49,11 @@ export async function createLocalBackup(now = new Date()) {
   let stage = 'locate_db';
   try {
     console.info('[backup.local][stage=locate_db] locating database', { database: DATABASE_NAME });
-    const info = await FileSystem.getInfoAsync(databasePath);
-    if (!info.exists) throw new Error('Database file not found');
+    if (!new File(databasePath).exists) throw new Error('Database file not found');
 
     stage = 'create_directory';
     console.info('[backup.local][stage=create_directory] preparing backup directory');
-    await FileSystem.makeDirectoryAsync(backupDirectory, { intermediates: true });
+    new Directory(backupDirectory).create({ intermediates: true, idempotent: true });
     const filename = backupFilename(now);
     const destination = `${backupDirectory}${filename}`;
 
@@ -108,7 +110,7 @@ function recognizeBackup(sourceDb: SQLite.SQLiteDatabase): BackupSchemaVersion {
 
 function assertLatestDatabase(database: SQLite.SQLiteDatabase): void {
   assertDatabaseIntegrity(database);
-  if (detectBackupSchemaVersion(getDatabaseColumns(database), getUserVersion(database)) !== 3) {
+  if (detectBackupSchemaVersion(getDatabaseColumns(database), getUserVersion(database)) !== LATEST_BACKUP_SCHEMA_VERSION) {
     throw new Error('Restored database is not the exact latest schema');
   }
 }
@@ -125,14 +127,14 @@ async function withRecoveryDatabase<Result>(
 ): Promise<Result> {
   return withRecoverySnapshot({
     removeStaleRecovery: async () => {
-      await FileSystem.deleteAsync(recoveryStagingPath, { idempotent: true });
+      deleteFileIfExists(recoveryStagingPath);
     },
     openRecovery: () => SQLite.openDatabaseSync(RECOVERY_STAGING_NAME, {}, sqliteDirectory),
     closeRecovery: async (recovery) => {
       await recovery.closeAsync();
     },
     deleteRecovery: async () => {
-      await FileSystem.deleteAsync(recoveryStagingPath, { idempotent: true });
+      deleteFileIfExists(recoveryStagingPath);
     },
     operation,
   });
@@ -170,15 +172,15 @@ export async function restoreDatabase(sourceUri: string) {
     await validateSqliteFile(sourceUri);
     stage = 'stage_file';
     console.info('[backup.restore][stage=stage_file] staging selected database');
-    await FileSystem.deleteAsync(stagingPath, { idempotent: true });
-    await FileSystem.copyAsync({ from: sourceUri, to: stagingPath });
+    deleteFileIfExists(stagingPath);
+    await new File(sourceUri).copy(new File(stagingPath));
 
     stage = 'validate_schema';
     console.info('[backup.restore][stage=validate_schema] validating staged database schema');
     sourceDb = SQLite.openDatabaseSync(RESTORE_STAGING_NAME, {}, sqliteDirectory);
     const sourceVersion = recognizeBackup(sourceDb);
 
-    stage = sourceVersion === 2 ? 'restore_v2_and_migrate' : 'restore_v3';
+    stage = sourceVersion === LATEST_BACKUP_SCHEMA_VERSION ? 'restore_latest' : 'restore_and_migrate';
     return await restoreSupportedBackup(sourceDb, sourceVersion);
   } catch (error) {
     console.error('[backup.restore] database restore failed', { stage, error: String(error) });
@@ -196,7 +198,7 @@ export async function restoreDatabase(sourceUri: string) {
     }
     try {
       console.info('[backup.restore][stage=cleanup] removing staged database');
-      await FileSystem.deleteAsync(stagingPath, { idempotent: true });
+      deleteFileIfExists(stagingPath);
     } catch (cleanupError) {
       console.error('[backup.restore][stage=cleanup] staged database cleanup failed', {
         error: String(cleanupError),
@@ -241,8 +243,8 @@ export async function importDatabase(sourceUri: string) {
     await validateSqliteFile(sourceUri);
     stage = 'stage_file';
     console.info('[backup.import][stage=stage_file] staging selected database');
-    await FileSystem.deleteAsync(importStagingPath, { idempotent: true });
-    await FileSystem.copyAsync({ from: sourceUri, to: importStagingPath });
+    deleteFileIfExists(importStagingPath);
+    await new File(sourceUri).copy(new File(importStagingPath));
 
     stage = 'validate_schema';
     console.info('[backup.import][stage=validate_schema] validating staged database schema');
@@ -257,7 +259,7 @@ export async function importDatabase(sourceUri: string) {
       getUserVersion(sourceDb),
     );
     if (sourceVersion !== null) {
-      stage = sourceVersion === 2 ? 'restore_v2_and_migrate' : 'restore_v3';
+      stage = sourceVersion === LATEST_BACKUP_SCHEMA_VERSION ? 'restore_latest' : 'restore_and_migrate';
       return await restoreSupportedBackup(sourceDb, sourceVersion);
     }
 
@@ -268,8 +270,8 @@ export async function importDatabase(sourceUri: string) {
 
       const legacyPath = getLegacyDbPath();
       console.info('[backup.import][stage=stage_legacy] staging integer-ID legacy database');
-      await FileSystem.deleteAsync(legacyPath, { idempotent: true });
-      await FileSystem.copyAsync({ from: importStagingPath, to: legacyPath });
+      deleteFileIfExists(legacyPath);
+      await new File(importStagingPath).copy(new File(legacyPath));
 
       stage = 'migrate_legacy';
       console.info('[backup.import][stage=migrate_legacy] migrating integer-ID legacy database');
@@ -305,7 +307,7 @@ export async function importDatabase(sourceUri: string) {
     }
     try {
       console.info('[backup.import][stage=cleanup] removing staged database');
-      await FileSystem.deleteAsync(importStagingPath, { idempotent: true });
+      deleteFileIfExists(importStagingPath);
     } catch (cleanupError) {
       console.error('[backup.import][stage=cleanup] staging database cleanup failed', {
         error: String(cleanupError),

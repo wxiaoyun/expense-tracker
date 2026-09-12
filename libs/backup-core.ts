@@ -69,7 +69,13 @@ export const V2_REQUIRED_COLUMNS: Record<string, readonly string[]> = {
   ],
 };
 
-export type BackupSchemaVersion = 2 | 3;
+export const V4_REQUIRED_COLUMNS: Record<string, readonly string[]> = {
+  ...V3_REQUIRED_COLUMNS,
+  transactions: [...V3_REQUIRED_COLUMNS.transactions, 'source'],
+};
+
+export type BackupSchemaVersion = 2 | 3 | 4;
+export const LATEST_BACKUP_SCHEMA_VERSION: BackupSchemaVersion = 4;
 
 const hasExactSchema = (
   actual: Record<string, readonly string[]>,
@@ -86,6 +92,7 @@ export const detectBackupSchemaVersion = (
   columnsByTable: Record<string, readonly string[]>,
   userVersion: number,
 ): BackupSchemaVersion | null => {
+  if (userVersion === 4 && hasExactSchema(columnsByTable, V4_REQUIRED_COLUMNS)) return 4;
   if (userVersion === 3 && hasExactSchema(columnsByTable, V3_REQUIRED_COLUMNS)) return 3;
   if ((userVersion === 0 || userVersion === 2) && hasExactSchema(columnsByTable, V2_REQUIRED_COLUMNS)) return 2;
   return null;
@@ -276,9 +283,9 @@ export async function restoreRecognizedBackup<Database>({
     validateDestination,
     operation: async () => {
       await copyDatabase(source, destination);
-      if (sourceVersion === 2) migrate(destination);
+      if (sourceVersion !== LATEST_BACKUP_SCHEMA_VERSION) migrate(destination);
       return {
-        mode: sourceVersion === 2 ? 'migrate' as const : 'restore' as const,
+        mode: sourceVersion !== LATEST_BACKUP_SCHEMA_VERSION ? 'migrate' as const : 'restore' as const,
         sourceVersion,
       };
     },
