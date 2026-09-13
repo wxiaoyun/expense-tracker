@@ -414,8 +414,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       paddingHorizontal: 16,
       paddingBottom: 12,
       backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.separator,
     },
     title: { color: colors.text, fontSize: 17, fontWeight: "600" },
     cancelText: { color: colors.primary, fontSize: 17 },

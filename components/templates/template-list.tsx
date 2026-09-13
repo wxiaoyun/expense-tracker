@@ -10,7 +10,6 @@ type TemplateListProps = {
   templates: TransactionTemplate[];
   isLoading?: boolean;
   quickAddPendingIds?: readonly string[];
-  onUse: (id: string) => void;
   onQuickAdd: (id: string) => void;
   onEdit: (id: string) => void;
   onPause: (id: string) => void;
@@ -22,7 +21,6 @@ export function TemplateList({
   templates,
   isLoading = false,
   quickAddPendingIds = [],
-  onUse,
   onQuickAdd,
   onEdit,
   onPause,
@@ -35,7 +33,6 @@ export function TemplateList({
       <TemplateRow
         template={item}
         quickAddPending={quickAddPendingIds.includes(item.id)}
-        onUse={onUse}
         onQuickAdd={onQuickAdd}
         onEdit={onEdit}
         onPause={onPause}
@@ -45,7 +42,6 @@ export function TemplateList({
     ),
     [
       quickAddPendingIds,
-      onUse,
       onQuickAdd,
       onEdit,
       onPause,

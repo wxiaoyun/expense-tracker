@@ -15,7 +15,6 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 
 type TemplateRowProps = {
   template: TransactionTemplate;
-  onUse: (id: string) => void;
   onQuickAdd: (id: string) => void;
   onEdit: (id: string) => void;
   onPause: (id: string) => void;
@@ -39,7 +38,6 @@ const signedAmount = (template: TransactionTemplate) => {
 
 export function TemplateRow({
   template,
-  onUse,
   onQuickAdd,
   onEdit,
   onPause,
@@ -111,9 +109,9 @@ export function TemplateRow({
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Use ${template.name}`}
-          onPress={() => onUse(template.id)}
-          style={({ pressed }) => [styles.useArea, pressed && styles.pressed]}
+          accessibilityLabel={`Edit ${template.name}`}
+          onPress={() => onEdit(template.id)}
+          style={({ pressed }) => [styles.editArea, pressed && styles.pressed]}
         >
           <View
             accessible
@@ -222,7 +220,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  useArea: {
+  editArea: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",

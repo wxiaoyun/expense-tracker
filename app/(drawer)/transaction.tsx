@@ -513,8 +513,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       paddingHorizontal: 16,
       paddingBottom: 12,
       backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.separator,
     },
     title: {
       fontSize: 17,

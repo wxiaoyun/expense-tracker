@@ -40,7 +40,6 @@ const makeTemplate = (
 });
 
 const callbacks = () => ({
-  onUse: jest.fn(),
   onQuickAdd: jest.fn(),
   onEdit: jest.fn(),
   onPause: jest.fn(),
@@ -49,18 +48,18 @@ const callbacks = () => ({
 });
 
 describe("TemplateRow", () => {
-  it("uses a complete template card and exposes Quick Add", async () => {
+  it("edits a complete template card and exposes Quick Add", async () => {
     const props = callbacks();
     const screen = await render(
       <TemplateRow template={makeTemplate()} {...props} />,
     );
 
-    await fireEvent.press(screen.getByRole("button", { name: "Use Coffee" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Edit Coffee" }));
     await fireEvent.press(
       screen.getByRole("button", { name: "Quick add Coffee" }),
     );
 
-    expect(props.onUse).toHaveBeenCalledWith("template-1");
+    expect(props.onEdit).toHaveBeenCalledWith("template-1");
     expect(props.onQuickAdd).toHaveBeenCalledWith("template-1");
     expect(screen.getByText("Manual")).toBeTruthy();
   });
@@ -106,9 +105,9 @@ describe("TemplateRow", () => {
     const quickAdd = screen.getByRole("button", { name: "Quick add Coffee" });
     expect(quickAdd.props.accessibilityState).toEqual({ disabled: true });
     await fireEvent.press(quickAdd);
-    await fireEvent.press(screen.getByRole("button", { name: "Use Coffee" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Edit Coffee" }));
 
     expect(props.onQuickAdd).not.toHaveBeenCalled();
-    expect(props.onUse).toHaveBeenCalledWith("template-1");
+    expect(props.onEdit).toHaveBeenCalledWith("template-1");
   });
 });

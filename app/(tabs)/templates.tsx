@@ -82,24 +82,6 @@ export default function TemplatesScreen() {
     }
   }, [categoryQuery.error]);
 
-  const handleUse = useCallback(
-    (id: string) => {
-      setOperationError(null);
-      console.info("[templates.ui][stage=navigate_use]", { template_id: id });
-      try {
-        router.push({
-          pathname: "/(drawer)/transaction",
-          params: { templateId: id },
-        });
-      } catch (error) {
-        logFailure(id, "navigate_use", error);
-        setOperationError("Could not open the transaction form");
-        toast.error("Could not open transaction form");
-      }
-    },
-    [router],
-  );
-
   const handleEdit = useCallback(
     (id: string) => {
       setOperationError(null);
@@ -281,7 +263,6 @@ export default function TemplatesScreen() {
           templates={templateQuery.data ?? []}
           isLoading={templateQuery.isLoading}
           quickAddPendingIds={pendingQuickAddIds}
-          onUse={handleUse}
           onQuickAdd={handleQuickAdd}
           onEdit={handleEdit}
           onPause={handlePause}

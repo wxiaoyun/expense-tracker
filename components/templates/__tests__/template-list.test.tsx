@@ -39,7 +39,6 @@ jest.mock("../template-row", () => {
 });
 
 const callbacks = {
-  onUse: jest.fn(),
   onQuickAdd: jest.fn(),
   onEdit: jest.fn(),
   onPause: jest.fn(),
