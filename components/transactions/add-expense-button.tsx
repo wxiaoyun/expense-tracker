@@ -1,9 +1,11 @@
 import React from 'react';
 import { Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export function AddExpenseButton() {
   const router = useRouter();
+  const { primary, onPrimary } = useThemeColors();
 
   return (
     <Pressable
@@ -19,12 +21,12 @@ export function AddExpenseButton() {
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#007AFF',
+        backgroundColor: primary,
         boxShadow: '0 8px 24px rgba(0, 122, 255, 0.32)',
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Text style={{ color: '#FFFFFF', fontSize: 34, fontWeight: '300', lineHeight: 38 }}>+</Text>
+      <Text style={{ color: onPrimary, fontSize: 34, fontWeight: '300', lineHeight: 38 }}>+</Text>
     </Pressable>
   );
 }

@@ -2,9 +2,11 @@ import React from 'react';
 import { Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { toast } from 'sonner-native';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export function AddTemplateButton() {
   const router = useRouter();
+  const colors = useThemeColors();
 
   const handlePress = () => {
     console.info('[templates.ui][stage=navigate_create]', { template_id: null });
@@ -34,12 +36,12 @@ export function AddTemplateButton() {
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#007AFF',
+        backgroundColor: colors.primary,
         boxShadow: '0 8px 24px rgba(0, 122, 255, 0.32)',
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Text style={{ color: '#FFFFFF', fontSize: 34, fontWeight: '300', lineHeight: 38 }}>+</Text>
+      <Text style={{ color: colors.onPrimary, fontSize: 34, fontWeight: '300', lineHeight: 38 }}>+</Text>
     </Pressable>
   );
 }

@@ -18,12 +18,16 @@ import {
   successFeedback,
 } from '@/libs/haptics';
 import {
+  applyThemePreference,
   currencyAtom,
+  isThemePreference,
   PREFERENCE_KEYS,
   savePreferenceAndApply,
   SUGGESTION_LOOKBACK_OPTIONS,
   type SuggestionLookback,
   suggestionLookbackAtom,
+  themeAtom,
+  type ThemePreference,
   type WeekStart,
   weekStartAtom,
 } from '@/libs/preferences';
@@ -46,8 +50,14 @@ import { useAtom } from 'jotai';
 import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Text as RNText, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 const CURRENCIES = ['USD', 'SGD', 'EUR', 'GBP', 'JPY', 'CNY'];
+const THEMES: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 const WEEK_STARTS: { value: WeekStart; label: string }[] = [
   { value: 'sunday', label: 'Sunday' },
   { value: 'monday', label: 'Monday' },
@@ -74,15 +84,16 @@ function SettingsRow({
   destructive = false,
   testID,
 }: SettingsRowProps) {
+  const colors = useThemeColors();
   return (
     <Row alignment="center" spacing={12} style={styles.settingsRow} onPress={onPress} testID={testID}>
       <Icon
         name={icon}
         size={18}
-        color="#FFFFFF"
+        color={colors.onPrimary}
         style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: iconColor }}
       />
-      <Text textStyle={{ fontSize: 16, color: destructive ? '#FF3B30' : '#000000' }}>
+      <Text textStyle={{ fontSize: 16, color: destructive ? colors.destructive : colors.text }}>
         {label}
       </Text>
       <Spacer flexible />
@@ -129,7 +140,9 @@ function PreferenceRow({
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const [currency, setCurrency] = useAtom(currencyAtom);
+  const [theme, setTheme] = useAtom(themeAtom);
   const [weekStart, setWeekStart] = useAtom(weekStartAtom);
   const [suggestionLookback, setSuggestionLookback] = useAtom(suggestionLookbackAtom);
   const [restoring, setRestoring] = useState(false);
@@ -196,6 +209,17 @@ export default function SettingsScreen() {
       selectionFeedback();
     });
   }, [currency, persistPreference, setCurrency]);
+
+  const changeTheme = useCallback((value: string) => {
+    if (!isThemePreference(value)) return;
+    const next: ThemePreference = value;
+    if (next === theme) return;
+    void persistPreference(PREFERENCE_KEYS.theme, next, () => {
+      setTheme(next);
+      applyThemePreference(next);
+      selectionFeedback();
+    });
+  }, [persistPreference, setTheme, theme]);
 
   const changeWeekStart = useCallback((value: string) => {
     const next = value as WeekStart;
@@ -350,9 +374,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.pageHeader, { paddingTop: insets.top + 8 }]}>
-        <RNText style={styles.pageTitle}>Settings</RNText>
+        <RNText style={[styles.pageTitle, { color: colors.text }]}>Settings</RNText>
       </View>
 
       <Host style={{ flex: 1 }}>
@@ -365,6 +389,14 @@ export default function SettingsScreen() {
               selectedValue={currency}
               options={CURRENCIES.map((c) => ({ value: c, label: c }))}
               onSelect={changeCurrency}
+            />
+            <PreferenceRow
+              icon="circle.lefthalf.filled"
+              iconColor="#5856D6"
+              label="Appearance"
+              selectedValue={theme}
+              options={THEMES}
+              onSelect={changeTheme}
             />
             <PreferenceRow
               icon="calendar"
@@ -437,9 +469,9 @@ export default function SettingsScreen() {
       </Host>
 
       {restoring && (
-        <View style={styles.restoreOverlay}>
-          <ActivityIndicator size="large" />
-          <RNText style={styles.restoreText}>Restoring database</RNText>
+        <View style={[styles.restoreOverlay, { backgroundColor: colors.overlay }]}>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <RNText style={[styles.restoreText, { color: colors.text }]}>Restoring database</RNText>
         </View>
       )}
     </View>
@@ -449,13 +481,11 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f2f7',
   },
   pageHeader: {
     paddingHorizontal: 16,
   },
   pageTitle: {
-    color: '#111111',
     fontSize: 34,
     fontWeight: '700',
   },
@@ -464,7 +494,6 @@ const styles = StyleSheet.create({
   },
   restoreOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(242,242,247,0.86)',
     justifyContent: 'center',
     alignItems: 'center',
   },

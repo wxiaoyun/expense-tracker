@@ -15,6 +15,7 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "userInterfaceStyle": "automatic",
       "bundleIdentifier": "com.wxiaoyun.vibetracker",
       "infoPlist": {
         "UIBackgroundModes": [
@@ -54,7 +55,10 @@
           "image": "./assets/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "ios": {
+            "backgroundColor": "#007AFF"
+          }
         }
       ],
       "expo-sqlite",

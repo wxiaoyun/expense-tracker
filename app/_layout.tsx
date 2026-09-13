@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import '@/libs/background';
 import { Stack, router, usePathname } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import {
   waitForLaunchTemplateProcessing,
 } from '@/libs/app-runtime';
 import { loadPreferences, preferenceStore } from '@/libs/preferences';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export {
   appQueryClient,
@@ -47,20 +48,23 @@ export async function initializeApp() {
 
 export default function RootLayout() {
   const pathname = usePathname();
-
-  useEffect(() => {
+  const [preferencesLoaded] = useState(() => {
     loadPreferences(preferenceStore);
-  }, []);
+    return true;
+  });
+  const colors = useThemeColors();
 
-  useEffect(() => {
+  React.useEffect(() => {
     void initializeApp();
   }, [pathname]);
+
+  if (!preferencesLoaded) return null;
 
   return (
     <AppRoot>
       <Provider store={preferenceStore}>
         <QueryClientProvider client={appQueryClient}>
-          <Stack>
+          <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="migrate" options={{ headerShown: false }} />
             <Stack.Screen

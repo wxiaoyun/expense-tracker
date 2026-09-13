@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react
 import { FlashList } from '@shopify/flash-list';
 import { Transaction } from '@/db/schema';
 import { TransactionRow } from './Row';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type TransactionListProps = {
   transactions: Transaction[];
@@ -41,8 +41,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   refreshing,
   onRefresh,
 }) => {
-  const backgroundColor = useThemeColor('background');
-  const textColor = useThemeColor('text');
+  const { background, text, secondaryText } = useThemeColors();
 
   const renderItem = React.useCallback(
     ({ item }: { item: Transaction }) => (
@@ -61,9 +60,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   if (transactions.length === 0) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor }]}>
-        <Text style={[styles.emptyTitle, { color: textColor }]}>No Expenses Yet</Text>
-        <Text style={[styles.emptySubtitle, { color: textColor, opacity: 0.6 }]}>
+      <View style={[styles.emptyContainer, { backgroundColor: background }]}>
+        <Text style={[styles.emptyTitle, { color: text }]}>No Expenses Yet</Text>
+        <Text style={[styles.emptySubtitle, { color: secondaryText }]}>
           Tap the + button to add your first expense
         </Text>
       </View>
@@ -76,13 +75,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       renderItem={renderItem}
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
-      ListFooterComponent={renderFooter(isLoadingMore ?? false, textColor)}
+      ListFooterComponent={renderFooter(isLoadingMore ?? false, text)}
       refreshControl={
         onRefresh ? (
           <RefreshControl
             refreshing={refreshing ?? false}
             onRefresh={onRefresh}
-            tintColor={textColor}
+            tintColor={text}
           />
         ) : undefined
       }

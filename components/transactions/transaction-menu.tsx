@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { MenuView, type MenuAction, type NativeActionEvent } from '@expo/ui/community/menu';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 type TransactionMenuProps = {
   transactionId: string;
@@ -24,6 +25,7 @@ export function TransactionMenu({
   onViewTemplate,
   onDelete,
 }: TransactionMenuProps) {
+  const iconColor = useThemeColor('secondaryText');
   const canViewTemplate = hasActiveTemplate && Boolean(templateId);
   const actions: MenuAction[] = [
     { id: 'edit', title: 'Edit', image: 'pencil' },
@@ -62,7 +64,7 @@ export function TransactionMenu({
         hitSlop={8}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
-        <Feather name="more-vertical" size={22} color="#6E6E73" />
+        <Feather name="more-vertical" size={22} color={iconColor} />
       </Pressable>
     </MenuView>
   );

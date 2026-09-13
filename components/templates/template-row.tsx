@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import type { TransactionTemplate } from '@/db/schema';
 import { getNextOccurrences, occurrenceToText } from '@/libs/date';
 import { formatCurrency } from '@/libs/intl';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type TemplateRowProps = {
   template: TransactionTemplate;
@@ -42,6 +43,7 @@ export function TemplateRow({
   onDelete,
   quickAddPending = false,
 }: TemplateRowProps) {
+  const colors = useThemeColors();
   const scheduled = template.recurrenceValue !== null;
   const paused = scheduled && template.scheduleActive !== 1;
   const amount = signedAmount(template);
@@ -93,7 +95,7 @@ export function TemplateRow({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.groupedBackground }]}>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
@@ -104,19 +106,19 @@ export function TemplateRow({
           <View
             accessible
             accessibilityLabel={scheduled ? 'Scheduled template' : 'Manual template'}
-            style={styles.iconWrap}
+            style={[styles.iconWrap, { backgroundColor: colors.primaryBackground }]}
           >
-            <Feather name={scheduled ? 'calendar' : 'file-text'} size={18} color="#007AFF" />
+            <Feather name={scheduled ? 'calendar' : 'file-text'} size={18} color={colors.primary} />
           </View>
           <View style={styles.body}>
-            <Text numberOfLines={1} style={styles.name}>{template.name}</Text>
-            <Text numberOfLines={2} style={styles.summary}>{summary}</Text>
+            <Text numberOfLines={1} style={[styles.name, { color: colors.text }]}>{template.name}</Text>
+            <Text numberOfLines={2} style={[styles.summary, { color: colors.secondaryText }]}>{summary}</Text>
             <View style={styles.statusRow}>
-              <Text style={[styles.status, paused && styles.paused]}>
+              <Text style={[styles.status, { color: paused ? colors.warning : colors.primary }]}>
                 {scheduled ? paused ? 'Paused' : occurrenceToText(template.recurrenceValue!) : 'Manual'}
               </Text>
               {nextOccurrence ? (
-                <Text style={styles.nextOccurrence}>Next {format(nextOccurrence, 'MMM d, yyyy')}</Text>
+                <Text style={[styles.nextOccurrence, { color: colors.secondaryText }]}>Next {format(nextOccurrence, 'MMM d, yyyy')}</Text>
               ) : null}
             </View>
           </View>
@@ -128,7 +130,7 @@ export function TemplateRow({
             hitSlop={8}
             style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
           >
-            <Feather name="more-horizontal" size={22} color="#6E6E73" />
+            <Feather name="more-horizontal" size={22} color={colors.secondaryText} />
           </Pressable>
         </MenuView>
       </View>
@@ -141,11 +143,12 @@ export function TemplateRow({
           onPress={() => onQuickAdd(template.id)}
           style={({ pressed }) => [
             styles.quickAdd,
+            { backgroundColor: colors.fill },
             (pressed || quickAddPending) && styles.quickAddDisabled,
           ]}
         >
-          <Feather name="plus" size={15} color="#007AFF" />
-          <Text style={styles.quickAddText}>{quickAddPending ? 'Adding…' : 'Quick Add'}</Text>
+          <Feather name="plus" size={15} color={colors.primary} />
+          <Text style={[styles.quickAddText, { color: colors.primary }]}>{quickAddPending ? 'Adding…' : 'Quick Add'}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -154,7 +157,6 @@ export function TemplateRow({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F2F2F7',
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 16,
@@ -173,7 +175,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#007AFF18',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -182,12 +183,10 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
   },
   name: {
-    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
   },
   summary: {
-    color: '#6E6E73',
     fontSize: 13,
     marginTop: 2,
   },
@@ -198,15 +197,10 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   status: {
-    color: '#007AFF',
     fontSize: 12,
     fontWeight: '600',
   },
-  paused: {
-    color: '#FF9500',
-  },
   nextOccurrence: {
-    color: '#6E6E73',
     fontSize: 12,
   },
   moreButton: {
@@ -221,13 +215,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     borderRadius: 8,
-    backgroundColor: '#F2F2F7',
     paddingVertical: 7,
     paddingHorizontal: 11,
     marginTop: 12,
   },
   quickAddText: {
-    color: '#007AFF',
     fontSize: 14,
     fontWeight: '500',
   },

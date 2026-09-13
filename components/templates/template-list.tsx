@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 
 import type { TransactionTemplate } from '@/db/schema';
+import { useThemeColors } from '@/hooks/useThemeColor';
 import { TemplateRow } from './template-row';
 
 type TemplateListProps = {
@@ -28,6 +29,7 @@ export function TemplateList({
   onResume,
   onDelete,
 }: TemplateListProps) {
+  const colors = useThemeColors();
   const renderItem = React.useCallback(
     ({ item }: { item: TransactionTemplate }) => (
       <TemplateRow
@@ -47,8 +49,8 @@ export function TemplateList({
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading templates…</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.secondaryText }]}>Loading templates…</Text>
       </View>
     );
   }
@@ -56,8 +58,8 @@ export function TemplateList({
   if (templates.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyTitle}>No Templates Yet</Text>
-        <Text style={styles.emptySubtitle}>Tap the + button to add your first template</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Templates Yet</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>Tap the + button to add your first template</Text>
       </View>
     );
   }
@@ -85,17 +87,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   loadingText: {
-    color: '#6E6E73',
     fontSize: 15,
     marginTop: 10,
   },
   emptyTitle: {
-    color: '#000000',
     fontSize: 20,
     fontWeight: '600',
   },
   emptySubtitle: {
-    color: '#6E6E73',
     fontSize: 15,
     textAlign: 'center',
     marginTop: 8,

@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import Feather from '@expo/vector-icons/Feather';
 
 import { Transaction } from '@/db/schema';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/libs/intl';
 import { TransactionMenu } from './transaction-menu';
 
@@ -27,13 +27,12 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onViewTemplate,
   onDelete,
 }) => {
-  const textColor = useThemeColor('text');
-  const secondaryColor = useThemeColor('backgroundSecondary');
+  const { destructive, secondaryText, success, surface, text } = useThemeColors();
   const isExpense = transaction.amount < 0;
-  const amountColor = isExpense ? '#FF3B30' : '#34C759';
+  const amountColor = isExpense ? destructive : success;
 
   return (
-    <View style={[styles.card, { backgroundColor: secondaryColor }]}>
+    <View style={[styles.card, { backgroundColor: surface }]}>
       <View style={styles.content}>
         <Pressable
           accessibilityRole="checkbox"
@@ -45,7 +44,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           <Feather
             name={transaction.verified ? 'check-circle' : 'circle'}
             size={24}
-            color={transaction.verified ? '#34C759' : amountColor}
+            color={transaction.verified ? success : amountColor}
           />
         </Pressable>
         <Pressable
@@ -55,17 +54,17 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           style={({ pressed }) => [styles.editTarget, pressed && styles.pressed]}
         >
           <View style={styles.body}>
-            <Text numberOfLines={1} style={[styles.description, { color: textColor }]}>
+            <Text numberOfLines={1} style={[styles.description, { color: text }]}>
               {transaction.description}
             </Text>
             <Text style={[styles.amount, { color: amountColor }]}>
               {formatCurrency(transaction.amount)}
             </Text>
             <View style={styles.meta}>
-              <Text style={[styles.metaText, { color: textColor }]}>
+              <Text style={[styles.metaText, { color: secondaryText }]}>
                 {format(transaction.transactionDate, 'MMM d, yyyy')}
               </Text>
-              <Text style={[styles.metaText, { color: textColor }]}>
+              <Text style={[styles.metaText, { color: secondaryText }]}>
                 {transaction.category}
               </Text>
             </View>
@@ -116,7 +115,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    opacity: 0.6,
   },
   amount: {
     fontSize: 17,

@@ -1,4 +1,5 @@
 import { atom, getDefaultStore } from 'jotai';
+import { Appearance } from 'react-native';
 import { db } from '@/db';
 import { settings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -7,6 +8,9 @@ import type { SuggestionLookback } from '@/db/template-core';
 export type { SuggestionLookback } from '@/db/template-core';
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type WeekStart = 'sunday' | 'monday';
+
+export const isThemePreference = (value: string | null): value is ThemePreference =>
+  value === 'system' || value === 'light' || value === 'dark';
 
 export const DEFAULT_PREFERENCES = {
   currency: 'USD',
@@ -20,6 +24,18 @@ export const themeAtom = atom<ThemePreference>(DEFAULT_PREFERENCES.theme);
 export const weekStartAtom = atom<WeekStart>(DEFAULT_PREFERENCES.weekStart);
 export const suggestionLookbackAtom = atom<SuggestionLookback>(DEFAULT_PREFERENCES.suggestionLookback);
 export const preferenceStore = getDefaultStore();
+
+export function applyThemePreference(theme: ThemePreference) {
+  console.info('[preferences.theme][stage=apply_appearance] applying appearance', { theme });
+  try {
+    Appearance.setColorScheme(theme === 'system' ? 'unspecified' : theme);
+  } catch (error) {
+    console.error('[preferences.theme][stage=apply_appearance] appearance update failed', {
+      theme,
+      error: String(error),
+    });
+  }
+}
 
 const PREF_KEYS = {
   currency: 'pref.currency',
@@ -59,6 +75,7 @@ export function resetPreferencesToDefaults(store = preferenceStore) {
   store.set(themeAtom, DEFAULT_PREFERENCES.theme);
   store.set(weekStartAtom, DEFAULT_PREFERENCES.weekStart);
   store.set(suggestionLookbackAtom, DEFAULT_PREFERENCES.suggestionLookback);
+  applyThemePreference(DEFAULT_PREFERENCES.theme);
 }
 
 export function loadPreferences(store = preferenceStore) {
@@ -68,12 +85,9 @@ export function loadPreferences(store = preferenceStore) {
   const suggestionLookback = readSetting(PREF_KEYS.suggestionLookback);
 
   store.set(currencyAtom, currency || DEFAULT_PREFERENCES.currency);
-  store.set(
-    themeAtom,
-    theme === 'light' || theme === 'dark' || theme === 'system'
-      ? theme
-      : DEFAULT_PREFERENCES.theme,
-  );
+  const nextTheme = isThemePreference(theme) ? theme : DEFAULT_PREFERENCES.theme;
+  store.set(themeAtom, nextTheme);
+  applyThemePreference(nextTheme);
   store.set(
     weekStartAtom,
     weekStart === 'sunday' || weekStart === 'monday'

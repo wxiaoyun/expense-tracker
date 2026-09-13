@@ -7,6 +7,7 @@ import { CategoryDonut, type CategorySlice } from '@/components/summary/Category
 import { computeDateRange, endOfDay, useDateRange, type DateRangePreset } from '@/hooks/useFilter';
 import { useTransactionSummary } from '@/hooks/useTransactionsQuery';
 import { formatCurrency } from '@/libs/intl';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 const CATEGORY_COLORS = [
   '#007AFF', '#AF52DE', '#FF9500', '#FF2D55',
@@ -28,9 +29,10 @@ const getTrendGranularity = (preset: DateRangePreset, start: Date, end: Date) =>
 };
 
 function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
+  const colors = useThemeColors();
   return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
+    <View style={[styles.metricCard, { backgroundColor: colors.groupedBackground }]}>
+      <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>{label}</Text>
       <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.metricValue, { color }]}>
         {value}
       </Text>
@@ -39,9 +41,10 @@ function MetricCard({ label, value, color }: { label: string; value: string; col
 }
 
 function EmptyCard({ message }: { message: string }) {
+  const colors = useThemeColors();
   return (
-    <View style={styles.emptyCard}>
-      <Text style={styles.emptyText}>{message}</Text>
+    <View style={[styles.emptyCard, { backgroundColor: colors.groupedBackground }]}>
+      <Text style={[styles.emptyText, { color: colors.secondaryText }]}>{message}</Text>
     </View>
   );
 }
@@ -53,6 +56,7 @@ function CategoryBreakdown({
   data: CategorySlice[];
   kind: 'income' | 'expense';
 }) {
+  const colors = useThemeColors();
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   if (!data.length) {
@@ -60,7 +64,7 @@ function CategoryBreakdown({
   }
 
   return (
-    <View style={styles.breakdownCard}>
+    <View style={[styles.breakdownCard, { backgroundColor: colors.groupedBackground }]}>
       {data.map((item) => {
         const percentage = total === 0 ? 0 : (item.value / total) * 100;
         const amount = kind === 'expense' ? -item.value : item.value;
@@ -69,11 +73,11 @@ function CategoryBreakdown({
             <View style={styles.categoryHeader}>
               <View style={styles.categoryNameGroup}>
                 <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                <Text numberOfLines={1} style={styles.categoryName}>{item.text}</Text>
+                <Text numberOfLines={1} style={[styles.categoryName, { color: colors.text }]}>{item.text}</Text>
               </View>
-              <Text style={styles.categoryAmount}>{formatCurrency(amount)}</Text>
+              <Text style={[styles.categoryAmount, { color: colors.secondaryText }]}>{formatCurrency(amount)}</Text>
             </View>
-            <View style={styles.progressTrack}>
+            <View style={[styles.progressTrack, { backgroundColor: colors.chartTrack }]}>
               <View style={[styles.progressFill, { backgroundColor: item.color, width: `${percentage}%` }]} />
             </View>
           </View>
@@ -84,6 +88,7 @@ function CategoryBreakdown({
 }
 
 export default function SummaryScreen() {
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const [dateRange, setDateRange] = useDateRange();
   const granularity = useMemo(
@@ -172,27 +177,27 @@ export default function SummaryScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="#007AFF" size="large" />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Error loading summary</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.destructive }]}>Error loading summary</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
     >
       <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Summary</Text>
+        <Text style={[styles.pageTitle, { color: colors.text }]}>Summary</Text>
       </View>
       <ExpenseFilterBar
         preset={dateRange.preset}
@@ -206,13 +211,13 @@ export default function SummaryScreen() {
       />
 
       <View style={styles.metricRow}>
-        <MetricCard label="Income" value={formatCurrency(summary?.income ?? 0)} color="#34C759" />
-        <MetricCard label="Spending" value={formatCurrency(summary?.expense ?? 0)} color="#FF3B30" />
-        <MetricCard label="Net" value={formatCurrency(netBalance)} color={netBalance < 0 ? '#FF3B30' : '#007AFF'} />
+        <MetricCard label="Income" value={formatCurrency(summary?.income ?? 0)} color={colors.success} />
+        <MetricCard label="Spending" value={formatCurrency(summary?.expense ?? 0)} color={colors.destructive} />
+        <MetricCard label="Net" value={formatCurrency(netBalance)} color={netBalance < 0 ? colors.destructive : colors.primary} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Spending by Category</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Spending by Category</Text>
         {spendingCategories.length > 0 ? (
           <CategoryDonut data={spendingCategories} />
         ) : (
@@ -224,12 +229,12 @@ export default function SummaryScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Income by Category</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Income by Category</Text>
         <CategoryBreakdown data={incomeCategories} kind="income" />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cash Flow Trend</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Cash Flow Trend</Text>
         <CashFlowTrend data={data?.byPeriod ?? []} granularity={granularity} />
       </View>
     </ScrollView>
@@ -238,7 +243,6 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
     flex: 1,
   },
   content: {
@@ -246,12 +250,10 @@ const styles = StyleSheet.create({
   },
   centered: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     flex: 1,
     justifyContent: 'center',
   },
   errorText: {
-    color: '#FF3B30',
     fontSize: 16,
   },
   pageHeader: {
@@ -259,7 +261,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   pageTitle: {
-    color: '#111111',
     fontSize: 34,
     fontWeight: '700',
   },
@@ -272,14 +273,12 @@ const styles = StyleSheet.create({
     marginBottom: 26,
   },
   metricCard: {
-    backgroundColor: '#F2F2F7',
     borderRadius: 16,
     flex: 1,
     minWidth: 0,
     padding: 12,
   },
   metricLabel: {
-    color: '#6E6E73',
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 5,
@@ -293,7 +292,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: {
-    color: '#111111',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 12,
@@ -302,7 +300,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   breakdownCard: {
-    backgroundColor: '#F2F2F7',
     borderRadius: 18,
     padding: 14,
   },
@@ -328,18 +325,15 @@ const styles = StyleSheet.create({
     width: 10,
   },
   categoryName: {
-    color: '#111111',
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
   },
   categoryAmount: {
-    color: '#3C3C43',
     fontSize: 14,
     fontWeight: '600',
   },
   progressTrack: {
-    backgroundColor: '#E5E5EA',
     borderRadius: 3,
     height: 6,
     overflow: 'hidden',
@@ -350,12 +344,10 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
     borderRadius: 18,
     padding: 28,
   },
   emptyText: {
-    color: '#6E6E73',
     fontSize: 15,
     textAlign: 'center',
   },

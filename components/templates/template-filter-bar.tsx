@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { CategoryFilterChips } from '@/components/ui/category-picker';
 import type { TemplateListFilter } from '@/db/template';
 import { selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type TemplateType = NonNullable<TemplateListFilter['type']>;
 
@@ -32,6 +33,7 @@ export function TemplateFilterBar({
   selectedCategories = [],
   onCategoriesChange,
 }: TemplateFilterBarProps) {
+  const colors = useThemeColors();
   return (
     <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 }}>
       <TextInput
@@ -41,10 +43,12 @@ export function TemplateFilterBar({
         placeholder="Search templates"
         returnKeyType="search"
         clearButtonMode="while-editing"
+        placeholderTextColor={colors.placeholder}
         style={{
           height: 38,
           borderRadius: 12,
-          backgroundColor: '#F2F2F7',
+          backgroundColor: colors.input,
+          color: colors.text,
           paddingHorizontal: 12,
           fontSize: 16,
         }}
@@ -64,12 +68,12 @@ export function TemplateFilterBar({
               }}
               style={{
                 borderRadius: 15,
-                backgroundColor: selected ? '#007AFF' : '#F2F2F7',
+                backgroundColor: selected ? colors.primary : colors.fill,
                 paddingHorizontal: 14,
                 paddingVertical: 7,
               }}
             >
-              <Text style={{ color: selected ? '#FFFFFF' : '#3C3C43', fontWeight: '600' }}>
+              <Text style={{ color: selected ? colors.onPrimary : colors.text, fontWeight: '600' }}>
                 {item.label}
               </Text>
             </Pressable>

@@ -18,6 +18,7 @@ import { showConfirmDialog } from '@/libs/dialog';
 import { AddExpenseButton } from '@/components/transactions/add-expense-button';
 import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
 import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 const logFailure = (stage: string, error: unknown, transactionId?: string) => {
   console.error(`[transactions.ui][stage=${stage}] failed`, {
@@ -30,8 +31,7 @@ const logFailure = (stage: string, error: unknown, transactionId?: string) => {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const backgroundColor = '#fff';
-  const textColor = '#000';
+  const { background, text } = useThemeColors();
 
   const [dateRange, setDateRange] = useDateRange();
   const [categories, setCategories] = useCategoryFilter();
@@ -234,12 +234,12 @@ export default function HomeScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor,
+          backgroundColor: background,
           justifyContent: 'center',
           alignItems: 'center',
         }}
       >
-        <ActivityIndicator size="large" color={textColor} />
+        <ActivityIndicator size="large" color={text} />
         <ThemedText style={{ marginTop: 16 }}>Loading transactions...</ThemedText>
       </View>
     );
@@ -250,7 +250,7 @@ export default function HomeScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor,
+          backgroundColor: background,
           justifyContent: 'center',
           alignItems: 'center',
           padding: 20,
@@ -265,7 +265,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor, paddingTop: insets.top + 8 }}>
+    <View style={{ flex: 1, backgroundColor: background, paddingTop: insets.top + 8 }}>
       <ExpenseFilterBar
         search={search}
         preset={dateRange.preset}

@@ -11,8 +11,10 @@ import {
 import GlassView from '@/components/glass/GlassView';
 import { db, sqlite } from '@/db';
 import { actionFeedback, errorFeedback, successFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export default function MigrationScreen() {
+  const colors = useThemeColors();
   const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
   const [counts, setCounts] = useState<{ transactions: number; recurring: number } | null>(null);
   const [progress, setProgress] = useState<string>('');
@@ -114,22 +116,22 @@ export default function MigrationScreen() {
         return (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
-            <Text style={styles.text}>Checking for existing data...</Text>
+            <Text style={[styles.text, { color: colors.text }]}>Checking for existing data...</Text>
           </View>
         );
       case 'found':
         return (
           <View style={styles.container}>
-            <Text style={styles.title}>Found Existing Data</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Found Existing Data</Text>
             <View style={styles.stats}>
-              <Text style={styles.stat}>
+              <Text style={[styles.stat, { color: colors.text }]}>
                 {counts?.transactions ?? 0} Transactions
               </Text>
-              <Text style={styles.stat}>
+              <Text style={[styles.stat, { color: colors.text }]}>
                 {counts?.recurring ?? 0} Templates
               </Text>
             </View>
-            <Text style={styles.description}>
+            <Text style={[styles.description, { color: colors.secondaryText }]}>
               Would you like to import this data into the new app?
             </Text>
             <View style={styles.buttonRow}>
@@ -142,22 +144,22 @@ export default function MigrationScreen() {
         return (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
-            <Text style={styles.text}>{progress}</Text>
+            <Text style={[styles.text, { color: colors.text }]}>{progress}</Text>
           </View>
         );
       case 'success':
         return (
           <View style={styles.centered}>
-            <Text style={[styles.title, { color: '#34C759' }]}>✓ Migration Complete</Text>
-            <Text style={styles.text}>All data imported successfully.</Text>
+            <Text style={[styles.title, { color: colors.success }]}>✓ Migration Complete</Text>
+            <Text style={[styles.text, { color: colors.text }]}>All data imported successfully.</Text>
             <Button title="Continue" onPress={handleContinue} />
           </View>
         );
       case 'error':
         return (
           <View style={styles.centered}>
-            <Text style={[styles.title, { color: '#FF3B30' }]}>✗ Migration Failed</Text>
-            <Text style={styles.text}>{error}</Text>
+            <Text style={[styles.title, { color: colors.destructive }]}>✗ Migration Failed</Text>
+            <Text style={[styles.text, { color: colors.text }]}>{error}</Text>
             <View style={styles.buttonRow}>
               <Button title="Retry" onPress={handleMigrate} />
               <Button title="Skip" onPress={handleSkip} />
@@ -170,7 +172,7 @@ export default function MigrationScreen() {
   };
 
   return (
-    <GlassView style={{ flex: 1 }}>
+    <GlassView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.safeArea}>
         {renderContent()}
       </View>

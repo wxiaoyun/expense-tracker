@@ -38,12 +38,14 @@ jest.mock('expo-sqlite', () => {
 })
 
 import { getDefaultStore } from 'jotai'
+import { Appearance } from 'react-native'
 
 import { db, settings } from '@/db'
 import {
   currencyAtom,
   loadPreferences,
   PREFERENCE_KEYS,
+  applyThemePreference,
   resetPreferencesToDefaults,
   savePreference,
   savePreferenceAndApply,
@@ -54,9 +56,13 @@ import {
 } from '../preferences'
 
 describe('template suggestion lookback preference', () => {
+  let mockSetColorScheme: jest.SpyInstance
+
   beforeEach(async () => {
+    mockSetColorScheme = jest.spyOn(Appearance, 'setColorScheme').mockImplementation(() => undefined)
     await db.delete(settings).run()
     resetPreferencesToDefaults(getDefaultStore())
+    mockSetColorScheme.mockClear()
   })
 
   afterEach(() => {
@@ -66,6 +72,35 @@ describe('template suggestion lookback preference', () => {
   it('defaults to three months', () => {
     loadPreferences()
     expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
+  })
+
+  it.each([
+    ['system', 'unspecified'],
+    ['light', 'light'],
+    ['dark', 'dark'],
+  ] as const)('applies %s appearance preference', (preference, expected) => {
+    applyThemePreference(preference)
+
+    expect(mockSetColorScheme).toHaveBeenCalledWith(expected)
+  })
+
+  it('applies loaded and reset theme preferences', async () => {
+    await db.insert(settings).values({ key: PREFERENCE_KEYS.theme, value: 'dark' }).run()
+
+    loadPreferences()
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith('dark')
+
+    resetPreferencesToDefaults()
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith('unspecified')
+  })
+
+  it('uses System for an invalid stored theme', async () => {
+    await db.insert(settings).values({ key: PREFERENCE_KEYS.theme, value: 'sepia' }).run()
+
+    loadPreferences()
+
+    expect(getDefaultStore().get(themeAtom)).toBe('system')
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith('unspecified')
   })
 
   it('resets and reloads every preference after database replacement', async () => {
@@ -164,6 +199,23 @@ describe('template suggestion lookback preference', () => {
     insert.mockRestore()
     info.mockRestore()
     error.mockRestore()
+  })
+
+  it('keeps the previous appearance when saving a theme fails', async () => {
+    const store = getDefaultStore()
+    store.set(themeAtom, 'dark')
+    const insert = jest.spyOn(db, 'insert').mockImplementation((() => {
+      throw new Error('forced theme save failure')
+    }) as typeof db.insert)
+
+    await expect(savePreferenceAndApply(PREFERENCE_KEYS.theme, 'light', () => {
+      store.set(themeAtom, 'light')
+      applyThemePreference('light')
+    })).rejects.toThrow('forced theme save failure')
+
+    expect(store.get(themeAtom)).toBe('dark')
+    expect(mockSetColorScheme).not.toHaveBeenCalled()
+    insert.mockRestore()
   })
 
   it('falls back to three months for an invalid persisted value', async () => {

@@ -25,6 +25,7 @@ import {
 } from '@/db/template-core';
 import { getTransaction, listCategoriesByUsage } from '@/db/transaction';
 import { useTemplateSuggestionsQuery } from '@/hooks/useTemplatesQuery';
+import { useThemeColors } from '@/hooks/useThemeColor';
 import { getNextOccurrences } from '@/libs/date';
 import {
   actionFeedback,
@@ -56,6 +57,7 @@ export default function TemplateEditDrawer() {
   const isBlankCreate = !id && !requestedSourceTransactionId;
   const queryClient = useQueryClient();
   const suggestionQuery = useTemplateSuggestionsQuery(undefined, isBlankCreate);
+  const colors = useThemeColors();
 
   const amountRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
@@ -427,8 +429,8 @@ export default function TemplateEditDrawer() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F2F2F7' }}>
-        <Text>Loading</Text>
+      <View style={{ flex: 1, backgroundColor: colors.groupedBackground }}>
+        <Text style={{ color: colors.text }}>Loading</Text>
       </View>
     );
   }

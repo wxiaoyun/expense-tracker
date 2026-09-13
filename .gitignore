@@ -13,3 +13,4 @@ test/data/**/*
 .claude/
 docs/superpowers/
 .superpowers/
+.artifacts/

@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useTemplatesQuery';
 import { showConfirmDialog } from '@/libs/dialog';
 import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type TemplateType = NonNullable<TemplateListFilter['type']>;
 
@@ -34,6 +35,7 @@ const logFailure = (templateId: string | null, stage: string, error: unknown) =>
 export default function TemplatesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const [search, setSearch] = useState('');
   const [type, setType] = useState<TemplateType>('all');
   const [categories, setCategories] = useState<string[]>([]);
@@ -173,7 +175,7 @@ export default function TemplatesScreen() {
   const shouldRenderTemplateList = !templateQuery.error || templateQuery.data !== undefined;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top + 8 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top + 8 }}>
       <TemplateFilterBar
         search={search}
         type={type}
@@ -188,10 +190,10 @@ export default function TemplatesScreen() {
           accessibilityRole="alert"
           style={{ gap: 2, paddingHorizontal: 16, paddingBottom: 6 }}
         >
-          <Text selectable style={{ color: '#FF3B30', fontWeight: '600' }}>
+          <Text selectable style={{ color: colors.destructive, fontWeight: '600' }}>
             Could not load templates
           </Text>
-          <Text selectable style={{ color: '#FF3B30' }}>
+          <Text selectable style={{ color: colors.destructive }}>
             {templateQuery.error.message || String(templateQuery.error)}
           </Text>
         </View>
@@ -201,10 +203,10 @@ export default function TemplatesScreen() {
           accessibilityRole="alert"
           style={{ gap: 2, paddingHorizontal: 16, paddingBottom: 6 }}
         >
-          <Text selectable style={{ color: '#FF3B30', fontWeight: '600' }}>
+          <Text selectable style={{ color: colors.destructive, fontWeight: '600' }}>
             Could not load template categories
           </Text>
-          <Text selectable style={{ color: '#FF3B30' }}>
+          <Text selectable style={{ color: colors.destructive }}>
             {categoryQuery.error.message || String(categoryQuery.error)}
           </Text>
         </View>
@@ -213,7 +215,7 @@ export default function TemplatesScreen() {
         <Text
           selectable
           accessibilityRole="alert"
-          style={{ color: '#FF3B30', paddingHorizontal: 16, paddingBottom: 6 }}
+          style={{ color: colors.destructive, paddingHorizontal: 16, paddingBottom: 6 }}
         >
           {operationError}
         </Text>

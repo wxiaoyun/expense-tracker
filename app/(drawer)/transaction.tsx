@@ -9,6 +9,7 @@ import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { CategoryPicker } from '@/components/ui/category-picker';
 import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -23,6 +24,8 @@ export default function TransactionDrawer() {
   const isEdit = !!id;
   const sourceTemplateId = isEdit ? undefined : routeTemplateId;
   const invalidateTransactionsAndTemplates = useInvalidateTransactionsAndTemplates();
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
 
   const amountRef = useRef<TextInput>(null);
   const descriptionRef = useRef<TextInput>(null);
@@ -283,7 +286,7 @@ export default function TransactionDrawer() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text>Loading</Text>
+        <Text style={{ color: colors.text }}>Loading</Text>
      </View>
     );
   }
@@ -333,7 +336,7 @@ export default function TransactionDrawer() {
           onChangeText={setAmount}
           placeholder="0.00"
           keyboardType="decimal-pad"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.placeholder}
           autoFocus={!isEdit && !sourceTemplateId}
         />
 
@@ -367,7 +370,7 @@ export default function TransactionDrawer() {
           value={description}
           onChangeText={setDescription}
           placeholder="What was this for?"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.placeholder}
         />
 
         <Text style={styles.label}>Category</Text>
@@ -401,7 +404,7 @@ export default function TransactionDrawer() {
               selectionFeedback();
               setVerified(value);
             }}
-            trackColor={{ false: '#767577', true: '#34C759' }}
+            trackColor={{ false: colors.fill, true: colors.success }}
           />
        </View>
 
@@ -413,17 +416,17 @@ export default function TransactionDrawer() {
           onChangeText={setNotes}
           placeholder="Add any notes..."
           multiline
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.placeholder}
         />
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.groupedBackground,
   },
   header: {
     flexDirection: 'row',
@@ -432,23 +435,23 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.separator,
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
   },
   cancelText: {
     fontSize: 17,
-    color: '#007AFF',
+    color: colors.primary,
   },
   saveText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.primary,
   },
   form: {
     flex: 1,
@@ -462,18 +465,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 16,
     marginBottom: 8,
-    color: '#6E6E73',
+    color: colors.secondaryText,
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.separator,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000',
+    color: colors.text,
   },
   typeRow: {
     flexDirection: 'row',
@@ -484,21 +487,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.separator,
     borderRadius: 10,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: colors.input,
   },
   typeButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   typeButtonText: {
-    color: '#3C3C43',
+    color: colors.text,
     fontWeight: '600',
   },
   typeButtonTextSelected: {
-    color: '#fff',
+    color: colors.onPrimary,
   },
   notesInput: {
     minHeight: 80,
@@ -514,12 +517,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   errorBanner: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: colors.destructiveBackground,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
-    color: '#D70015',
+    color: colors.destructive,
   },
 });

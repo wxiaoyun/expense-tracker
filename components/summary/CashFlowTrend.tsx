@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type CashFlowPeriod = {
   period: string;
@@ -20,6 +21,7 @@ const formatLabel = (period: string, granularity: 'day' | 'month') => {
 };
 
 export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
+  const colors = useThemeColors();
   const maxValue = useMemo(
     () => Math.max(1, ...data.flatMap((item) => [item.income, item.expense])),
     [data],
@@ -30,22 +32,22 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
 
   if (!data.some((item) => item.income > 0 || item.expense > 0)) {
     return (
-      <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>No cash-flow activity in selected range</Text>
+      <View style={[styles.emptyCard, { backgroundColor: colors.groupedBackground }]}>
+        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No cash-flow activity in selected range</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.groupedBackground }]}>
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.income]} />
-          <Text style={styles.legendText}>Income</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+          <Text style={[styles.legendText, { color: colors.secondaryText }]}>Income</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.expense]} />
-          <Text style={styles.legendText}>Spending</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
+          <Text style={[styles.legendText, { color: colors.secondaryText }]}>Spending</Text>
         </View>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -58,10 +60,10 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
             return (
               <View key={item.period} style={[styles.group, { width: groupWidth }]}>
                 <View style={styles.bars}>
-                  <View style={[styles.bar, styles.income, { height: incomeHeight }]} />
-                  <View style={[styles.bar, styles.expense, { height: expenseHeight }]} />
+                  <View style={[styles.bar, { backgroundColor: colors.success, height: incomeHeight }]} />
+                  <View style={[styles.bar, { backgroundColor: colors.destructive, height: expenseHeight }]} />
                 </View>
-                <Text numberOfLines={1} style={styles.label}>
+                <Text numberOfLines={1} style={[styles.label, { color: colors.secondaryText }]}>
                   {showLabel ? formatLabel(item.period, granularity) : ''}
                 </Text>
               </View>
@@ -75,19 +77,16 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#F2F2F7',
     borderRadius: 18,
     paddingTop: 14,
     paddingBottom: 10,
   },
   emptyCard: {
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
     borderRadius: 18,
     padding: 28,
   },
   emptyText: {
-    color: '#6E6E73',
     fontSize: 15,
   },
   legend: {
@@ -106,7 +105,6 @@ const styles = StyleSheet.create({
     width: 8,
   },
   legendText: {
-    color: '#6E6E73',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -135,14 +133,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 3,
     width: 9,
   },
-  income: {
-    backgroundColor: '#34C759',
-  },
-  expense: {
-    backgroundColor: '#FF3B30',
-  },
   label: {
-    color: '#6E6E73',
     fontSize: 10,
     marginTop: 6,
     textAlign: 'center',

@@ -1,9 +1,11 @@
 import React from 'react';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export default function TabsLayout() {
+  const colors = useThemeColors();
   return (
-    <NativeTabs tintColor="#007AFF">
+    <NativeTabs tintColor={colors.primary}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Expenses</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet', selected: 'list.bullet' }} />

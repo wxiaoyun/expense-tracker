@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import type { TemplateSuggestion, TransactionType } from '@/db/template-core';
 import { CategoryPicker } from '@/components/ui/category-picker';
 import { selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export const RECURRENCE_PRESETS = [
   { label: 'Daily', value: '0 0 * * *' },
@@ -99,6 +100,8 @@ export function TemplateEditorForm({
   onApplySuggestion,
   onRepeatChange,
 }: Props) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View collapsable={false} style={styles.container}>
       <View collapsable={false} style={styles.header}>
@@ -157,7 +160,7 @@ export function TemplateEditorForm({
                     onApplySuggestion(suggestion);
                   }}
                 >
-                  <Text>{suggestion.name}</Text>
+                  <Text style={{ color: colors.text }}>{suggestion.name}</Text>
                 </Pressable>
               ))}
             </View>
@@ -172,6 +175,7 @@ export function TemplateEditorForm({
           value={name}
           onChangeText={setName}
           placeholder="e.g. Morning coffee"
+          placeholderTextColor={colors.placeholder}
         />
 
         <Text style={styles.label}>Amount</Text>
@@ -182,6 +186,7 @@ export function TemplateEditorForm({
           value={amount}
           onChangeText={setAmount}
           placeholder="0.00"
+          placeholderTextColor={colors.placeholder}
           keyboardType="decimal-pad"
         />
 
@@ -216,6 +221,7 @@ export function TemplateEditorForm({
           value={description}
           onChangeText={setDescription}
           placeholder="What is this for?"
+          placeholderTextColor={colors.placeholder}
         />
 
         <Text style={styles.label}>Category</Text>
@@ -246,6 +252,7 @@ export function TemplateEditorForm({
           value={notes}
           onChangeText={setNotes}
           placeholder="Optional notes"
+          placeholderTextColor={colors.placeholder}
           multiline
         />
 
@@ -284,6 +291,7 @@ export function TemplateEditorForm({
               value={recurrenceValue}
               onChangeText={setRecurrenceValue}
               placeholder="0 0 1 * *"
+              placeholderTextColor={colors.placeholder}
               autoCapitalize="none"
             />
 
@@ -336,8 +344,8 @@ export function TemplateEditorForm({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.groupedBackground },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -345,26 +353,27 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.separator,
   },
-  title: { fontSize: 17, fontWeight: '600' },
-  cancelText: { color: '#007AFF', fontSize: 17 },
-  saveText: { color: '#007AFF', fontSize: 17, fontWeight: '600' },
+  title: { color: colors.text, fontSize: 17, fontWeight: '600' },
+  cancelText: { color: colors.primary, fontSize: 17 },
+  saveText: { color: colors.primary, fontSize: 17, fontWeight: '600' },
   formContent: { paddingHorizontal: 16, paddingBottom: 32, gap: 8 },
-  sectionLabel: { color: '#6E6E73', fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
+  sectionLabel: { color: colors.secondaryText, fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
   suggestionSection: { paddingTop: 16, gap: 8 },
-  label: { color: '#6E6E73', fontSize: 13, fontWeight: '500', paddingTop: 8, textTransform: 'uppercase' },
+  label: { color: colors.secondaryText, fontSize: 13, fontWeight: '500', paddingTop: 8, textTransform: 'uppercase' },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.separator,
     borderRadius: 12,
     borderCurve: 'continuous',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    color: colors.text,
   },
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
   typeRow: { flexDirection: 'row', gap: 8 },
@@ -372,33 +381,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.separator,
     borderRadius: 10,
     borderCurve: 'continuous',
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.input,
   },
-  typeButtonSelected: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  typeButtonText: { color: '#3C3C43', fontWeight: '600' },
-  typeButtonTextSelected: { color: '#FFFFFF' },
+  typeButtonSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  typeButtonText: { color: colors.text, fontWeight: '600' },
+  typeButtonTextSelected: { color: colors.onPrimary },
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.input,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.separator,
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  selectedChip: { borderColor: '#007AFF', backgroundColor: '#E5F1FF' },
-  selectedChipText: { color: '#007AFF' },
+  selectedChip: { borderColor: colors.primary, backgroundColor: colors.primaryBackground },
+  selectedChipText: { color: colors.primary },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8 },
   scheduleSection: { gap: 8 },
-  preview: { backgroundColor: '#FFFFFF', borderRadius: 12, borderCurve: 'continuous', padding: 12, gap: 4 },
-  previewTitle: { fontWeight: '600' },
-  previewText: { color: '#3C3C43', fontVariant: ['tabular-nums'] },
-  backfillText: { color: '#B25000', fontWeight: '600', paddingVertical: 8 },
-  errorBanner: { backgroundColor: '#FFE5E5', borderRadius: 10, borderCurve: 'continuous', padding: 12, gap: 8 },
-  errorText: { color: '#D70015' },
-  suggestionAction: { color: '#007AFF', fontWeight: '600' },
+  preview: { backgroundColor: colors.surface, borderRadius: 12, borderCurve: 'continuous', padding: 12, gap: 4 },
+  previewTitle: { color: colors.text, fontWeight: '600' },
+  previewText: { color: colors.secondaryText, fontVariant: ['tabular-nums'] },
+  backfillText: { color: colors.warning, fontWeight: '600', paddingVertical: 8 },
+  errorBanner: { backgroundColor: colors.destructiveBackground, borderRadius: 10, borderCurve: 'continuous', padding: 12, gap: 8 },
+  errorText: { color: colors.destructive },
+  suggestionAction: { color: colors.primary, fontWeight: '600' },
 });

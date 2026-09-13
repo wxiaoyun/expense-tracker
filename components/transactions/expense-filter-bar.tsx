@@ -4,6 +4,7 @@ import { CategoryFilterChips } from '@/components/ui/category-picker';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import type { DateRangePreset } from '@/hooks/useFilter';
 import { selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 type ExpenseFilterBarProps = {
   search?: string;
@@ -44,6 +45,8 @@ export function ExpenseFilterBar({
   onCustomStartChange,
   onCustomEndChange,
 }: ExpenseFilterBarProps) {
+  const { input, primary, onPrimary, secondaryText } = useThemeColors();
+
   return (
     <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 }}>
       {showSearch && (
@@ -57,7 +60,7 @@ export function ExpenseFilterBar({
           style={{
             height: 38,
             borderRadius: 12,
-            backgroundColor: '#F2F2F7',
+            backgroundColor: input,
             paddingHorizontal: 12,
             fontSize: 16,
           }}
@@ -78,12 +81,12 @@ export function ExpenseFilterBar({
               }}
               style={{
                 borderRadius: 15,
-                backgroundColor: selected ? '#007AFF' : '#F2F2F7',
+                backgroundColor: selected ? primary : input,
                 paddingHorizontal: 14,
                 paddingVertical: 7,
               }}
             >
-              <Text style={{ color: selected ? '#FFFFFF' : '#3C3C43', fontWeight: '600' }}>
+              <Text style={{ color: selected ? onPrimary : secondaryText, fontWeight: '600' }}>
                 {item.label}
               </Text>
             </Pressable>

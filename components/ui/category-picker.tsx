@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, type StyleProp, typ
 import Fuse from 'fuse.js';
 
 import { selectionFeedback } from '@/libs/haptics';
+import { useThemeColors } from '@/hooks/useThemeColor';
 
 export type CategoryOption = { name: string; icon: string; color: string };
 
@@ -25,6 +26,7 @@ export function CategoryPicker({
   placeholder = 'Search or type custom category',
 }: Props) {
   const [filter, setFilter] = useState('');
+  const { background, placeholder: placeholderColor, text } = useThemeColors();
 
   const fuse = useMemo(
     () => new Fuse(categories, { keys: ['name'], threshold: 0.3, ignoreLocation: true, shouldSort: true }),
@@ -48,7 +50,7 @@ export function CategoryPicker({
           setFilter(text);
         }}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={placeholderColor}
       />
       <ScrollView
         horizontal
@@ -65,14 +67,14 @@ export function CategoryPicker({
               accessibilityRole="button"
               accessibilityLabel={`Category: ${cat.name}`}
               accessibilityState={{ selected }}
-              style={[styles.chip, { borderColor: cat.color }, selected && { backgroundColor: `${cat.color}20` }]}
+              style={[styles.chip, { backgroundColor: background, borderColor: cat.color }, selected && { backgroundColor: `${cat.color}20` }]}
               onPress={() => {
                 selectionFeedback();
                 onChange(cat.name);
                 setFilter('');
               }}
             >
-              <Text style={[styles.chipText, selected && { color: cat.color }]}>{cat.name}</Text>
+              <Text style={[styles.chipText, { color: text }, selected && { color: cat.color }]}>{cat.name}</Text>
             </Pressable>
           );
         })}
@@ -93,6 +95,7 @@ type FilterProps = {
 /** Multi-select category filter: search input above fuzzy-filtered toggle chips. Selected chips always stay visible. */
 export function CategoryFilterChips({ categories, selected, onChange, searchable = true }: FilterProps) {
   const [filter, setFilter] = useState('');
+  const { input, primary, secondaryText, separator } = useThemeColors();
 
   const fuse = useMemo(
     () => new Fuse(categories, { threshold: 0.3, ignoreLocation: true, shouldSort: true }),
@@ -110,14 +113,17 @@ export function CategoryFilterChips({ categories, selected, onChange, searchable
 
   return (
     <>
-      {searchable && <TextInput
-        accessibilityLabel="Filter categories"
-        value={filter}
-        onChangeText={setFilter}
-        placeholder="Filter categories"
-        clearButtonMode="while-editing"
-        style={styles.filterInput}
-      />}
+      {searchable && (
+        <TextInput
+          accessibilityLabel="Filter categories"
+          value={filter}
+          onChangeText={setFilter}
+          placeholder="Filter categories"
+          clearButtonMode="while-editing"
+          placeholderTextColor={secondaryText}
+          style={[styles.filterInput, { backgroundColor: input }]}
+        />
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -132,13 +138,13 @@ export function CategoryFilterChips({ categories, selected, onChange, searchable
               accessibilityRole="button"
               accessibilityLabel={`Filter ${category}`}
               accessibilityState={{ selected: isSelected }}
-              style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+              style={[styles.filterChip, { borderColor: separator }, isSelected && { borderColor: primary }]}
               onPress={() => {
                 selectionFeedback();
                 onChange(isSelected ? selected.filter((item) => item !== category) : [...selected, category]);
               }}
             >
-              <Text style={isSelected ? styles.filterChipTextSelected : styles.filterChipText}>{category}</Text>
+              <Text style={{ color: isSelected ? primary : secondaryText }}>{category}</Text>
             </Pressable>
           );
         })}
@@ -151,17 +157,12 @@ const styles = StyleSheet.create({
   chipsScroll: { marginTop: 10, marginBottom: 12 },
   chipsContainer: { flexDirection: 'row', gap: 8 },
   chip: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   chipText: { fontSize: 14 },
-  filterInput: { height: 38, borderRadius: 12, backgroundColor: '#F2F2F7', paddingHorizontal: 12, fontSize: 16 },
-  filterChip: { borderRadius: 15, borderWidth: 1, borderColor: '#D1D1D6', paddingHorizontal: 12, paddingVertical: 6 },
-  filterChipSelected: { borderColor: '#007AFF' },
-  filterChipText: { color: '#3C3C43' },
-  filterChipTextSelected: { color: '#007AFF' },
+  filterInput: { height: 38, borderRadius: 12, paddingHorizontal: 12, fontSize: 16 },
+  filterChip: { borderRadius: 15, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
 });
