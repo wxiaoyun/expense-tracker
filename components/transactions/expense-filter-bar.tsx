@@ -45,7 +45,7 @@ export function ExpenseFilterBar({
   onCustomStartChange,
   onCustomEndChange,
 }: ExpenseFilterBarProps) {
-  const { input, primary, onPrimary, secondaryText } = useThemeColors();
+  const { input, onPrimary, placeholder, primary, secondaryText, text } = useThemeColors();
 
   return (
     <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 }}>
@@ -55,12 +55,14 @@ export function ExpenseFilterBar({
           value={search ?? ''}
           onChangeText={onSearchChange}
           placeholder="Search description or category"
+          placeholderTextColor={placeholder}
           returnKeyType="search"
           clearButtonMode="while-editing"
           style={{
             height: 38,
             borderRadius: 12,
             backgroundColor: input,
+            color: text,
             paddingHorizontal: 12,
             fontSize: 16,
           }}

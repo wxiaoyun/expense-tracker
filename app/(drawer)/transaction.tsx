@@ -426,7 +426,7 @@ export default function TransactionDrawer() {
 const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.groupedBackground,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -469,9 +469,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: colors.input,
-    borderWidth: 1,
-    borderColor: colors.separator,
+    backgroundColor: colors.fill,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -486,15 +484,12 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   typeButton: {
     flex: 1,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.separator,
     borderRadius: 10,
     paddingVertical: 10,
-    backgroundColor: colors.input,
+    backgroundColor: colors.fill,
   },
   typeButtonSelected: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   typeButtonText: {
     color: colors.text,

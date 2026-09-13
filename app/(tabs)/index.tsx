@@ -31,7 +31,7 @@ const logFailure = (stage: string, error: unknown, transactionId?: string) => {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { background, text } = useThemeColors();
+  const { groupedBackground: pageBackground, text } = useThemeColors();
 
   const [dateRange, setDateRange] = useDateRange();
   const [categories, setCategories] = useCategoryFilter();
@@ -234,7 +234,7 @@ export default function HomeScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: background,
+          backgroundColor: pageBackground,
           justifyContent: 'center',
           alignItems: 'center',
         }}
@@ -250,7 +250,7 @@ export default function HomeScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: background,
+          backgroundColor: pageBackground,
           justifyContent: 'center',
           alignItems: 'center',
           padding: 20,
@@ -265,7 +265,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: background, paddingTop: insets.top + 8 }}>
+    <View style={{ flex: 1, backgroundColor: pageBackground, paddingTop: insets.top + 8 }}>
       <ExpenseFilterBar
         search={search}
         preset={dateRange.preset}

@@ -25,7 +25,7 @@ describe('theme colors', () => {
 
     expect(useThemeColor('background')).toBe('#000000');
     expect(useThemeColors()).toMatchObject({
-      groupedBackground: '#1C1C1E',
+      groupedBackground: '#000000',
       surface: '#1C1C1E',
       text: '#FFFFFF',
       onPrimary: '#000000',

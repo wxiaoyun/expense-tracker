@@ -41,7 +41,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   refreshing,
   onRefresh,
 }) => {
-  const { background, text, secondaryText } = useThemeColors();
+  const { groupedBackground, text, secondaryText } = useThemeColors();
 
   const renderItem = React.useCallback(
     ({ item }: { item: Transaction }) => (
@@ -60,7 +60,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   if (transactions.length === 0) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: background }]}>
+      <View style={[styles.emptyContainer, { backgroundColor: groupedBackground }]}>
         <Text style={[styles.emptyTitle, { color: text }]}>No Expenses Yet</Text>
         <Text style={[styles.emptySubtitle, { color: secondaryText }]}>
           Tap the + button to add your first expense

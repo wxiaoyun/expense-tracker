@@ -95,7 +95,7 @@ export function TemplateRow({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.groupedBackground }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"

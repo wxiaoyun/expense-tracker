@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useThemeColor';
+import { formatCurrency } from '@/libs/intl';
 
 type CashFlowPeriod = {
   period: string;
@@ -27,19 +28,19 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
     [data],
   );
   const labelEvery = Math.max(1, Math.ceil(data.length / 6));
-  const groupWidth = data.length > 12 ? 38 : 56;
-  const chartWidth = Math.max(320, data.length * groupWidth);
+  const groupWidth = data.length > 12 ? 42 : 58;
+  const chartWidth = Math.max(328, data.length * groupWidth);
 
   if (!data.some((item) => item.income > 0 || item.expense > 0)) {
     return (
-      <View style={[styles.emptyCard, { backgroundColor: colors.groupedBackground }]}>
+      <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
         <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No cash-flow activity in selected range</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.groupedBackground }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
@@ -54,11 +55,16 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
         <View style={[styles.chart, { width: chartWidth }]}>
           {data.map((item, index) => {
             const showLabel = index % labelEvery === 0 || index === data.length - 1;
-            const incomeHeight = item.income === 0 ? 0 : Math.max(4, (item.income / maxValue) * 128);
-            const expenseHeight = item.expense === 0 ? 0 : Math.max(4, (item.expense / maxValue) * 128);
+            const incomeHeight = item.income === 0 ? 0 : Math.max(4, (item.income / maxValue) * 120);
+            const expenseHeight = item.expense === 0 ? 0 : Math.max(4, (item.expense / maxValue) * 120);
 
             return (
-              <View key={item.period} style={[styles.group, { width: groupWidth }]}>
+              <View
+                accessibilityLabel={`${formatLabel(item.period, granularity)}. Income ${formatCurrency(item.income)}. Spending ${formatCurrency(item.expense)}.`}
+                accessible
+                key={item.period}
+                style={[styles.group, { width: groupWidth }]}
+              >
                 <View style={styles.bars}>
                   <View style={[styles.bar, { backgroundColor: colors.success, height: incomeHeight }]} />
                   <View style={[styles.bar, { backgroundColor: colors.destructive, height: expenseHeight }]} />
@@ -77,9 +83,10 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
 
 const styles = StyleSheet.create({
   card: {
+    borderCurve: 'continuous',
     borderRadius: 18,
-    paddingTop: 14,
-    paddingBottom: 10,
+    paddingBottom: 12,
+    paddingTop: 16,
   },
   emptyCard: {
     alignItems: 'center',
@@ -92,7 +99,7 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: 'row',
     gap: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
   },
   legendItem: {
     alignItems: 'center',
@@ -114,8 +121,8 @@ const styles = StyleSheet.create({
   chart: {
     alignItems: 'flex-end',
     flexDirection: 'row',
-    height: 166,
-    marginTop: 8,
+    height: 158,
+    marginTop: 10,
   },
   group: {
     alignItems: 'center',
@@ -126,12 +133,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     flexDirection: 'row',
     gap: 3,
-    height: 132,
+    height: 124,
   },
   bar: {
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    width: 9,
+    borderRadius: 4,
+    width: 10,
   },
   label: {
     fontSize: 10,

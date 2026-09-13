@@ -28,7 +28,7 @@ const darkColors: ThemeColors = {
   text: '#FFFFFF',
   secondaryText: '#AEAEB2',
   background: '#000000',
-  groupedBackground: '#1C1C1E',
+  groupedBackground: '#000000',
   surface: '#1C1C1E',
   separator: '#68686D',
   fill: '#2C2C2E',

@@ -175,7 +175,7 @@ export default function TemplatesScreen() {
   const shouldRenderTemplateList = !templateQuery.error || templateQuery.data !== undefined;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top + 8 }}>
+    <View style={{ flex: 1, backgroundColor: colors.groupedBackground, paddingTop: insets.top + 8 }}>
       <TemplateFilterBar
         search={search}
         type={type}

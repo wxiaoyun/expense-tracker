@@ -429,7 +429,7 @@ export default function TemplateEditDrawer() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.groupedBackground }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         <Text style={{ color: colors.text }}>Loading</Text>
       </View>
     );

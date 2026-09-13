@@ -68,7 +68,7 @@ export function TemplateFilterBar({
               }}
               style={{
                 borderRadius: 15,
-                backgroundColor: selected ? colors.primary : colors.fill,
+                backgroundColor: selected ? colors.primary : colors.input,
                 paddingHorizontal: 14,
                 paddingVertical: 7,
               }}

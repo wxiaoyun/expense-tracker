@@ -1,26 +1,14 @@
 import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
 import { CashFlowTrend } from '@/components/summary/CashFlowTrend';
-import { CategoryDonut, type CategorySlice } from '@/components/summary/CategoryDonut';
 import { computeDateRange, endOfDay, useDateRange, type DateRangePreset } from '@/hooks/useFilter';
 import { useTransactionSummary } from '@/hooks/useTransactionsQuery';
 import { formatCurrency } from '@/libs/intl';
 import { useThemeColors } from '@/hooks/useThemeColor';
+import { customCategoryColor } from '@/libs/category-color';
 
-const CATEGORY_COLORS = [
-  '#007AFF', '#AF52DE', '#FF9500', '#FF2D55',
-  '#34C759', '#5856D6', '#00C7BE', '#A2845E',
-];
-
-const colorForCategory = (category: string) => {
-  let hash = 0;
-  for (const character of category) {
-    hash = (hash * 31 + character.charCodeAt(0)) | 0;
-  }
-  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
-};
+type CategorySlice = { value: number; text: string; color: string };
 
 const getTrendGranularity = (preset: DateRangePreset, start: Date, end: Date) => {
   if (preset === 'weekly' || preset === 'monthly') return 'day' as const;
@@ -28,14 +16,47 @@ const getTrendGranularity = (preset: DateRangePreset, start: Date, end: Date) =>
   return rangeDays <= 90 ? 'day' as const : 'month' as const;
 };
 
-function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
+function OverviewCard({ income, spending, net }: { income: number; spending: number; net: number }) {
   const colors = useThemeColors();
   return (
-    <View style={[styles.metricCard, { backgroundColor: colors.groupedBackground }]}>
-      <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>{label}</Text>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.metricValue, { color }]}>
-        {value}
+    <View style={[styles.overviewCard, { backgroundColor: colors.primary }]}>
+      <Text style={styles.overviewLabel}>Net change</Text>
+      <Text
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        numberOfLines={1}
+        selectable
+        style={styles.overviewValue}
+      >
+        {formatCurrency(net)}
       </Text>
+      <View style={styles.overviewDivider} />
+      <View style={styles.overviewDetails}>
+        <View style={styles.overviewDetail}>
+          <Text style={styles.overviewDetailLabel}>Income</Text>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            selectable
+            style={styles.overviewDetailValue}
+          >
+            {formatCurrency(income)}
+          </Text>
+        </View>
+        <View style={styles.overviewDetail}>
+          <Text style={styles.overviewDetailLabel}>Spending</Text>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            selectable
+            style={styles.overviewDetailValue}
+          >
+            {formatCurrency(Math.abs(spending))}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -43,7 +64,7 @@ function MetricCard({ label, value, color }: { label: string; value: string; col
 function EmptyCard({ message }: { message: string }) {
   const colors = useThemeColors();
   return (
-    <View style={[styles.emptyCard, { backgroundColor: colors.groupedBackground }]}>
+    <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
       <Text style={[styles.emptyText, { color: colors.secondaryText }]}>{message}</Text>
     </View>
   );
@@ -51,23 +72,21 @@ function EmptyCard({ message }: { message: string }) {
 
 function CategoryBreakdown({
   data,
-  kind,
+  total,
 }: {
   data: CategorySlice[];
-  kind: 'income' | 'expense';
+  total: number;
 }) {
   const colors = useThemeColors();
-  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   if (!data.length) {
-    return <EmptyCard message={`No ${kind === 'income' ? 'income' : 'spending'} categories in selected range`} />;
+    return <EmptyCard message="No spending in selected range" />;
   }
 
   return (
-    <View style={[styles.breakdownCard, { backgroundColor: colors.groupedBackground }]}>
+    <View style={[styles.breakdownCard, { backgroundColor: colors.surface }]}>
       {data.map((item) => {
         const percentage = total === 0 ? 0 : (item.value / total) * 100;
-        const amount = kind === 'expense' ? -item.value : item.value;
         return (
           <View key={item.text} style={styles.categoryRow}>
             <View style={styles.categoryHeader}>
@@ -75,7 +94,20 @@ function CategoryBreakdown({
                 <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
                 <Text numberOfLines={1} style={[styles.categoryName, { color: colors.text }]}>{item.text}</Text>
               </View>
-              <Text style={[styles.categoryAmount, { color: colors.secondaryText }]}>{formatCurrency(amount)}</Text>
+              <View style={styles.categoryValueGroup}>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  numberOfLines={1}
+                  selectable
+                  style={[styles.categoryAmount, { color: colors.text }]}
+                >
+                  {formatCurrency(item.value)}
+                </Text>
+                <Text style={[styles.categoryPercent, { color: colors.secondaryText }]}>
+                  {percentage.toFixed(1)}%
+                </Text>
+              </View>
             </View>
             <View style={[styles.progressTrack, { backgroundColor: colors.chartTrack }]}>
               <View style={[styles.progressFill, { backgroundColor: item.color, width: `${percentage}%` }]} />
@@ -89,7 +121,6 @@ function CategoryBreakdown({
 
 export default function SummaryScreen() {
   const colors = useThemeColors();
-  const insets = useSafeAreaInsets();
   const [dateRange, setDateRange] = useDateRange();
   const granularity = useMemo(
     () => getTrendGranularity(dateRange.preset, dateRange.start, dateRange.end),
@@ -156,28 +187,18 @@ export default function SummaryScreen() {
       .map((category) => ({
         value: Math.abs(category.expense),
         text: category.category,
-        color: colorForCategory(category.category),
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [data?.byCategory]);
-
-  const incomeCategories = useMemo(() => {
-    return (data?.byCategory ?? [])
-      .filter((category) => category.income > 0)
-      .map((category) => ({
-        value: category.income,
-        text: category.category,
-        color: colorForCategory(category.category),
+        color: customCategoryColor(category.category),
       }))
       .sort((a, b) => b.value - a.value);
   }, [data?.byCategory]);
 
   const summary = data?.summary;
   const netBalance = summary?.balance ?? 0;
+  const spendingTotal = Math.abs(summary?.expense ?? 0);
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+      <View style={[styles.centered, { backgroundColor: colors.groupedBackground }]}>
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
@@ -185,7 +206,7 @@ export default function SummaryScreen() {
 
   if (error) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+      <View style={[styles.centered, { backgroundColor: colors.groupedBackground }]}>
         <Text style={[styles.errorText, { color: colors.destructive }]}>Error loading summary</Text>
       </View>
     );
@@ -193,8 +214,9 @@ export default function SummaryScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      style={[styles.container, { backgroundColor: colors.groupedBackground }]}
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
     >
       <View style={styles.pageHeader}>
         <Text style={[styles.pageTitle, { color: colors.text }]}>Summary</Text>
@@ -210,31 +232,30 @@ export default function SummaryScreen() {
         onCustomEndChange={handleCustomEndChange}
       />
 
-      <View style={styles.metricRow}>
-        <MetricCard label="Income" value={formatCurrency(summary?.income ?? 0)} color={colors.success} />
-        <MetricCard label="Spending" value={formatCurrency(summary?.expense ?? 0)} color={colors.destructive} />
-        <MetricCard label="Net" value={formatCurrency(netBalance)} color={netBalance < 0 ? colors.destructive : colors.primary} />
+      <View style={styles.overviewSection}>
+        <OverviewCard
+          income={summary?.income ?? 0}
+          spending={summary?.expense ?? 0}
+          net={netBalance}
+        />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Spending by Category</Text>
-        {spendingCategories.length > 0 ? (
-          <CategoryDonut data={spendingCategories} />
-        ) : (
-          <EmptyCard message="No spending in selected range" />
-        )}
-        <View style={styles.breakdownSpacing}>
-          <CategoryBreakdown data={spendingCategories} kind="expense" />
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Top spending</Text>
+          {spendingCategories.length > 5 ? (
+            <Text style={[styles.sectionCaption, { color: colors.secondaryText }]}>
+              5 of {spendingCategories.length} categories
+            </Text>
+          ) : null}
         </View>
+        <CategoryBreakdown data={spendingCategories.slice(0, 5)} total={spendingTotal} />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Income by Category</Text>
-        <CategoryBreakdown data={incomeCategories} kind="income" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Cash Flow Trend</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Cash flow</Text>
+        </View>
         <CashFlowTrend data={data?.byPeriod ?? []} granularity={granularity} />
       </View>
     </ScrollView>
@@ -265,27 +286,54 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  metricRow: {
-    flexDirection: 'row',
-    gap: 8,
+  overviewSection: {
     marginHorizontal: 16,
     marginTop: 2,
     marginBottom: 26,
   },
-  metricCard: {
-    borderRadius: 16,
+  overviewCard: {
+    borderCurve: 'continuous',
+    borderRadius: 24,
+    boxShadow: '0 8px 24px rgba(0, 98, 204, 0.2)',
+    padding: 20,
+  },
+  overviewLabel: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  overviewValue: {
+    color: '#FFFFFF',
+    fontSize: 36,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+    letterSpacing: -1,
+    marginTop: 4,
+  },
+  overviewDivider: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 18,
+  },
+  overviewDetails: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  overviewDetail: {
     flex: 1,
     minWidth: 0,
-    padding: 12,
   },
-  metricLabel: {
+  overviewDetailLabel: {
+    color: 'rgba(255,255,255,0.72)',
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 5,
   },
-  metricValue: {
-    fontSize: 19,
+  overviewDetailValue: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontVariant: ['tabular-nums'],
     fontWeight: '700',
+    marginTop: 3,
   },
   section: {
     marginBottom: 26,
@@ -294,29 +342,36 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  sectionHeader: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
-  breakdownSpacing: {
-    marginTop: 10,
+  sectionCaption: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   breakdownCard: {
+    borderCurve: 'continuous',
     borderRadius: 18,
-    padding: 14,
+    gap: 18,
+    padding: 16,
   },
   categoryRow: {
-    marginBottom: 14,
+    gap: 8,
   },
   categoryHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 7,
   },
   categoryNameGroup: {
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
-    marginRight: 12,
+    marginRight: 16,
   },
   categoryDot: {
     borderRadius: 5,
@@ -330,13 +385,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   categoryAmount: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+    maxWidth: 132,
+  },
+  categoryValueGroup: {
+    alignItems: 'flex-end',
+  },
+  categoryPercent: {
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
+    marginTop: 1,
   },
   progressTrack: {
-    borderRadius: 3,
-    height: 6,
+    borderRadius: 2,
+    height: 4,
     overflow: 'hidden',
+    opacity: 0.85,
   },
   progressFill: {
     borderRadius: 3,

@@ -26,7 +26,7 @@ export function CategoryPicker({
   placeholder = 'Search or type custom category',
 }: Props) {
   const [filter, setFilter] = useState('');
-  const { background, placeholder: placeholderColor, text } = useThemeColors();
+  const { fill, placeholder: placeholderColor, text } = useThemeColors();
 
   const fuse = useMemo(
     () => new Fuse(categories, { keys: ['name'], threshold: 0.3, ignoreLocation: true, shouldSort: true }),
@@ -67,7 +67,7 @@ export function CategoryPicker({
               accessibilityRole="button"
               accessibilityLabel={`Category: ${cat.name}`}
               accessibilityState={{ selected }}
-              style={[styles.chip, { backgroundColor: background, borderColor: cat.color }, selected && { backgroundColor: `${cat.color}20` }]}
+              style={[styles.chip, { backgroundColor: fill, borderColor: cat.color }, selected && { backgroundColor: `${cat.color}20` }]}
               onPress={() => {
                 selectionFeedback();
                 onChange(cat.name);
