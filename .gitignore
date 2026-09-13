@@ -1,16 +1,16 @@
-node_modules/
-.expo/
-ios/
-android/
+node_modules/**/*
+.expo/**/*
+ios/**/*
+android/**/*
 
-build/
-tmp/
+build/**/*
+tmp/**/*
 test/data/**/*
 
 **/.DS_Store
 
 .agents/
 .claude/
-docs/superpowers/
-.superpowers/
-.artifacts/
+docs/superpowers/**/*
+.superpowers/**/*
+.artifacts/**/*
