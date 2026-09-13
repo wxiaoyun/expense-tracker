@@ -1,9 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, type StyleProp, type TextStyle } from 'react-native';
-import Fuse from 'fuse.js';
+import React, { useMemo, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  type StyleProp,
+  type TextStyle,
+} from "react-native";
+import Fuse from "fuse.js";
 
-import { selectionFeedback } from '@/libs/haptics';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import { selectionFeedback } from "@/libs/haptics";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 export type CategoryOption = { name: string; icon: string; color: string };
 
@@ -23,13 +31,19 @@ export function CategoryPicker({
   onChange,
   inputLabel,
   inputStyle,
-  placeholder = 'Search or type custom category',
+  placeholder = "Search or type custom category",
 }: Props) {
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const { fill, placeholder: placeholderColor, text } = useThemeColors();
 
   const fuse = useMemo(
-    () => new Fuse(categories, { keys: ['name'], threshold: 0.3, ignoreLocation: true, shouldSort: true }),
+    () =>
+      new Fuse(categories, {
+        keys: ["name"],
+        threshold: 0.3,
+        ignoreLocation: true,
+        shouldSort: true,
+      }),
     [categories],
   );
 
@@ -67,14 +81,26 @@ export function CategoryPicker({
               accessibilityRole="button"
               accessibilityLabel={`Category: ${cat.name}`}
               accessibilityState={{ selected }}
-              style={[styles.chip, { backgroundColor: fill, borderColor: cat.color }, selected && { backgroundColor: `${cat.color}20` }]}
+              style={[
+                styles.chip,
+                { backgroundColor: fill, borderColor: cat.color },
+                selected && { backgroundColor: `${cat.color}20` },
+              ]}
               onPress={() => {
                 selectionFeedback();
                 onChange(cat.name);
-                setFilter('');
+                setFilter("");
               }}
             >
-              <Text style={[styles.chipText, { color: text }, selected && { color: cat.color }]}>{cat.name}</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: text },
+                  selected && { color: cat.color },
+                ]}
+              >
+                {cat.name}
+              </Text>
             </Pressable>
           );
         })}
@@ -82,7 +108,6 @@ export function CategoryPicker({
     </>
   );
 }
-
 
 type FilterProps = {
   categories: string[];
@@ -93,12 +118,22 @@ type FilterProps = {
 };
 
 /** Multi-select category filter: search input above fuzzy-filtered toggle chips. Selected chips always stay visible. */
-export function CategoryFilterChips({ categories, selected, onChange, searchable = true }: FilterProps) {
-  const [filter, setFilter] = useState('');
+export function CategoryFilterChips({
+  categories,
+  selected,
+  onChange,
+  searchable = true,
+}: FilterProps) {
+  const [filter, setFilter] = useState("");
   const { input, primary, secondaryText, separator } = useThemeColors();
 
   const fuse = useMemo(
-    () => new Fuse(categories, { threshold: 0.3, ignoreLocation: true, shouldSort: true }),
+    () =>
+      new Fuse(categories, {
+        threshold: 0.3,
+        ignoreLocation: true,
+        shouldSort: true,
+      }),
     [categories],
   );
 
@@ -138,13 +173,23 @@ export function CategoryFilterChips({ categories, selected, onChange, searchable
               accessibilityRole="button"
               accessibilityLabel={`Filter ${category}`}
               accessibilityState={{ selected: isSelected }}
-              style={[styles.filterChip, { borderColor: separator }, isSelected && { borderColor: primary }]}
+              style={[
+                styles.filterChip,
+                { borderColor: separator },
+                isSelected && { borderColor: primary },
+              ]}
               onPress={() => {
                 selectionFeedback();
-                onChange(isSelected ? selected.filter((item) => item !== category) : [...selected, category]);
+                onChange(
+                  isSelected
+                    ? selected.filter((item) => item !== category)
+                    : [...selected, category],
+                );
               }}
             >
-              <Text style={{ color: isSelected ? primary : secondaryText }}>{category}</Text>
+              <Text style={{ color: isSelected ? primary : secondaryText }}>
+                {category}
+              </Text>
             </Pressable>
           );
         })}
@@ -155,7 +200,7 @@ export function CategoryFilterChips({ categories, selected, onChange, searchable
 
 const styles = StyleSheet.create({
   chipsScroll: { marginTop: 10, marginBottom: 12 },
-  chipsContainer: { flexDirection: 'row', gap: 8 },
+  chipsContainer: { flexDirection: "row", gap: 8 },
   chip: {
     borderWidth: 1,
     borderRadius: 18,
@@ -163,6 +208,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   chipText: { fontSize: 14 },
-  filterInput: { height: 38, borderRadius: 12, paddingHorizontal: 12, fontSize: 16 },
-  filterChip: { borderRadius: 15, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6 },
+  filterInput: {
+    height: 38,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  filterChip: {
+    borderRadius: 15,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
 });

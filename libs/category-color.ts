@@ -4,18 +4,18 @@
  * custom category always renders with the same color across screens.
  */
 export const CUSTOM_CATEGORY_PALETTE = [
-  '#FF6B6B',
-  '#F06595',
-  '#CC5DE8',
-  '#845EF7',
-  '#5C7CFA',
-  '#339AF0',
-  '#22B8CF',
-  '#20C997',
-  '#51CF66',
-  '#94D82D',
-  '#FCC419',
-  '#FF922B',
+  "#FF6B6B",
+  "#F06595",
+  "#CC5DE8",
+  "#845EF7",
+  "#5C7CFA",
+  "#339AF0",
+  "#22B8CF",
+  "#20C997",
+  "#51CF66",
+  "#94D82D",
+  "#FCC419",
+  "#FF922B",
 ] as const;
 
 /** FNV-1a 32-bit hash. Stable across platforms and JS engines. */
@@ -30,4 +30,6 @@ export const hashCategoryName = (name: string): number => {
 };
 
 export const customCategoryColor = (name: string): string =>
-  CUSTOM_CATEGORY_PALETTE[hashCategoryName(name) % CUSTOM_CATEGORY_PALETTE.length];
+  CUSTOM_CATEGORY_PALETTE[
+    hashCategoryName(name) % CUSTOM_CATEGORY_PALETTE.length
+  ];

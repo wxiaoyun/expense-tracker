@@ -1,45 +1,57 @@
-import type * as SQLite from 'expo-sqlite';
+import type * as SQLite from "expo-sqlite";
 import {
   DATABASE_SCHEMA_DEFINITION_SQL,
   TRANSACTION_TEMPLATE_CONSTRAINTS_SQL,
-} from './schema-sql';
+} from "./schema-sql";
 import {
   mapRecurringRowsToTemplates,
   type RecurringRowForTemplateMigration,
-} from './template-migration-core';
+} from "./template-migration-core";
 
 export const LATEST_SCHEMA_VERSION = 4;
 
 const V2_REQUIRED_COLUMNS: Record<string, string[]> = {
-  categories: ['id', 'name', 'icon', 'color', 'is_preset', 'sort_order', 'created_at'],
-  settings: ['key', 'value'],
+  categories: [
+    "id",
+    "name",
+    "icon",
+    "color",
+    "is_preset",
+    "sort_order",
+    "created_at",
+  ],
+  settings: ["key", "value"],
   transactions: [
-    'id',
-    'amount',
-    'transaction_date',
-    'description',
-    'category',
-    'recurring_transaction_id',
-    'verified',
-    'notes',
-    'created_at',
-    'updated_at',
+    "id",
+    "amount",
+    "transaction_date",
+    "description",
+    "category",
+    "recurring_transaction_id",
+    "verified",
+    "notes",
+    "created_at",
+    "updated_at",
   ],
   recurring_transactions: [
-    'id',
-    'amount',
-    'description',
-    'category',
-    'start_date',
-    'last_charged',
-    'recurrence_value',
-    'created_at',
-    'updated_at',
+    "id",
+    "amount",
+    "description",
+    "category",
+    "start_date",
+    "last_charged",
+    "recurrence_value",
+    "created_at",
+    "updated_at",
   ],
 };
 
-const logInfo = (stage: string, fromVersion: number, details: Record<string, unknown> = {}) => {
-  console.info('[db.schema_migration] migration stage', {
+const logInfo = (
+  stage: string,
+  fromVersion: number,
+  details: Record<string, unknown> = {},
+) => {
+  console.info("[db.schema_migration] migration stage", {
     stage,
     from_version: fromVersion,
     to_version: LATEST_SCHEMA_VERSION,
@@ -60,14 +72,20 @@ const migrateV2ToV3 = (
     logInfo(stage, fromVersion, details);
   };
 
-  enterStage('begin_v2_to_v3');
+  enterStage("begin_v2_to_v3");
   sqlite.withTransactionSync(() => {
-    enterStage('read_source_counts');
-    const sourceTransactionCount = count(sqlite, 'SELECT COUNT(*) AS count FROM transactions');
-    const sourceTemplateCount = count(sqlite, 'SELECT COUNT(*) AS count FROM recurring_transactions');
+    enterStage("read_source_counts");
+    const sourceTransactionCount = count(
+      sqlite,
+      "SELECT COUNT(*) AS count FROM transactions",
+    );
+    const sourceTemplateCount = count(
+      sqlite,
+      "SELECT COUNT(*) AS count FROM recurring_transactions",
+    );
     const sourceLinkedCount = count(
       sqlite,
-      'SELECT COUNT(*) AS count FROM transactions WHERE recurring_transaction_id IS NOT NULL',
+      "SELECT COUNT(*) AS count FROM transactions WHERE recurring_transaction_id IS NOT NULL",
     );
     const sourceRelationshipCount = count(
       sqlite,
@@ -77,7 +95,7 @@ const migrateV2ToV3 = (
            ON transactions.recurring_transaction_id = recurring_transactions.id`,
     );
 
-    enterStage('read_recurring_rows', { count: sourceTemplateCount });
+    enterStage("read_recurring_rows", { count: sourceTemplateCount });
     const recurringRows = sqlite.getAllSync<RecurringRowForTemplateMigration>(`
       SELECT
         id,
@@ -94,7 +112,7 @@ const migrateV2ToV3 = (
     `);
     const templates = mapRecurringRowsToTemplates(recurringRows);
 
-    enterStage('create_template_table');
+    enterStage("create_template_table");
     sqlite.execSync(`
       CREATE TABLE transaction_templates (
         id TEXT PRIMARY KEY NOT NULL,
@@ -117,7 +135,7 @@ const migrateV2ToV3 = (
       );
     `);
 
-    enterStage('insert_templates', { count: templates.length });
+    enterStage("insert_templates", { count: templates.length });
     for (const template of templates) {
       sqlite.runSync(
         `INSERT INTO transaction_templates (
@@ -144,7 +162,7 @@ const migrateV2ToV3 = (
       );
     }
 
-    enterStage('create_transactions_v3');
+    enterStage("create_transactions_v3");
     sqlite.execSync(`
       CREATE TABLE transactions_v3 (
         id TEXT PRIMARY KEY NOT NULL,
@@ -161,7 +179,7 @@ const migrateV2ToV3 = (
       );
     `);
 
-    enterStage('copy_transactions', { count: sourceTransactionCount });
+    enterStage("copy_transactions", { count: sourceTransactionCount });
     sqlite.execSync(`
       INSERT INTO transactions_v3 (
         id, amount, transaction_date, description, category, template_id,
@@ -174,12 +192,18 @@ const migrateV2ToV3 = (
       FROM transactions;
     `);
 
-    enterStage('verify_migration');
-    const migratedTransactionCount = count(sqlite, 'SELECT COUNT(*) AS count FROM transactions_v3');
-    const migratedTemplateCount = count(sqlite, 'SELECT COUNT(*) AS count FROM transaction_templates');
+    enterStage("verify_migration");
+    const migratedTransactionCount = count(
+      sqlite,
+      "SELECT COUNT(*) AS count FROM transactions_v3",
+    );
+    const migratedTemplateCount = count(
+      sqlite,
+      "SELECT COUNT(*) AS count FROM transaction_templates",
+    );
     const migratedLinkedCount = count(
       sqlite,
-      'SELECT COUNT(*) AS count FROM transactions_v3 WHERE template_id IS NOT NULL',
+      "SELECT COUNT(*) AS count FROM transactions_v3 WHERE template_id IS NOT NULL",
     );
     const migratedRelationshipCount = count(
       sqlite,
@@ -203,27 +227,29 @@ const migrateV2ToV3 = (
       migratedRelationshipCount !== sourceRelationshipCount ||
       mismatchedLinks !== 0
     ) {
-      throw new Error(`Schema migration verification failed: ${JSON.stringify({
-        sourceTransactionCount,
-        migratedTransactionCount,
-        sourceTemplateCount,
-        migratedTemplateCount,
-        sourceLinkedCount,
-        migratedLinkedCount,
-        sourceRelationshipCount,
-        migratedRelationshipCount,
-        mismatchedLinks,
-      })}`);
+      throw new Error(
+        `Schema migration verification failed: ${JSON.stringify({
+          sourceTransactionCount,
+          migratedTransactionCount,
+          sourceTemplateCount,
+          migratedTemplateCount,
+          sourceLinkedCount,
+          migratedLinkedCount,
+          sourceRelationshipCount,
+          migratedRelationshipCount,
+          mismatchedLinks,
+        })}`,
+      );
     }
 
-    enterStage('replace_v2_tables');
+    enterStage("replace_v2_tables");
     sqlite.execSync(`
       DROP TABLE transactions;
       DROP TABLE recurring_transactions;
       ALTER TABLE transactions_v3 RENAME TO transactions;
     `);
 
-    enterStage('create_v3_indexes');
+    enterStage("create_v3_indexes");
     sqlite.execSync(`
       CREATE INDEX IF NOT EXISTS idx_categories_name ON categories (name);
       CREATE UNIQUE INDEX idx_templates_active_name
@@ -241,7 +267,7 @@ const migrateV2ToV3 = (
 };
 
 const migrateV3ToV4 = (sqlite: SQLite.SQLiteDatabase, fromVersion: number) => {
-  logInfo('migrate_v3_to_v4', fromVersion);
+  logInfo("migrate_v3_to_v4", fromVersion);
   sqlite.withTransactionSync(() => {
     sqlite.execSync(`
       ALTER TABLE transactions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
@@ -253,43 +279,51 @@ const migrateV3ToV4 = (sqlite: SQLite.SQLiteDatabase, fromVersion: number) => {
 
 export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
   let fromVersion = -1;
-  let stage = 'inspect_schema_version';
+  let stage = "inspect_schema_version";
 
   try {
     logInfo(stage, fromVersion);
-    fromVersion = Number(sqlite.getFirstSync<{ user_version: number }>('PRAGMA user_version')?.user_version ?? 0);
+    fromVersion = Number(
+      sqlite.getFirstSync<{ user_version: number }>("PRAGMA user_version")
+        ?.user_version ?? 0,
+    );
 
     if (fromVersion === LATEST_SCHEMA_VERSION) {
-      logInfo('schema_current', fromVersion);
+      logInfo("schema_current", fromVersion);
       return;
     }
 
-    if (fromVersion > LATEST_SCHEMA_VERSION || ![0, 2, 3].includes(fromVersion)) {
+    if (
+      fromVersion > LATEST_SCHEMA_VERSION ||
+      ![0, 2, 3].includes(fromVersion)
+    ) {
       throw new Error(`Unsupported database schema version: ${fromVersion}`);
     }
 
     if (fromVersion === 3) {
-      stage = 'migrate_v3_to_v4';
+      stage = "migrate_v3_to_v4";
       migrateV3ToV4(sqlite, fromVersion);
       return;
     }
 
     let existingTables: Set<string> | null = null;
     if (fromVersion === 0) {
-      stage = 'inspect_existing_tables';
+      stage = "inspect_existing_tables";
       logInfo(stage, fromVersion);
       existingTables = new Set(
-        sqlite.getAllSync<{ name: string }>(
-          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-        ).map(({ name }) => name),
+        sqlite
+          .getAllSync<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+          )
+          .map(({ name }) => name),
       );
 
       if (existingTables.size === 0) {
-        stage = 'enable_wal';
+        stage = "enable_wal";
         logInfo(stage, fromVersion);
-        sqlite.execSync('PRAGMA journal_mode = WAL;');
+        sqlite.execSync("PRAGMA journal_mode = WAL;");
 
-        stage = 'create_latest_schema';
+        stage = "create_latest_schema";
         logInfo(stage, fromVersion);
         sqlite.withTransactionSync(() => {
           sqlite.execSync(DATABASE_SCHEMA_DEFINITION_SQL);
@@ -300,14 +334,18 @@ export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
       fromVersion = 2;
     }
 
-    stage = 'verify_v2_schema';
+    stage = "verify_v2_schema";
     logInfo(stage, fromVersion);
     existingTables ??= new Set(
-      sqlite.getAllSync<{ name: string }>(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-      ).map(({ name }) => name),
+      sqlite
+        .getAllSync<{ name: string }>(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .map(({ name }) => name),
     );
-    for (const [table, expectedColumns] of Object.entries(V2_REQUIRED_COLUMNS)) {
+    for (const [table, expectedColumns] of Object.entries(
+      V2_REQUIRED_COLUMNS,
+    )) {
       if (!existingTables.has(table)) {
         throw new Error(`V2 database is missing required table: ${table}`);
       }
@@ -318,23 +356,25 @@ export const runSchemaMigrations = (sqlite: SQLite.SQLiteDatabase): void => {
         actualColumns.length !== expectedColumns.length ||
         actualColumns.some((column, index) => column !== expectedColumns[index])
       ) {
-        throw new Error(`V2 database has unexpected columns for table: ${table}`);
+        throw new Error(
+          `V2 database has unexpected columns for table: ${table}`,
+        );
       }
     }
 
-    stage = 'enable_wal';
+    stage = "enable_wal";
     logInfo(stage, fromVersion);
-    sqlite.execSync('PRAGMA journal_mode = WAL;');
+    sqlite.execSync("PRAGMA journal_mode = WAL;");
 
-    stage = 'migrate_v2_to_v3';
+    stage = "migrate_v2_to_v3";
     migrateV2ToV3(sqlite, fromVersion, (migrationStage) => {
       stage = migrationStage;
     });
 
-    stage = 'migrate_v3_to_v4';
+    stage = "migrate_v3_to_v4";
     migrateV3ToV4(sqlite, fromVersion);
   } catch (error) {
-    console.error('[db.schema_migration] migration failed', {
+    console.error("[db.schema_migration] migration failed", {
       stage,
       from_version: fromVersion,
       to_version: LATEST_SCHEMA_VERSION,

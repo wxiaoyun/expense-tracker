@@ -1,24 +1,24 @@
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import React from "react";
+import { fireEvent, render } from "@testing-library/react-native";
 
-import { AddTemplateButton } from '../add-template-button';
+import { AddTemplateButton } from "../add-template-button";
 
 const mockPush = jest.fn();
 
-jest.mock('sonner-native', () => ({ toast: { error: jest.fn() } }));
+jest.mock("sonner-native", () => ({ toast: { error: jest.fn() } }));
 
-jest.mock('expo-router', () => ({
+jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-describe('AddTemplateButton', () => {
+describe("AddTemplateButton", () => {
   beforeEach(() => mockPush.mockClear());
 
-  it('opens a new template editor when pressed', async () => {
+  it("opens a new template editor when pressed", async () => {
     const screen = await render(<AddTemplateButton />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Add template' }));
+    await fireEvent.press(screen.getByRole("button", { name: "Add template" }));
 
-    expect(mockPush).toHaveBeenCalledWith('/(drawer)/template-edit');
+    expect(mockPush).toHaveBeenCalledWith("/(drawer)/template-edit");
   });
 });

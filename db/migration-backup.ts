@@ -6,7 +6,7 @@ export const backupLegacyDatabase = async (
   backupDirectory: string,
   now = new Date(),
 ): Promise<string> => {
-  const timestamp = now.toISOString().replace(/[:.]/g, '-');
+  const timestamp = now.toISOString().replace(/[:.]/g, "-");
   const backupPath = `${backupDirectory}/legacy_backup_${timestamp}.db`;
   await copyAsync({ from: legacyPath, to: backupPath });
   return backupPath;

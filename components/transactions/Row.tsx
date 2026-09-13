@@ -1,12 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { format } from 'date-fns';
-import Feather from '@expo/vector-icons/Feather';
+import React from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { format } from "date-fns";
+import Feather from "@expo/vector-icons/Feather";
 
-import { Transaction } from '@/db/schema';
-import { useThemeColors } from '@/hooks/useThemeColor';
-import { formatCurrency } from '@/libs/intl';
-import { TransactionMenu } from './transaction-menu';
+import { Transaction } from "@/db/schema";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { formatCurrency } from "@/libs/intl";
+import { TransactionMenu } from "./transaction-menu";
 
 type TransactionRowProps = {
   transaction: Transaction;
@@ -27,7 +27,8 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   onViewTemplate,
   onDelete,
 }) => {
-  const { destructive, secondaryText, success, surface, text } = useThemeColors();
+  const { destructive, secondaryText, success, surface, text } =
+    useThemeColors();
   const isExpense = transaction.amount < 0;
   const amountColor = isExpense ? destructive : success;
 
@@ -39,10 +40,12 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           accessibilityLabel={`Mark ${transaction.description} verified`}
           accessibilityState={{ checked: Boolean(transaction.verified) }}
           hitSlop={10}
-          onPress={() => onToggleVerified(transaction.id, !transaction.verified)}
+          onPress={() =>
+            onToggleVerified(transaction.id, !transaction.verified)
+          }
         >
           <Feather
-            name={transaction.verified ? 'check-circle' : 'circle'}
+            name={transaction.verified ? "check-circle" : "circle"}
             size={24}
             color={transaction.verified ? success : amountColor}
           />
@@ -51,10 +54,16 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           accessibilityRole="button"
           accessibilityLabel={`Edit ${transaction.description}`}
           onPress={() => onEdit(transaction.id)}
-          style={({ pressed }) => [styles.editTarget, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.editTarget,
+            pressed && styles.pressed,
+          ]}
         >
           <View style={styles.body}>
-            <Text numberOfLines={1} style={[styles.description, { color: text }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.description, { color: text }]}
+            >
               {transaction.description}
             </Text>
             <Text style={[styles.amount, { color: amountColor }]}>
@@ -62,7 +71,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
             </Text>
             <View style={styles.meta}>
               <Text style={[styles.metaText, { color: secondaryText }]}>
-                {format(transaction.transactionDate, 'MMM d, yyyy')}
+                {format(transaction.transactionDate, "MMM d, yyyy")}
               </Text>
               <Text style={[styles.metaText, { color: secondaryText }]}>
                 {transaction.category}
@@ -93,8 +102,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   editTarget: {
     flex: 1,
@@ -105,11 +114,11 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   meta: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 4,
   },
@@ -118,7 +127,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 4,
   },
   pressed: {

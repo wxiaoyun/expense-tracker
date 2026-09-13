@@ -1,8 +1,8 @@
-import { getDefaultStore } from 'jotai';
-import { currencyAtom } from './preferences';
+import { getDefaultStore } from "jotai";
+import { currencyAtom } from "./preferences";
 
 const NARROW_SYMBOL_OVERRIDES: Record<string, string> = {
-  SGD: '$',
+  SGD: "$",
 };
 
 /**
@@ -15,16 +15,16 @@ export const formatCurrency = (amount: number, currency?: string): string => {
   const symbolOverride = NARROW_SYMBOL_OVERRIDES[resolvedCurrency];
 
   if (symbolOverride) {
-    const formattedNumber = new Intl.NumberFormat('en-US', {
+    const formattedNumber = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
     }).format(absAmount);
-    return `${amount < 0 ? '-' : ''}${symbolOverride}${formattedNumber}`;
+    return `${amount < 0 ? "-" : ""}${symbolOverride}${formattedNumber}`;
   }
 
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
+  const formatted = new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency: resolvedCurrency,
-    currencyDisplay: 'narrowSymbol',
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits: 2,
   }).format(absAmount);
   return amount < 0 ? `-${formatted}` : formatted;

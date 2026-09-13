@@ -1,10 +1,10 @@
-import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import React from "react";
+import { fireEvent, render } from "@testing-library/react-native";
 
-import { TemplateFilterBar } from '../template-filter-bar';
+import { TemplateFilterBar } from "../template-filter-bar";
 
-describe('TemplateFilterBar', () => {
-  it('emits exact search, type, and category filters', async () => {
+describe("TemplateFilterBar", () => {
+  it("emits exact search, type, and category filters", async () => {
     const onSearchChange = jest.fn();
     const onTypeChange = jest.fn();
     const onCategoriesChange = jest.fn();
@@ -14,24 +14,31 @@ describe('TemplateFilterBar', () => {
         type="all"
         onSearchChange={onSearchChange}
         onTypeChange={onTypeChange}
-        categories={['Food', 'Travel']}
+        categories={["Food", "Travel"]}
         selectedCategories={[]}
         onCategoriesChange={onCategoriesChange}
       />,
     );
 
-    await fireEvent.changeText(screen.getByLabelText('Search templates'), 'coffee');
-    await fireEvent.press(screen.getByRole('button', { name: 'Manual' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Scheduled' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'All' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Filter Food' }));
+    await fireEvent.changeText(
+      screen.getByLabelText("Search templates"),
+      "coffee",
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Manual" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Scheduled" }));
+    await fireEvent.press(screen.getByRole("button", { name: "All" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Filter Food" }));
 
-    expect(onSearchChange).toHaveBeenCalledWith('coffee');
-    expect(onTypeChange.mock.calls).toEqual([['manual'], ['scheduled'], ['all']]);
-    expect(onCategoriesChange).toHaveBeenCalledWith(['Food']);
+    expect(onSearchChange).toHaveBeenCalledWith("coffee");
+    expect(onTypeChange.mock.calls).toEqual([
+      ["manual"],
+      ["scheduled"],
+      ["all"],
+    ]);
+    expect(onCategoriesChange).toHaveBeenCalledWith(["Food"]);
   });
 
-  it('removes a selected category without changing the others', async () => {
+  it("removes a selected category without changing the others", async () => {
     const onCategoriesChange = jest.fn();
     const screen = await render(
       <TemplateFilterBar
@@ -39,14 +46,14 @@ describe('TemplateFilterBar', () => {
         type="all"
         onSearchChange={jest.fn()}
         onTypeChange={jest.fn()}
-        categories={['Food', 'Travel']}
-        selectedCategories={['Food', 'Travel']}
+        categories={["Food", "Travel"]}
+        selectedCategories={["Food", "Travel"]}
         onCategoriesChange={onCategoriesChange}
       />,
     );
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Filter Food' }));
+    await fireEvent.press(screen.getByRole("button", { name: "Filter Food" }));
 
-    expect(onCategoriesChange).toHaveBeenCalledWith(['Travel']);
+    expect(onCategoriesChange).toHaveBeenCalledWith(["Travel"]);
   });
 });

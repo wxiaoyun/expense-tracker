@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useThemeColors } from '@/hooks/useThemeColor';
-import { formatCurrency } from '@/libs/intl';
+import React, { useMemo } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { formatCurrency } from "@/libs/intl";
 
 type CashFlowPeriod = {
   period: string;
@@ -11,14 +11,19 @@ type CashFlowPeriod = {
 
 type CashFlowTrendProps = {
   data: CashFlowPeriod[];
-  granularity: 'day' | 'month';
+  granularity: "day" | "month";
 };
 
-const formatLabel = (period: string, granularity: 'day' | 'month') => {
-  const date = new Date(`${period}${granularity === 'day' ? 'T00:00:00' : '-01T00:00:00'}`);
-  return date.toLocaleDateString('en-US', granularity === 'day'
-    ? { month: 'short', day: 'numeric' }
-    : { month: 'short', year: '2-digit' });
+const formatLabel = (period: string, granularity: "day" | "month") => {
+  const date = new Date(
+    `${period}${granularity === "day" ? "T00:00:00" : "-01T00:00:00"}`,
+  );
+  return date.toLocaleDateString(
+    "en-US",
+    granularity === "day"
+      ? { month: "short", day: "numeric" }
+      : { month: "short", year: "2-digit" },
+  );
 };
 
 export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
@@ -34,7 +39,9 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
   if (!data.some((item) => item.income > 0 || item.expense > 0)) {
     return (
       <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No cash-flow activity in selected range</Text>
+        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+          No cash-flow activity in selected range
+        </Text>
       </View>
     );
   }
@@ -43,20 +50,39 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
     <View style={[styles.card, { backgroundColor: colors.surface }]}>
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.legendText, { color: colors.secondaryText }]}>Income</Text>
+          <View
+            style={[styles.legendDot, { backgroundColor: colors.success }]}
+          />
+          <Text style={[styles.legendText, { color: colors.secondaryText }]}>
+            Income
+          </Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.destructive }]} />
-          <Text style={[styles.legendText, { color: colors.secondaryText }]}>Spending</Text>
+          <View
+            style={[styles.legendDot, { backgroundColor: colors.destructive }]}
+          />
+          <Text style={[styles.legendText, { color: colors.secondaryText }]}>
+            Spending
+          </Text>
         </View>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={[styles.chart, { width: chartWidth }]}>
           {data.map((item, index) => {
-            const showLabel = index % labelEvery === 0 || index === data.length - 1;
-            const incomeHeight = item.income === 0 ? 0 : Math.max(4, (item.income / maxValue) * 120);
-            const expenseHeight = item.expense === 0 ? 0 : Math.max(4, (item.expense / maxValue) * 120);
+            const showLabel =
+              index % labelEvery === 0 || index === data.length - 1;
+            const incomeHeight =
+              item.income === 0
+                ? 0
+                : Math.max(4, (item.income / maxValue) * 120);
+            const expenseHeight =
+              item.expense === 0
+                ? 0
+                : Math.max(4, (item.expense / maxValue) * 120);
 
             return (
               <View
@@ -66,11 +92,27 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
                 style={[styles.group, { width: groupWidth }]}
               >
                 <View style={styles.bars}>
-                  <View style={[styles.bar, { backgroundColor: colors.success, height: incomeHeight }]} />
-                  <View style={[styles.bar, { backgroundColor: colors.destructive, height: expenseHeight }]} />
+                  <View
+                    style={[
+                      styles.bar,
+                      { backgroundColor: colors.success, height: incomeHeight },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.bar,
+                      {
+                        backgroundColor: colors.destructive,
+                        height: expenseHeight,
+                      },
+                    ]}
+                  />
                 </View>
-                <Text numberOfLines={1} style={[styles.label, { color: colors.secondaryText }]}>
-                  {showLabel ? formatLabel(item.period, granularity) : ''}
+                <Text
+                  numberOfLines={1}
+                  style={[styles.label, { color: colors.secondaryText }]}
+                >
+                  {showLabel ? formatLabel(item.period, granularity) : ""}
                 </Text>
               </View>
             );
@@ -83,13 +125,13 @@ export function CashFlowTrend({ data, granularity }: CashFlowTrendProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderCurve: 'continuous',
+    borderCurve: "continuous",
     borderRadius: 18,
     paddingBottom: 12,
     paddingTop: 16,
   },
   emptyCard: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 18,
     padding: 28,
   },
@@ -97,13 +139,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   legend: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     paddingHorizontal: 18,
   },
   legendItem: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 6,
   },
   legendDot: {
@@ -113,25 +155,25 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   scrollContent: {
     paddingHorizontal: 12,
   },
   chart: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
+    alignItems: "flex-end",
+    flexDirection: "row",
     height: 158,
     marginTop: 10,
   },
   group: {
-    alignItems: 'center',
-    height: '100%',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    height: "100%",
+    justifyContent: "flex-end",
   },
   bars: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
+    alignItems: "flex-end",
+    flexDirection: "row",
     gap: 3,
     height: 124,
   },
@@ -142,7 +184,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     marginTop: 6,
-    textAlign: 'center',
-    width: '100%',
+    textAlign: "center",
+    width: "100%",
   },
 });

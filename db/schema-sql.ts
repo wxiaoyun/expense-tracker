@@ -1,5 +1,5 @@
-export const LEGACY_DATABASE_NAME = 'expense_tracker.db';
-export const DATABASE_NAME = 'expense_tracker_v2.db';
+export const LEGACY_DATABASE_NAME = "expense_tracker.db";
+export const DATABASE_NAME = "expense_tracker_v2.db";
 
 export const TRANSACTION_TEMPLATE_CONSTRAINTS_SQL = `
     CONSTRAINT chk_templates_amount CHECK (

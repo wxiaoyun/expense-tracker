@@ -1,23 +1,39 @@
-import React, { type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { DateTimePicker } from '@expo/ui/community/datetime-picker';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
+import { DateTimePicker } from "@expo/ui/community/datetime-picker";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
-import type { TemplateSuggestion, TransactionType } from '@/db/template-core';
-import { CategoryPicker } from '@/components/ui/category-picker';
-import { selectionFeedback } from '@/libs/haptics';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import type { TemplateSuggestion, TransactionType } from "@/db/template-core";
+import { CategoryPicker } from "@/components/ui/category-picker";
+import { selectionFeedback } from "@/libs/haptics";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 export const RECURRENCE_PRESETS = [
-  { label: 'Daily', value: '0 0 * * *' },
-  { label: 'Weekly', value: '0 0 * * 0' },
-  { label: 'Monthly', value: '0 0 1 * *' },
-  { label: 'Yearly', value: '0 0 1 1 *' },
-  { label: 'Weekdays', value: '0 9 * * 1-5' },
+  { label: "Daily", value: "0 0 * * *" },
+  { label: "Weekly", value: "0 0 * * 0" },
+  { label: "Monthly", value: "0 0 1 * *" },
+  { label: "Yearly", value: "0 0 1 1 *" },
+  { label: "Weekdays", value: "0 9 * * 1-5" },
 ] as const;
 
 export const DEFAULT_TEMPLATE_CRON = RECURRENCE_PRESETS[2].value;
 
-export type TemplateEditorCategory = { name: string; icon: string; color: string };
+export type TemplateEditorCategory = {
+  name: string;
+  icon: string;
+  color: string;
+};
 
 type Props = {
   isEdit: boolean;
@@ -105,10 +121,17 @@ export function TemplateEditorForm({
   return (
     <View collapsable={false} style={styles.container}>
       <View collapsable={false} style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Cancel" hitSlop={12} onPress={onCancel}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+          hitSlop={12}
+          onPress={onCancel}
+        >
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
-        <Text style={styles.title}>{isEdit ? 'Edit Template' : 'New Template'}</Text>
+        <Text style={styles.title}>
+          {isEdit ? "Edit Template" : "New Template"}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Save"
@@ -129,7 +152,9 @@ export function TemplateEditorForm({
       >
         {error && (
           <View style={styles.errorBanner}>
-            <Text selectable style={styles.errorText}>{error}</Text>
+            <Text selectable style={styles.errorText}>
+              {error}
+            </Text>
             {suggestedName && (
               <Pressable
                 accessibilityRole="button"
@@ -139,7 +164,9 @@ export function TemplateEditorForm({
                   onUseSuggestedName();
                 }}
               >
-                <Text style={styles.suggestionAction}>Use “{suggestedName}”</Text>
+                <Text style={styles.suggestionAction}>
+                  Use “{suggestedName}”
+                </Text>
               </Pressable>
             )}
           </View>
@@ -191,23 +218,33 @@ export function TemplateEditorForm({
         />
 
         <View style={styles.typeRow}>
-          {(['expense', 'income'] as const).map((type) => {
+          {(["expense", "income"] as const).map((type) => {
             const selected = transactionType === type;
-            const label = type === 'income' ? 'Income' : 'Expense';
+            const label = type === "income" ? "Income" : "Expense";
             return (
               <Pressable
                 key={type}
                 accessibilityRole="button"
                 accessibilityLabel={`Transaction type: ${label}`}
                 accessibilityState={{ selected }}
-                style={[styles.typeButton, selected && styles.typeButtonSelected]}
+                style={[
+                  styles.typeButton,
+                  selected && styles.typeButtonSelected,
+                ]}
                 onPress={() => {
                   if (selected) return;
                   selectionFeedback();
                   setTransactionType(type);
                 }}
               >
-                <Text style={[styles.typeButtonText, selected && styles.typeButtonTextSelected]}>{label}</Text>
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    selected && styles.typeButtonTextSelected,
+                  ]}
+                >
+                  {label}
+                </Text>
               </Pressable>
             );
           })}
@@ -258,7 +295,11 @@ export function TemplateEditorForm({
 
         <View style={styles.toggleRow}>
           <Text style={styles.label}>Repeat automatically</Text>
-          <Switch accessibilityLabel="Repeat automatically" value={repeatAutomatically} onValueChange={onRepeatChange} />
+          <Switch
+            accessibilityLabel="Repeat automatically"
+            value={repeatAutomatically}
+            onValueChange={onRepeatChange}
+          />
         </View>
 
         {repeatAutomatically && (
@@ -270,15 +311,28 @@ export function TemplateEditorForm({
                   key={preset.value}
                   accessibilityRole="button"
                   accessibilityLabel={`Recurrence preset ${preset.label}`}
-                  accessibilityState={{ selected: recurrenceValue === preset.value }}
-                  style={[styles.chip, recurrenceValue === preset.value && styles.selectedChip]}
+                  accessibilityState={{
+                    selected: recurrenceValue === preset.value,
+                  }}
+                  style={[
+                    styles.chip,
+                    recurrenceValue === preset.value && styles.selectedChip,
+                  ]}
                   onPress={() => {
                     if (recurrenceValue === preset.value) return;
                     selectionFeedback();
                     setRecurrenceValue(preset.value);
                   }}
                 >
-                  <Text style={recurrenceValue === preset.value ? styles.selectedChipText : undefined}>{preset.label}</Text>
+                  <Text
+                    style={
+                      recurrenceValue === preset.value
+                        ? styles.selectedChipText
+                        : undefined
+                    }
+                  >
+                    {preset.label}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -325,7 +379,12 @@ export function TemplateEditorForm({
               <View style={styles.preview}>
                 <Text style={styles.previewTitle}>Next 3 occurrences</Text>
                 {nextOccurrences.map((date) => (
-                  <Text selectable testID="next-occurrence" key={date.getTime()} style={styles.previewText}>
+                  <Text
+                    selectable
+                    testID="next-occurrence"
+                    key={date.getTime()}
+                    style={styles.previewText}
+                  >
                     {date.toLocaleString()}
                   </Text>
                 ))}
@@ -344,64 +403,97 @@ export function TemplateEditorForm({
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.separator,
-  },
-  title: { color: colors.text, fontSize: 17, fontWeight: '600' },
-  cancelText: { color: colors.primary, fontSize: 17 },
-  saveText: { color: colors.primary, fontSize: 17, fontWeight: '600' },
-  formContent: { paddingHorizontal: 16, paddingBottom: 32, gap: 8 },
-  sectionLabel: { color: colors.secondaryText, fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
-  suggestionSection: { paddingTop: 16, gap: 8 },
-  label: { color: colors.secondaryText, fontSize: 13, fontWeight: '500', paddingTop: 8, textTransform: 'uppercase' },
-  input: {
-    backgroundColor: colors.fill,
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
-  },
-  notesInput: { minHeight: 80, textAlignVertical: 'top' },
-  typeRow: { flexDirection: 'row', gap: 8 },
-  typeButton: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderCurve: 'continuous',
-    paddingVertical: 10,
-    backgroundColor: colors.fill,
-  },
-  typeButtonSelected: { backgroundColor: colors.primary },
-  typeButtonText: { color: colors.text, fontWeight: '600' },
-  typeButtonTextSelected: { color: colors.onPrimary },
-  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: colors.fill,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  selectedChip: { backgroundColor: colors.primaryBackground },
-  selectedChipText: { color: colors.primary },
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8 },
-  scheduleSection: { gap: 8 },
-  preview: { backgroundColor: colors.fill, borderRadius: 12, borderCurve: 'continuous', padding: 12, gap: 4 },
-  previewTitle: { color: colors.text, fontWeight: '600' },
-  previewText: { color: colors.secondaryText, fontVariant: ['tabular-nums'] },
-  backfillText: { color: colors.warning, fontWeight: '600', paddingVertical: 8 },
-  errorBanner: { backgroundColor: colors.destructiveBackground, borderRadius: 10, borderCurve: 'continuous', padding: 12, gap: 8 },
-  errorText: { color: colors.destructive },
-  suggestionAction: { color: colors.primary, fontWeight: '600' },
-});
+const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingTop: 20,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.separator,
+    },
+    title: { color: colors.text, fontSize: 17, fontWeight: "600" },
+    cancelText: { color: colors.primary, fontSize: 17 },
+    saveText: { color: colors.primary, fontSize: 17, fontWeight: "600" },
+    formContent: { paddingHorizontal: 16, paddingBottom: 32, gap: 8 },
+    sectionLabel: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      fontWeight: "600",
+      textTransform: "uppercase",
+    },
+    suggestionSection: { paddingTop: 16, gap: 8 },
+    label: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      fontWeight: "500",
+      paddingTop: 8,
+      textTransform: "uppercase",
+    },
+    input: {
+      backgroundColor: colors.fill,
+      borderRadius: 12,
+      borderCurve: "continuous",
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.text,
+    },
+    notesInput: { minHeight: 80, textAlignVertical: "top" },
+    typeRow: { flexDirection: "row", gap: 8 },
+    typeButton: {
+      flex: 1,
+      alignItems: "center",
+      borderRadius: 10,
+      borderCurve: "continuous",
+      paddingVertical: 10,
+      backgroundColor: colors.fill,
+    },
+    typeButtonSelected: { backgroundColor: colors.primary },
+    typeButtonText: { color: colors.text, fontWeight: "600" },
+    typeButtonTextSelected: { color: colors.onPrimary },
+    chipsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    chip: {
+      backgroundColor: colors.fill,
+      borderRadius: 18,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    selectedChip: { backgroundColor: colors.primaryBackground },
+    selectedChipText: { color: colors.primary },
+    toggleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingTop: 8,
+    },
+    scheduleSection: { gap: 8 },
+    preview: {
+      backgroundColor: colors.fill,
+      borderRadius: 12,
+      borderCurve: "continuous",
+      padding: 12,
+      gap: 4,
+    },
+    previewTitle: { color: colors.text, fontWeight: "600" },
+    previewText: { color: colors.secondaryText, fontVariant: ["tabular-nums"] },
+    backfillText: {
+      color: colors.warning,
+      fontWeight: "600",
+      paddingVertical: 8,
+    },
+    errorBanner: {
+      backgroundColor: colors.destructiveBackground,
+      borderRadius: 10,
+      borderCurve: "continuous",
+      padding: 12,
+      gap: 8,
+    },
+    errorText: { color: colors.destructive },
+    suggestionAction: { color: colors.primary, fontWeight: "600" },
+  });

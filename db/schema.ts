@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql } from "drizzle-orm";
 import {
   check,
   index,
@@ -7,53 +7,58 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
-import { z } from 'zod';
+} from "drizzle-orm/sqlite-core";
+import { z } from "zod";
 
 export const categories = sqliteTable(
-  'categories',
+  "categories",
   {
-    id: text('id').primaryKey().notNull(),
-    name: text('name').notNull().unique(),
-    icon: text('icon').notNull(),
-    color: text('color').notNull(),
-    is_preset: integer('is_preset', { mode: 'boolean' }).notNull().default(false),
-    sort_order: integer('sort_order').notNull(),
-    createdAt: integer('created_at').notNull(),
+    id: text("id").primaryKey().notNull(),
+    name: text("name").notNull().unique(),
+    icon: text("icon").notNull(),
+    color: text("color").notNull(),
+    is_preset: integer("is_preset", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    sort_order: integer("sort_order").notNull(),
+    createdAt: integer("created_at").notNull(),
   },
   (table) => ({
-    nameIdx: index('idx_categories_name').on(table.name),
+    nameIdx: index("idx_categories_name").on(table.name),
   }),
 );
 
 export const transactionTemplates = sqliteTable(
-  'transaction_templates',
+  "transaction_templates",
   {
-    id: text('id').primaryKey().notNull(),
-    name: text('name').notNull(),
-    normalizedName: text('normalized_name').notNull(),
-    amount: real('amount'),
-    transactionType: text('transaction_type').$type<'income' | 'expense'>(),
-    description: text('description'),
-    category: text('category'),
-    notes: text('notes'),
-    verified: integer('verified'),
-    recurrenceValue: text('recurrence_value'),
-    startDate: integer('start_date'),
-    scheduleCursorAt: integer('schedule_cursor_at'),
-    scheduleActive: integer('schedule_active').notNull().default(0),
-    deletedAt: integer('deleted_at'),
-    createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
+    id: text("id").primaryKey().notNull(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    amount: real("amount"),
+    transactionType: text("transaction_type").$type<"income" | "expense">(),
+    description: text("description"),
+    category: text("category"),
+    notes: text("notes"),
+    verified: integer("verified"),
+    recurrenceValue: text("recurrence_value"),
+    startDate: integer("start_date"),
+    scheduleCursorAt: integer("schedule_cursor_at"),
+    scheduleActive: integer("schedule_active").notNull().default(0),
+    deletedAt: integer("deleted_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
   },
   (table) => ({
-    activeNameIdx: uniqueIndex('idx_templates_active_name')
+    activeNameIdx: uniqueIndex("idx_templates_active_name")
       .on(table.normalizedName)
       .where(sql`${table.deletedAt} IS NULL`),
-    categoryIdx: index('idx_templates_category').on(table.category),
-    scheduleIdx: index('idx_templates_schedule').on(table.scheduleActive, table.deletedAt),
+    categoryIdx: index("idx_templates_category").on(table.category),
+    scheduleIdx: index("idx_templates_schedule").on(
+      table.scheduleActive,
+      table.deletedAt,
+    ),
     amountCheck: check(
-      'chk_templates_amount',
+      "chk_templates_amount",
       sql`${table.amount} IS NULL OR (
         typeof(${table.amount}) IN ('integer', 'real')
         AND ${table.amount} > 0
@@ -61,19 +66,19 @@ export const transactionTemplates = sqliteTable(
       )`,
     ),
     transactionTypeCheck: check(
-      'chk_templates_transaction_type',
+      "chk_templates_transaction_type",
       sql`${table.transactionType} IS NULL OR ${table.transactionType} IN ('income', 'expense')`,
     ),
     verifiedCheck: check(
-      'chk_templates_verified',
+      "chk_templates_verified",
       sql`${table.verified} IS NULL OR ${table.verified} IN (0, 1)`,
     ),
     scheduleActiveCheck: check(
-      'chk_templates_schedule_active',
+      "chk_templates_schedule_active",
       sql`${table.scheduleActive} IN (0, 1)`,
     ),
     reusableFieldCheck: check(
-      'chk_templates_reusable_field',
+      "chk_templates_reusable_field",
       sql`${table.amount} IS NOT NULL
         OR ${table.transactionType} IS NOT NULL
         OR (${table.description} IS NOT NULL AND trim(${table.description}) <> '')
@@ -83,7 +88,7 @@ export const transactionTemplates = sqliteTable(
         OR (${table.scheduleActive} = 0 AND ${table.recurrenceValue} IS NOT NULL)`,
     ),
     manualScheduleCheck: check(
-      'chk_templates_manual_schedule',
+      "chk_templates_manual_schedule",
       sql`${table.recurrenceValue} IS NOT NULL OR (
         ${table.startDate} IS NULL
         AND ${table.scheduleCursorAt} IS NULL
@@ -91,7 +96,7 @@ export const transactionTemplates = sqliteTable(
       )`,
     ),
     activeScheduleCheck: check(
-      'chk_templates_active_schedule',
+      "chk_templates_active_schedule",
       sql`${table.scheduleActive} = 0 OR (
         ${table.recurrenceValue} IS NOT NULL
         AND trim(${table.recurrenceValue}) <> ''
@@ -107,37 +112,34 @@ export const transactionTemplates = sqliteTable(
 );
 
 export const transactions = sqliteTable(
-  'transactions',
+  "transactions",
   {
-    id: text('id').primaryKey().notNull(),
-    amount: real('amount').notNull(),
-    transactionDate: integer('transaction_date').notNull(),
-    description: text('description').notNull(),
-    category: text('category').notNull(),
-    templateId: text('template_id'),
-    verified: integer('verified').notNull().default(0),
-    notes: text('notes'),
-    deletedAt: integer('deleted_at'),
-    createdAt: integer('created_at').notNull(),
-    updatedAt: integer('updated_at').notNull(),
-    source: text('source').notNull().default('manual'),
+    id: text("id").primaryKey().notNull(),
+    amount: real("amount").notNull(),
+    transactionDate: integer("transaction_date").notNull(),
+    description: text("description").notNull(),
+    category: text("category").notNull(),
+    templateId: text("template_id"),
+    verified: integer("verified").notNull().default(0),
+    notes: text("notes"),
+    deletedAt: integer("deleted_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    source: text("source").notNull().default("manual"),
   },
   (table) => ({
-    dateIdx: index('idx_transactions_date').on(table.transactionDate),
-    categoryIdx: index('idx_transactions_category').on(table.category),
-    templateIdx: index('idx_transactions_template').on(table.templateId),
-    verifiedIdx: index('idx_transactions_verified').on(table.verified),
-    deletedIdx: index('idx_transactions_deleted').on(table.deletedAt),
+    dateIdx: index("idx_transactions_date").on(table.transactionDate),
+    categoryIdx: index("idx_transactions_category").on(table.category),
+    templateIdx: index("idx_transactions_template").on(table.templateId),
+    verifiedIdx: index("idx_transactions_verified").on(table.verified),
+    deletedIdx: index("idx_transactions_deleted").on(table.deletedAt),
   }),
 );
 
-export const settings = sqliteTable(
-  'settings',
-  {
-    key: text('key').primaryKey().notNull(),
-    value: text('value').notNull(),
-  },
-);
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey().notNull(),
+  value: text("value").notNull(),
+});
 
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
@@ -177,7 +179,7 @@ export const TransactionTemplateSchema = z.object({
   name: z.string(),
   normalizedName: z.string(),
   amount: z.number().nullable(),
-  transactionType: z.enum(['income', 'expense']).nullable(),
+  transactionType: z.enum(["income", "expense"]).nullable(),
   description: z.string().nullable(),
   category: z.string().nullable(),
   notes: z.string().nullable(),

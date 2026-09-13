@@ -1,12 +1,12 @@
-import React from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import React from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import { CategoryFilterChips } from '@/components/ui/category-picker';
-import type { TemplateListFilter } from '@/db/template';
-import { selectionFeedback } from '@/libs/haptics';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import { CategoryFilterChips } from "@/components/ui/category-picker";
+import type { TemplateListFilter } from "@/db/template";
+import { selectionFeedback } from "@/libs/haptics";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
-type TemplateType = NonNullable<TemplateListFilter['type']>;
+type TemplateType = NonNullable<TemplateListFilter["type"]>;
 
 type TemplateFilterBarProps = {
   search: string;
@@ -19,9 +19,9 @@ type TemplateFilterBarProps = {
 };
 
 const TYPES: { label: string; value: TemplateType }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Manual', value: 'manual' },
-  { label: 'Scheduled', value: 'scheduled' },
+  { label: "All", value: "all" },
+  { label: "Manual", value: "manual" },
+  { label: "Scheduled", value: "scheduled" },
 ];
 
 export function TemplateFilterBar({
@@ -35,7 +35,14 @@ export function TemplateFilterBar({
 }: TemplateFilterBarProps) {
   const colors = useThemeColors();
   return (
-    <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 }}>
+    <View
+      style={{
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 10,
+      }}
+    >
       <TextInput
         accessibilityLabel="Search templates"
         value={search}
@@ -53,7 +60,11 @@ export function TemplateFilterBar({
           fontSize: 16,
         }}
       />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8 }}
+      >
         {TYPES.map((item) => {
           const selected = type === item.value;
           return (
@@ -73,7 +84,12 @@ export function TemplateFilterBar({
                 paddingVertical: 7,
               }}
             >
-              <Text style={{ color: selected ? colors.onPrimary : colors.text, fontWeight: '600' }}>
+              <Text
+                style={{
+                  color: selected ? colors.onPrimary : colors.text,
+                  fontWeight: "600",
+                }}
+              >
                 {item.label}
               </Text>
             </Pressable>
@@ -81,7 +97,11 @@ export function TemplateFilterBar({
         })}
       </ScrollView>
       {onCategoriesChange && (
-        <CategoryFilterChips categories={categories} selected={selectedCategories} onChange={onCategoriesChange} />
+        <CategoryFilterChips
+          categories={categories}
+          selected={selectedCategories}
+          onChange={onCategoriesChange}
+        />
       )}
     </View>
   );

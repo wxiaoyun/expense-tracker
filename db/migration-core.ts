@@ -1,7 +1,7 @@
-import { v5 as uuidv5 } from 'uuid';
-import { mapRecurringRowsToTemplates } from './template-migration-core';
+import { v5 as uuidv5 } from "uuid";
+import { mapRecurringRowsToTemplates } from "./template-migration-core";
 
-const MIGRATION_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+const MIGRATION_NAMESPACE = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 
 export type LegacyTransaction = {
   id: number;
@@ -36,9 +36,10 @@ export const mapLegacyTransaction = (transaction: LegacyTransaction) => ({
   transactionDate: transaction.transaction_date,
   description: transaction.description,
   category: transaction.category,
-  templateId: transaction.recurring_transaction_id === null
-    ? null
-    : generateMigrationUUID(transaction.recurring_transaction_id),
+  templateId:
+    transaction.recurring_transaction_id === null
+      ? null
+      : generateMigrationUUID(transaction.recurring_transaction_id),
   verified: transaction.verified,
   notes: null,
   deletedAt: null,
@@ -49,21 +50,30 @@ export const mapLegacyTransaction = (transaction: LegacyTransaction) => ({
 export const mapLegacyRecurring = (
   transaction: LegacyRecurring,
   activeNames = new Set<string>(),
-) => mapRecurringRowsToTemplates([{
-  id: generateMigrationUUID(transaction.id),
-  amount: transaction.amount,
-  description: transaction.description,
-  category: transaction.category,
-  startDate: transaction.start_date,
-  lastCharged: transaction.last_charged,
-  recurrenceValue: transaction.recurrence_value,
-  createdAt: transaction.created_at,
-  updatedAt: transaction.updated_at,
-}], activeNames)[0];
+) =>
+  mapRecurringRowsToTemplates(
+    [
+      {
+        id: generateMigrationUUID(transaction.id),
+        amount: transaction.amount,
+        description: transaction.description,
+        category: transaction.category,
+        startDate: transaction.start_date,
+        lastCharged: transaction.last_charged,
+        recurrenceValue: transaction.recurrence_value,
+        createdAt: transaction.created_at,
+        updatedAt: transaction.updated_at,
+      },
+    ],
+    activeNames,
+  )[0];
 
-export const splitIntoMigrationBatches = <T>(rows: T[], batchSize = 1000): T[][] => {
+export const splitIntoMigrationBatches = <T>(
+  rows: T[],
+  batchSize = 1000,
+): T[][] => {
   if (!Number.isInteger(batchSize) || batchSize < 1) {
-    throw new Error('Migration batch size must be a positive integer');
+    throw new Error("Migration batch size must be a positive integer");
   }
 
   const batches: T[][] = [];

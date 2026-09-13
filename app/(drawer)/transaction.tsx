@@ -1,53 +1,83 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { getTransaction, createTransaction, updateTransaction, listCategoriesByUsage } from '@/db/transaction';
-import { getTemplate } from '@/db/template';
-import { getTransactionInitialFocus } from '@/db/template-core';
-import type { Category } from '@/db/schema';
-import { useInvalidateTransactionsAndTemplates } from '@/hooks/useQueryClient';
-import { CompactDatePicker } from '@/components/ui/compact-date-picker';
-import { CategoryPicker } from '@/components/ui/category-picker';
-import { actionFeedback, errorFeedback, selectionFeedback } from '@/libs/haptics';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Pressable,
+  Switch,
+  ScrollView,
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+  getTransaction,
+  createTransaction,
+  updateTransaction,
+  listCategoriesByUsage,
+} from "@/db/transaction";
+import { getTemplate } from "@/db/template";
+import { getTransactionInitialFocus } from "@/db/template-core";
+import type { Category } from "@/db/schema";
+import { useInvalidateTransactionsAndTemplates } from "@/hooks/useQueryClient";
+import { CompactDatePicker } from "@/components/ui/compact-date-picker";
+import { CategoryPicker } from "@/components/ui/category-picker";
+import {
+  actionFeedback,
+  errorFeedback,
+  selectionFeedback,
+} from "@/libs/haptics";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
-const firstRouteParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
+const firstRouteParam = (value?: string | string[]) =>
+  Array.isArray(value) ? value[0] : value;
 
-const logTransactionFormError = (stage: string, details: Record<string, unknown>) => {
-  console.error(`[transaction.form][stage=${stage}] failed`, { stage, ...details });
+const logTransactionFormError = (
+  stage: string,
+  details: Record<string, unknown>,
+) => {
+  console.error(`[transaction.form][stage=${stage}] failed`, {
+    stage,
+    ...details,
+  });
 };
 
 export default function TransactionDrawer() {
-  const params = useLocalSearchParams<{ id?: string | string[], templateId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    id?: string | string[];
+    templateId?: string | string[];
+  }>();
   const id = firstRouteParam(params.id);
   const routeTemplateId = firstRouteParam(params.templateId);
   const isEdit = !!id;
   const sourceTemplateId = isEdit ? undefined : routeTemplateId;
-  const invalidateTransactionsAndTemplates = useInvalidateTransactionsAndTemplates();
+  const invalidateTransactionsAndTemplates =
+    useInvalidateTransactionsAndTemplates();
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
   const amountRef = useRef<TextInput>(null);
   const descriptionRef = useRef<TextInput>(null);
 
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState("");
   const [isIncome, setIsIncome] = useState(false);
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [notes, setNotes] = useState('');
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [notes, setNotes] = useState("");
   const [verified, setVerified] = useState(false);
   const [transactionDate, setTransactionDate] = useState(new Date());
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>(
+    [],
+  );
   const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(isEdit || !!sourceTemplateId);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id || !routeTemplateId) return;
-    logTransactionFormError('resolve_source', {
+    logTransactionFormError("resolve_source", {
       transaction_id_present: true,
       template_id_present: true,
-      error: 'Conflicting route sources',
+      error: "Conflicting route sources",
     });
   }, [id, routeTemplateId]);
 
@@ -58,10 +88,13 @@ export default function TransactionDrawer() {
         const cats = await listCategoriesByUsage();
         setAvailableCategories(cats);
       } catch (err) {
-        console.error('[transaction.form][stage=load_categories] category query failed', {
-          stage: 'load_categories',
-          error: String(err),
-        });
+        console.error(
+          "[transaction.form][stage=load_categories] category query failed",
+          {
+            stage: "load_categories",
+            error: String(err),
+          },
+        );
       }
     };
     loadCategories();
@@ -71,15 +104,18 @@ export default function TransactionDrawer() {
   useEffect(() => {
     if (!isEdit || !id) return;
     let active = true;
-    
+
     const loadTransaction = async () => {
       setLoading(true);
       setLoadedTemplateId(null);
-      console.info('[transaction.form][stage=load_transaction] loading transaction', {
-        stage: 'load_transaction',
-        transaction_id: id,
-        template_id: null,
-      });
+      console.info(
+        "[transaction.form][stage=load_transaction] loading transaction",
+        {
+          stage: "load_transaction",
+          transaction_id: id,
+          template_id: null,
+        },
+      );
       try {
         const tx = await getTransaction(id);
         if (!active) return;
@@ -88,13 +124,13 @@ export default function TransactionDrawer() {
           setIsIncome(tx.amount > 0);
           setDescription(tx.description);
           setCategory(tx.category);
-          setNotes(tx.notes || '');
+          setNotes(tx.notes || "");
           setVerified(tx.verified === 1);
           setTransactionDate(new Date(tx.transactionDate));
         }
       } catch (err) {
         if (!active) return;
-        logTransactionFormError('load_transaction', {
+        logTransactionFormError("load_transaction", {
           transaction_id: id,
           template_id: null,
           error: String(err),
@@ -120,8 +156,8 @@ export default function TransactionDrawer() {
       setLoading(true);
       setLoadedTemplateId(null);
       setError(null);
-      console.info('[transaction.form][stage=load_template] loading template', {
-        stage: 'load_template',
+      console.info("[transaction.form][stage=load_template] loading template", {
+        stage: "load_template",
         transaction_id: null,
         template_id: sourceTemplateId,
       });
@@ -129,26 +165,33 @@ export default function TransactionDrawer() {
         const template = await getTemplate(sourceTemplateId);
         if (!active) return;
         if (!template) {
-          console.info('[transaction.form][stage=load_template] skipped template population', {
-            stage: 'load_template',
-            template_id: sourceTemplateId,
-            reason: 'not_found',
-          });
-          setError('Template not found');
+          console.info(
+            "[transaction.form][stage=load_template] skipped template population",
+            {
+              stage: "load_template",
+              template_id: sourceTemplateId,
+              reason: "not_found",
+            },
+          );
+          setError("Template not found");
           return;
         }
 
-        setAmount(template.amount === null || !Number.isFinite(template.amount) ? '' : String(Math.abs(template.amount)));
-        setIsIncome(template.transactionType === 'income');
-        setDescription(template.description?.trim() ?? '');
-        setCategory(template.category?.trim() ?? '');
-        setNotes(template.notes?.trim() ?? '');
+        setAmount(
+          template.amount === null || !Number.isFinite(template.amount)
+            ? ""
+            : String(Math.abs(template.amount)),
+        );
+        setIsIncome(template.transactionType === "income");
+        setDescription(template.description?.trim() ?? "");
+        setCategory(template.category?.trim() ?? "");
+        setNotes(template.notes?.trim() ?? "");
         setVerified(template.verified === 1);
         setTransactionDate(new Date());
         setLoadedTemplateId(template.id);
       } catch (err) {
         if (!active) return;
-        logTransactionFormError('load_template', {
+        logTransactionFormError("load_template", {
           transaction_id: null,
           template_id: sourceTemplateId,
           error: String(err),
@@ -177,7 +220,7 @@ export default function TransactionDrawer() {
     if (!initialFocus) return;
 
     const frame = requestAnimationFrame(() => {
-      if (initialFocus === 'amount') {
+      if (initialFocus === "amount") {
         amountRef.current?.focus();
       } else {
         descriptionRef.current?.focus();
@@ -185,50 +228,65 @@ export default function TransactionDrawer() {
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [amount, description, isEdit, loadedTemplateId, loading, sourceTemplateId]);
+  }, [
+    amount,
+    description,
+    isEdit,
+    loadedTemplateId,
+    loading,
+    sourceTemplateId,
+  ]);
 
   const handleSave = async () => {
-    let stage = 'validate';
+    let stage = "validate";
     try {
       if (sourceTemplateId && !loadedTemplateId) {
-        setError('Template not found');
+        setError("Template not found");
         return;
       }
 
       const parsedAmount = Number(amount);
       if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-        setError('Amount must be greater than zero');
+        setError("Amount must be greater than zero");
         amountRef.current?.focus();
         return;
       }
 
-      const signedAmount = isIncome ? Math.abs(parsedAmount) : -Math.abs(parsedAmount);
+      const signedAmount = isIncome
+        ? Math.abs(parsedAmount)
+        : -Math.abs(parsedAmount);
 
       if (!description.trim()) {
-        setError('Description is required');
+        setError("Description is required");
         descriptionRef.current?.focus();
         return;
       }
 
       if (isEdit && id) {
-        stage = 'lookup_transaction_for_update';
-        console.info('[transaction.form][stage=lookup_transaction_for_update] loading transaction before update', {
-          stage,
-          transaction_id: id,
-          template_id: null,
-        });
+        stage = "lookup_transaction_for_update";
+        console.info(
+          "[transaction.form][stage=lookup_transaction_for_update] loading transaction before update",
+          {
+            stage,
+            transaction_id: id,
+            template_id: null,
+          },
+        );
         const existing = await getTransaction(id);
         if (!existing) {
-          setError('Transaction not found');
+          setError("Transaction not found");
           return;
         }
 
-        stage = 'update_transaction';
-        console.info('[transaction.form][stage=update_transaction] updating transaction', {
-          stage,
-          transaction_id: id,
-          template_id: existing.templateId ?? null,
-        });
+        stage = "update_transaction";
+        console.info(
+          "[transaction.form][stage=update_transaction] updating transaction",
+          {
+            stage,
+            transaction_id: id,
+            template_id: existing.templateId ?? null,
+          },
+        );
         await updateTransaction({
           ...existing,
           amount: signedAmount,
@@ -240,16 +298,19 @@ export default function TransactionDrawer() {
         });
       } else {
         const createTemplateId = loadedTemplateId ?? null;
-        stage = 'create_transaction';
-        console.info('[transaction.form][stage=create_transaction] creating transaction', {
-          stage,
-          transaction_id: null,
-          template_id: createTemplateId,
-        });
+        stage = "create_transaction";
+        console.info(
+          "[transaction.form][stage=create_transaction] creating transaction",
+          {
+            stage,
+            transaction_id: null,
+            template_id: createTemplateId,
+          },
+        );
         await createTransaction({
           amount: signedAmount,
           description: description.trim(),
-          category: category.trim() || 'Other',
+          category: category.trim() || "Other",
           notes: notes.trim() || null,
           verified: verified ? 1 : 0,
           transactionDate: transactionDate.getTime(),
@@ -261,9 +322,9 @@ export default function TransactionDrawer() {
       await invalidateTransactionsAndTemplates();
       actionFeedback();
       router.dismiss();
-      console.info('[transaction.form][stage=save] transaction saved', {
-        stage: 'save',
-        mode: isEdit ? 'edit' : 'create',
+      console.info("[transaction.form][stage=save] transaction saved", {
+        stage: "save",
+        mode: isEdit ? "edit" : "create",
         transaction_id: id ?? null,
         template_id: isEdit ? null : loadedTemplateId,
       });
@@ -279,7 +340,10 @@ export default function TransactionDrawer() {
   };
 
   const handleCancel = () => {
-    console.info('[transaction.form][stage=cancel] dismissing transaction form', { stage: 'cancel' });
+    console.info(
+      "[transaction.form][stage=cancel] dismissing transaction form",
+      { stage: "cancel" },
+    );
     router.dismiss();
   };
 
@@ -287,7 +351,7 @@ export default function TransactionDrawer() {
     return (
       <View style={styles.container}>
         <Text style={{ color: colors.text }}>Loading</Text>
-     </View>
+      </View>
     );
   }
 
@@ -303,7 +367,9 @@ export default function TransactionDrawer() {
         >
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
-        <Text style={styles.title}>{isEdit ? 'Edit Transaction' : 'New Transaction'}</Text>
+        <Text style={styles.title}>
+          {isEdit ? "Edit Transaction" : "New Transaction"}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Save"
@@ -324,7 +390,7 @@ export default function TransactionDrawer() {
         {error && (
           <View style={styles.errorBanner}>
             <Text style={styles.errorText}>{error}</Text>
-         </View>
+          </View>
         )}
 
         <Text style={styles.label}>Amount</Text>
@@ -341,8 +407,8 @@ export default function TransactionDrawer() {
         />
 
         <View style={styles.typeRow}>
-          {(['Expense', 'Income'] as const).map((type) => {
-            const selected = isIncome === (type === 'Income');
+          {(["Expense", "Income"] as const).map((type) => {
+            const selected = isIncome === (type === "Income");
             return (
               <Pressable
                 key={type}
@@ -352,11 +418,21 @@ export default function TransactionDrawer() {
                 onPress={() => {
                   if (selected) return;
                   selectionFeedback();
-                  setIsIncome(type === 'Income');
+                  setIsIncome(type === "Income");
                 }}
-                style={[styles.typeButton, selected && styles.typeButtonSelected]}
+                style={[
+                  styles.typeButton,
+                  selected && styles.typeButtonSelected,
+                ]}
               >
-                <Text style={[styles.typeButtonText, selected && styles.typeButtonTextSelected]}>{type}</Text>
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    selected && styles.typeButtonTextSelected,
+                  ]}
+                >
+                  {type}
+                </Text>
               </Pressable>
             );
           })}
@@ -406,7 +482,7 @@ export default function TransactionDrawer() {
             }}
             trackColor={{ false: colors.fill, true: colors.success }}
           />
-       </View>
+        </View>
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
@@ -423,101 +499,102 @@ export default function TransactionDrawer() {
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.separator,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  cancelText: {
-    fontSize: 17,
-    color: colors.primary,
-  },
-  saveText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  form: {
-    flex: 1,
-  },
-  formContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 16,
-    marginBottom: 8,
-    color: colors.secondaryText,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: colors.fill,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  typeButton: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: 10,
-    paddingVertical: 10,
-    backgroundColor: colors.fill,
-  },
-  typeButtonSelected: {
-    backgroundColor: colors.primary,
-  },
-  typeButtonText: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  typeButtonTextSelected: {
-    color: colors.onPrimary,
-  },
-  notesInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  datePickerContainer: {
-    alignItems: 'flex-start',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  errorBanner: {
-    backgroundColor: colors.destructiveBackground,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: colors.destructive,
-  },
-});
+const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingTop: 20,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.separator,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    cancelText: {
+      fontSize: 17,
+      color: colors.primary,
+    },
+    saveText: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    form: {
+      flex: 1,
+    },
+    formContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 32,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "500",
+      marginTop: 16,
+      marginBottom: 8,
+      color: colors.secondaryText,
+      textTransform: "uppercase",
+    },
+    input: {
+      backgroundColor: colors.fill,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.text,
+    },
+    typeRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 8,
+    },
+    typeButton: {
+      flex: 1,
+      alignItems: "center",
+      borderRadius: 10,
+      paddingVertical: 10,
+      backgroundColor: colors.fill,
+    },
+    typeButtonSelected: {
+      backgroundColor: colors.primary,
+    },
+    typeButtonText: {
+      color: colors.text,
+      fontWeight: "600",
+    },
+    typeButtonTextSelected: {
+      color: colors.onPrimary,
+    },
+    notesInput: {
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+    datePickerContainer: {
+      alignItems: "flex-start",
+    },
+    toggleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 16,
+    },
+    errorBanner: {
+      backgroundColor: colors.destructiveBackground,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    errorText: {
+      color: colors.destructive,
+    },
+  });

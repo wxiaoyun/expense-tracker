@@ -1,4 +1,7 @@
-import { nextAvailableTemplateName, normalizeTemplateText } from './template-core';
+import {
+  nextAvailableTemplateName,
+  normalizeTemplateText,
+} from "./template-core";
 
 export type RecurringCompatibilityRow = {
   id: string;
@@ -15,7 +18,7 @@ export type RecurringCompatibilityRow = {
 export type ScheduledTemplateSource = {
   id: string;
   amount: number | null;
-  transactionType: 'income' | 'expense' | null;
+  transactionType: "income" | "expense" | null;
   description: string | null;
   category: string | null;
   startDate: number | null;
@@ -42,7 +45,7 @@ export const mapScheduledTemplateToRecurring = (
   const magnitude = Math.abs(template.amount);
   return {
     id: template.id,
-    amount: template.transactionType === 'income' ? magnitude : -magnitude,
+    amount: template.transactionType === "income" ? magnitude : -magnitude,
     description: template.description,
     category: template.category,
     startDate: template.startDate,
@@ -59,7 +62,7 @@ export const mapRecurringToScheduledTemplate = (
 ) => {
   const magnitude = Math.abs(recurring.amount);
   if (!Number.isFinite(magnitude) || magnitude <= 0) {
-    throw new Error('Amount must be greater than zero');
+    throw new Error("Amount must be greater than zero");
   }
 
   const baseName = recurring.description.trim() || `Template ${recurring.id}`;
@@ -70,7 +73,8 @@ export const mapRecurringToScheduledTemplate = (
     name,
     normalizedName: normalizeTemplateText(name),
     amount: magnitude,
-    transactionType: recurring.amount >= 0 ? 'income' as const : 'expense' as const,
+    transactionType:
+      recurring.amount >= 0 ? ("income" as const) : ("expense" as const),
     description: recurring.description,
     category: recurring.category,
     notes: null,

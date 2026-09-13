@@ -1,8 +1,12 @@
-import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { MenuView, type MenuAction, type NativeActionEvent } from '@expo/ui/community/menu';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import React from "react";
+import { Pressable, StyleSheet } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import {
+  MenuView,
+  type MenuAction,
+  type NativeActionEvent,
+} from "@expo/ui/community/menu";
+import { useThemeColor } from "@/hooks/useThemeColor";
 
 type TransactionMenuProps = {
   transactionId: string;
@@ -25,28 +29,37 @@ export function TransactionMenu({
   onViewTemplate,
   onDelete,
 }: TransactionMenuProps) {
-  const iconColor = useThemeColor('secondaryText');
+  const iconColor = useThemeColor("secondaryText");
   const canViewTemplate = hasActiveTemplate && Boolean(templateId);
   const actions: MenuAction[] = [
-    { id: 'edit', title: 'Edit', image: 'pencil' },
+    { id: "edit", title: "Edit", image: "pencil" },
     canViewTemplate
-      ? { id: 'view-template', title: 'View Template', image: 'doc.text' }
-      : { id: 'save-template', title: 'Save as Template', image: 'plus.square' },
-    { id: 'delete', title: 'Delete', image: 'trash', attributes: { destructive: true } },
+      ? { id: "view-template", title: "View Template", image: "doc.text" }
+      : {
+          id: "save-template",
+          title: "Save as Template",
+          image: "plus.square",
+        },
+    {
+      id: "delete",
+      title: "Delete",
+      image: "trash",
+      attributes: { destructive: true },
+    },
   ];
 
   const handleMenuAction = ({ nativeEvent }: NativeActionEvent) => {
     switch (nativeEvent.event) {
-      case 'edit':
+      case "edit":
         onEdit(transactionId);
         break;
-      case 'save-template':
+      case "save-template":
         onSaveAsTemplate(transactionId);
         break;
-      case 'view-template':
+      case "view-template":
         if (templateId) onViewTemplate(templateId);
         break;
-      case 'delete':
+      case "delete":
         onDelete(transactionId);
         break;
     }
@@ -74,8 +87,8 @@ const styles = StyleSheet.create({
   button: {
     width: 34,
     height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   pressed: {
     opacity: 0.6,

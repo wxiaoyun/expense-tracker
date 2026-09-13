@@ -1,5 +1,9 @@
-import { validateOccurrence } from '@/libs/date';
-import { nextAvailableTemplateName, normalizeTemplateText, type TransactionType } from './template-core';
+import { validateOccurrence } from "@/libs/date";
+import {
+  nextAvailableTemplateName,
+  normalizeTemplateText,
+  type TransactionType,
+} from "./template-core";
 
 export type RecurringRowForTemplateMigration = {
   id: string;
@@ -42,18 +46,22 @@ const mapRecurringRow = (
   const amountMagnitude = Math.abs(row.amount);
   const amountIsValid = Number.isFinite(amountMagnitude) && amountMagnitude > 0;
   const scheduleCursorAt = row.lastCharged ?? row.startDate;
-  const startIsValid = Number.isFinite(row.startDate) && Number.isInteger(row.startDate);
-  const cursorIsValid = Number.isFinite(scheduleCursorAt)
-    && Number.isInteger(scheduleCursorAt)
-    && scheduleCursorAt >= row.startDate;
-  const recurrenceIsValid = typeof row.recurrenceValue === 'string'
-    && row.recurrenceValue.trim().length > 0
-    && validateOccurrence(row.recurrenceValue).ok;
-  const scheduleIsComplete = amountIsValid
-    && row.description.trim().length > 0
-    && startIsValid
-    && cursorIsValid
-    && recurrenceIsValid;
+  const startIsValid =
+    Number.isFinite(row.startDate) && Number.isInteger(row.startDate);
+  const cursorIsValid =
+    Number.isFinite(scheduleCursorAt) &&
+    Number.isInteger(scheduleCursorAt) &&
+    scheduleCursorAt >= row.startDate;
+  const recurrenceIsValid =
+    typeof row.recurrenceValue === "string" &&
+    row.recurrenceValue.trim().length > 0 &&
+    validateOccurrence(row.recurrenceValue).ok;
+  const scheduleIsComplete =
+    amountIsValid &&
+    row.description.trim().length > 0 &&
+    startIsValid &&
+    cursorIsValid &&
+    recurrenceIsValid;
   activeNames.add(normalizedName);
 
   return {
@@ -61,7 +69,11 @@ const mapRecurringRow = (
     name,
     normalizedName,
     amount: amountIsValid ? amountMagnitude : null,
-    transactionType: amountIsValid ? row.amount > 0 ? 'income' : 'expense' : null,
+    transactionType: amountIsValid
+      ? row.amount > 0
+        ? "income"
+        : "expense"
+      : null,
     description: row.description,
     category: row.category,
     notes: null,
@@ -79,6 +91,10 @@ const mapRecurringRow = (
 export const mapRecurringRowsToTemplates = (
   rows: RecurringRowForTemplateMigration[],
   activeNames = new Set<string>(),
-): MigratedTemplateRow[] => [...rows]
-  .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id))
-  .map((row) => mapRecurringRow(row, activeNames));
+): MigratedTemplateRow[] =>
+  [...rows]
+    .sort(
+      (left, right) =>
+        left.createdAt - right.createdAt || left.id.localeCompare(right.id),
+    )
+    .map((row) => mapRecurringRow(row, activeNames));

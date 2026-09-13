@@ -1,5 +1,5 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from './useTransactionsQuery';
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "./useTransactionsQuery";
 
 export const useInvalidateTransactions = () => {
   const qc = useQueryClient();

@@ -1,46 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Button } from 'react-native';
-import { router } from 'expo-router';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Button,
+} from "react-native";
+import { router } from "expo-router";
 import {
   runMigrationWithRecovery,
   getLegacyCounts,
   legacyDbExists,
   markMigrationComplete,
   seedPresetCategories,
-} from '@/db/migration';
-import GlassView from '@/components/glass/GlassView';
-import { db, sqlite } from '@/db';
-import { actionFeedback, errorFeedback, successFeedback } from '@/libs/haptics';
-import { useThemeColors } from '@/hooks/useThemeColor';
+} from "@/db/migration";
+import GlassView from "@/components/glass/GlassView";
+import { db, sqlite } from "@/db";
+import { actionFeedback, errorFeedback, successFeedback } from "@/libs/haptics";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 export default function MigrationScreen() {
   const colors = useThemeColors();
-  const [status, setStatus] = useState<'checking' | 'found' | 'migrating' | 'success' | 'error' | 'skip'>('checking');
-  const [counts, setCounts] = useState<{ transactions: number; recurring: number } | null>(null);
-  const [progress, setProgress] = useState<string>('');
+  const [status, setStatus] = useState<
+    "checking" | "found" | "migrating" | "success" | "error" | "skip"
+  >("checking");
+  const [counts, setCounts] = useState<{
+    transactions: number;
+    recurring: number;
+  } | null>(null);
+  const [progress, setProgress] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkLegacy = async () => {
       try {
-        console.info('[migration.screen][stage=check_legacy] checking for legacy database');
+        console.info(
+          "[migration.screen][stage=check_legacy] checking for legacy database",
+        );
         if (legacyDbExists()) {
           const legacyCounts = await getLegacyCounts();
-          if (!legacyCounts) throw new Error('Could not read legacy database');
+          if (!legacyCounts) throw new Error("Could not read legacy database");
           setCounts(legacyCounts);
-          setStatus('found');
+          setStatus("found");
         } else {
-          console.info('[migration.screen][stage=initialize] initializing latest database');
+          console.info(
+            "[migration.screen][stage=initialize] initializing latest database",
+          );
           await seedPresetCategories(db);
           await markMigrationComplete(db);
-          router.replace('/(tabs)');
+          router.replace("/(tabs)");
         }
       } catch (checkError) {
-        console.error('[migration.screen][stage=check_legacy] migration check failed', {
-          error: String(checkError),
-        });
+        console.error(
+          "[migration.screen][stage=check_legacy] migration check failed",
+          {
+            error: String(checkError),
+          },
+        );
         setError(String(checkError));
-        setStatus('error');
+        setStatus("error");
       }
     };
     void checkLegacy();
@@ -48,81 +67,98 @@ export default function MigrationScreen() {
 
   const handleMigrate = async () => {
     actionFeedback();
-    setStatus('migrating');
-    setProgress('Opening databases...');
+    setStatus("migrating");
+    setProgress("Opening databases...");
     setError(null);
 
     try {
-      console.info('[migration.screen][stage=run_migration] starting legacy migration');
+      console.info(
+        "[migration.screen][stage=run_migration] starting legacy migration",
+      );
       const result = await runMigrationWithRecovery(db, sqlite);
       if (result.success) {
-        setProgress('Migration complete!');
-        setStatus('success');
+        setProgress("Migration complete!");
+        setStatus("success");
         successFeedback();
       } else {
-        const migrationError = result.error || 'Migration failed';
-        console.error('[migration.screen][stage=run_migration] legacy migration failed', {
-          error: migrationError,
-        });
+        const migrationError = result.error || "Migration failed";
+        console.error(
+          "[migration.screen][stage=run_migration] legacy migration failed",
+          {
+            error: migrationError,
+          },
+        );
         errorFeedback();
         setError(migrationError);
-        setStatus('error');
+        setStatus("error");
       }
     } catch (err) {
-      console.error('[migration.screen][stage=run_migration] legacy migration failed', {
-        error: String(err),
-      });
+      console.error(
+        "[migration.screen][stage=run_migration] legacy migration failed",
+        {
+          error: String(err),
+        },
+      );
       errorFeedback();
       setError(String(err));
-      setStatus('error');
+      setStatus("error");
     }
   };
 
   const handleSkip = () => {
     Alert.alert(
-      'Skip Migration?',
-      'Your existing data will not be imported. You can import it later from Settings.',
+      "Skip Migration?",
+      "Your existing data will not be imported. You can import it later from Settings.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Skip',
-          style: 'destructive',
+          text: "Skip",
+          style: "destructive",
           onPress: async () => {
             try {
               await seedPresetCategories(db);
               await markMigrationComplete(db);
-              console.info('[migration][stage=skip][reason=user_selected] migration skipped');
-              router.replace('/(tabs)');
+              console.info(
+                "[migration][stage=skip][reason=user_selected] migration skipped",
+              );
+              router.replace("/(tabs)");
             } catch (skipError) {
-              console.error('[migration][stage=skip] failed to initialize new database', {
-                error: String(skipError),
-              });
+              console.error(
+                "[migration][stage=skip] failed to initialize new database",
+                {
+                  error: String(skipError),
+                },
+              );
               setError(String(skipError));
-              setStatus('error');
+              setStatus("error");
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const handleContinue = () => {
-    router.replace('/(tabs)');
+    router.replace("/(tabs)");
   };
 
   const renderContent = () => {
     switch (status) {
-      case 'checking':
+      case "checking":
         return (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
-            <Text style={[styles.text, { color: colors.text }]}>Checking for existing data...</Text>
+            <Text style={[styles.text, { color: colors.text }]}>
+              Checking for existing data...
+            </Text>
           </View>
         );
-      case 'found':
+      case "found":
         return (
           <View style={styles.container}>
-            <Text style={[styles.title, { color: colors.text }]}>Found Existing Data</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Found Existing Data
+            </Text>
             <View style={styles.stats}>
               <Text style={[styles.stat, { color: colors.text }]}>
                 {counts?.transactions ?? 0} Transactions
@@ -140,25 +176,33 @@ export default function MigrationScreen() {
             </View>
           </View>
         );
-      case 'migrating':
+      case "migrating":
         return (
           <View style={styles.centered}>
             <ActivityIndicator size="large" />
-            <Text style={[styles.text, { color: colors.text }]}>{progress}</Text>
+            <Text style={[styles.text, { color: colors.text }]}>
+              {progress}
+            </Text>
           </View>
         );
-      case 'success':
+      case "success":
         return (
           <View style={styles.centered}>
-            <Text style={[styles.title, { color: colors.success }]}>✓ Migration Complete</Text>
-            <Text style={[styles.text, { color: colors.text }]}>All data imported successfully.</Text>
+            <Text style={[styles.title, { color: colors.success }]}>
+              ✓ Migration Complete
+            </Text>
+            <Text style={[styles.text, { color: colors.text }]}>
+              All data imported successfully.
+            </Text>
             <Button title="Continue" onPress={handleContinue} />
           </View>
         );
-      case 'error':
+      case "error":
         return (
           <View style={styles.centered}>
-            <Text style={[styles.title, { color: colors.destructive }]}>✗ Migration Failed</Text>
+            <Text style={[styles.title, { color: colors.destructive }]}>
+              ✗ Migration Failed
+            </Text>
             <Text style={[styles.text, { color: colors.text }]}>{error}</Text>
             <View style={styles.buttonRow}>
               <Button title="Retry" onPress={handleMigrate} />
@@ -173,9 +217,7 @@ export default function MigrationScreen() {
 
   return (
     <GlassView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.safeArea}>
-        {renderContent()}
-      </View>
+      <View style={styles.safeArea}>{renderContent()}</View>
     </GlassView>
   );
 }
@@ -184,22 +226,22 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   centered: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 16,
   },
   title: {
     fontSize: 28,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   stats: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 32,
     marginVertical: 16,
   },
@@ -208,18 +250,18 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   description: {
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.7,
     marginBottom: 8,
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 24,
   },
   text: {
     marginTop: 16,
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

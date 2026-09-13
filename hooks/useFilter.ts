@@ -2,7 +2,8 @@ import { atom, getDefaultStore, useAtom } from "jotai";
 import { debounce } from "lodash";
 import { useMemo } from "react";
 
-export type DateRangePreset = "7d" | "30d" | "365d" | "monthly" | "weekly" | "all" | "custom";
+export type DateRangePreset =
+  "7d" | "30d" | "365d" | "monthly" | "weekly" | "all" | "custom";
 
 export type DateRange = {
   preset: DateRangePreset;
@@ -24,7 +25,15 @@ export const debouncedSetSearch = debounce((search: string) => {
 
 const now = new Date();
 export const endOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
 export const dateRangeAtom = atom<DateRange>({
   preset: "all",
@@ -49,7 +58,10 @@ export const useVerifiedFilter = () => {
 };
 
 // Filter combinator - shared between hook and tests
-export const computeDateRange = (preset: DateRangePreset, today: Date): { start: Date; end: Date } => {
+export const computeDateRange = (
+  preset: DateRangePreset,
+  today: Date,
+): { start: Date; end: Date } => {
   const end = endOfDay(today);
   switch (preset) {
     case "7d":
@@ -63,7 +75,10 @@ export const computeDateRange = (preset: DateRangePreset, today: Date): { start:
     case "weekly":
       const day = today.getDay(); // 0 = Sunday
       const diff = today.getDate() - day;
-      return { start: new Date(today.getFullYear(), today.getMonth(), diff), end };
+      return {
+        start: new Date(today.getFullYear(), today.getMonth(), diff),
+        end,
+      };
     case "all":
       return { start: new Date(0), end };
     default:

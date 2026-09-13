@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Alert, InteractionManager, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { router, useLocalSearchParams } from "expo-router";
+import { Alert, InteractionManager, Text, TextInput, View } from "react-native";
 
 import {
   DEFAULT_TEMPLATE_CRON,
   TemplateEditorForm,
   type TemplateEditorCategory,
-} from '@/components/templates/template-editor-form';
-import type { TransactionTemplate } from '@/db/schema';
+} from "@/components/templates/template-editor-form";
+import type { TransactionTemplate } from "@/db/schema";
 import {
   backfillTemplate,
   createTemplate,
@@ -16,40 +16,46 @@ import {
   getTemplate,
   previewTemplateBackfill,
   updateTemplate,
-} from '@/db/template';
+} from "@/db/template";
 import {
   validateTemplateDraft,
   type TemplateDraft,
   type TemplateSuggestion,
   type TransactionType,
-} from '@/db/template-core';
-import { getTransaction, listCategoriesByUsage } from '@/db/transaction';
-import { useTemplateSuggestionsQuery } from '@/hooks/useTemplatesQuery';
-import { useThemeColors } from '@/hooks/useThemeColor';
-import { getNextOccurrences } from '@/libs/date';
+} from "@/db/template-core";
+import { getTransaction, listCategoriesByUsage } from "@/db/transaction";
+import { useTemplateSuggestionsQuery } from "@/hooks/useTemplatesQuery";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { getNextOccurrences } from "@/libs/date";
 import {
   actionFeedback,
   errorFeedback,
   selectionFeedback,
   warningFeedback,
-} from '@/libs/haptics';
+} from "@/libs/haptics";
 
 const DEFAULT_CRON = DEFAULT_TEMPLATE_CRON;
 
 type CategoryRow = TemplateEditorCategory;
-type ValidationField = 'name' | 'amount' | 'description' | 'recurrenceValue' | 'startDate';
+type ValidationField =
+  "name" | "amount" | "description" | "recurrenceValue" | "startDate";
 
-const confirm = (title: string, message: string): Promise<boolean> => new Promise((resolve) => {
-  Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-    { text: 'Continue', onPress: () => resolve(true) },
-  ]);
-});
+const confirm = (title: string, message: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    Alert.alert(title, message, [
+      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+      { text: "Continue", onPress: () => resolve(true) },
+    ]);
+  });
 
-const firstParam = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+const firstParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 export default function TemplateEditDrawer() {
-  const params = useLocalSearchParams<{ id?: string | string[]; sourceTransactionId?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    id?: string | string[];
+    sourceTransactionId?: string | string[];
+  }>();
   const id = firstParam(params.id);
   const requestedSourceTransactionId = firstParam(params.sourceTransactionId);
   const sourceTransactionId = id ? undefined : requestedSourceTransactionId;
@@ -66,12 +72,13 @@ export default function TemplateEditDrawer() {
   const malformedRouteLogged = useRef(false);
   const submitInFlightRef = useRef(false);
 
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [transactionType, setTransactionType] = useState<TransactionType>('expense');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [transactionType, setTransactionType] =
+    useState<TransactionType>("expense");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [notes, setNotes] = useState("");
   const [verified, setVerified] = useState(false);
   const [repeatAutomatically, setRepeatAutomatically] = useState(false);
   const [recurrenceValue, setRecurrenceValue] = useState<string>(DEFAULT_CRON);
@@ -79,14 +86,22 @@ export default function TemplateEditDrawer() {
   const [presentedAt] = useState(() => Date.now());
   const [scheduleActive, setScheduleActive] = useState(true);
   const [initiallyScheduled, setInitiallyScheduled] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<CategoryRow[]>([]);
-  const [loading, setLoading] = useState(isEdit || Boolean(sourceTransactionId));
+  const [availableCategories, setAvailableCategories] = useState<CategoryRow[]>(
+    [],
+  );
+  const [loading, setLoading] = useState(
+    isEdit || Boolean(sourceTransactionId),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestedName, setSuggestedName] = useState<string | null>(null);
   const [backfillCount, setBackfillCount] = useState(0);
 
-  const metadata = (stage: string, errorValue?: unknown, templateId = id ?? null) => ({
+  const metadata = (
+    stage: string,
+    errorValue?: unknown,
+    templateId = id ?? null,
+  ) => ({
     template_id: templateId,
     source_transaction_id: sourceTransactionId ?? null,
     stage,
@@ -94,21 +109,31 @@ export default function TemplateEditDrawer() {
   });
 
   const logInfo = (stage: string, templateId?: string | null) => {
-    console.info(`[templates.editor][stage=${stage}]`, metadata(stage, undefined, templateId));
+    console.info(
+      `[templates.editor][stage=${stage}]`,
+      metadata(stage, undefined, templateId),
+    );
   };
 
-  const logError = (stage: string, errorValue: unknown, templateId?: string | null) => {
-    console.error(`[templates.editor][stage=${stage}] failed`, metadata(stage, errorValue, templateId));
+  const logError = (
+    stage: string,
+    errorValue: unknown,
+    templateId?: string | null,
+  ) => {
+    console.error(
+      `[templates.editor][stage=${stage}] failed`,
+      metadata(stage, errorValue, templateId),
+    );
   };
 
   useEffect(() => {
     if (id && requestedSourceTransactionId && !malformedRouteLogged.current) {
       malformedRouteLogged.current = true;
-      console.error('[templates.editor][stage=resolve_source] failed', {
+      console.error("[templates.editor][stage=resolve_source] failed", {
         template_id_present: true,
         source_transaction_id_present: true,
-        stage: 'resolve_source',
-        error: 'Conflicting route sources',
+        stage: "resolve_source",
+        error: "Conflicting route sources",
       });
     }
   }, [id, requestedSourceTransactionId]);
@@ -116,32 +141,38 @@ export default function TemplateEditDrawer() {
   useEffect(() => {
     let active = true;
     const loadCategories = async () => {
-      logInfo('load_categories');
+      logInfo("load_categories");
       try {
         const rows = await listCategoriesByUsage();
         if (active) setAvailableCategories(rows);
       } catch (loadError) {
-        logError('load_categories', loadError);
-        if (active) setError('Could not load categories');
+        logError("load_categories", loadError);
+        if (active) setError("Could not load categories");
       }
     };
     void loadCategories();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
     // Route sources intentionally define the logging metadata for this request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, sourceTransactionId]);
 
   useEffect(() => {
     if (!isBlankCreate) return;
-    const task = InteractionManager.runAfterInteractions(() => amountRef.current?.focus());
+    const task = InteractionManager.runAfterInteractions(() =>
+      amountRef.current?.focus(),
+    );
     return () => task.cancel();
   }, [isBlankCreate]);
 
-  const suggestions: TemplateSuggestion[] = isBlankCreate ? (suggestionQuery.data ?? []).slice(0, 5) : [];
+  const suggestions: TemplateSuggestion[] = isBlankCreate
+    ? (suggestionQuery.data ?? []).slice(0, 5)
+    : [];
 
   useEffect(() => {
     if (!isBlankCreate || !suggestionQuery.error) return;
-    logError('load_suggestions', suggestionQuery.error);
+    logError("load_suggestions", suggestionQuery.error);
     // Query errors are rendered non-blockingly; entered form state remains intact.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBlankCreate, suggestionQuery.error]);
@@ -152,11 +183,13 @@ export default function TemplateEditDrawer() {
 
     const applyTemplate = (template: TransactionTemplate) => {
       setName(template.name);
-      setAmount(template.amount === null ? '' : String(Math.abs(template.amount)));
-      setTransactionType(template.transactionType ?? 'expense');
-      setDescription(template.description ?? '');
-      setCategory(template.category ?? '');
-      setNotes(template.notes ?? '');
+      setAmount(
+        template.amount === null ? "" : String(Math.abs(template.amount)),
+      );
+      setTransactionType(template.transactionType ?? "expense");
+      setDescription(template.description ?? "");
+      setCategory(template.category ?? "");
+      setNotes(template.notes ?? "");
       setVerified(template.verified === 1);
       const scheduled = Boolean(template.recurrenceValue);
       setRepeatAutomatically(scheduled);
@@ -169,26 +202,26 @@ export default function TemplateEditDrawer() {
     const loadSource = async () => {
       try {
         if (id) {
-          logInfo('load_template');
+          logInfo("load_template");
           const template = await getTemplate(id);
-          if (!template) throw new Error('Template not found');
+          if (!template) throw new Error("Template not found");
           if (active) applyTemplate(template);
         } else if (sourceTransactionId) {
-          logInfo('load_source_transaction');
+          logInfo("load_source_transaction");
           const transaction = await getTransaction(sourceTransactionId);
-          if (!transaction) throw new Error('Transaction not found');
+          if (!transaction) throw new Error("Transaction not found");
           if (active) {
             setName(transaction.description.trim());
             setAmount(String(Math.abs(transaction.amount)));
-            setTransactionType(transaction.amount >= 0 ? 'income' : 'expense');
+            setTransactionType(transaction.amount >= 0 ? "income" : "expense");
             setDescription(transaction.description);
             setCategory(transaction.category);
-            setNotes(transaction.notes ?? '');
+            setNotes(transaction.notes ?? "");
             setVerified(transaction.verified === 1);
           }
         }
       } catch (loadError) {
-        logError(id ? 'load_template' : 'load_source_transaction', loadError);
+        logError(id ? "load_template" : "load_source_transaction", loadError);
         if (active) setError(String(loadError));
       } finally {
         if (active) setLoading(false);
@@ -196,7 +229,9 @@ export default function TemplateEditDrawer() {
     };
 
     void loadSource();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
     // Route source changes replace all local editor state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, sourceTransactionId]);
@@ -224,15 +259,16 @@ export default function TemplateEditDrawer() {
     return getNextOccurrences(recurrenceValue, 3, anchor);
   }, [presentedAt, recurrenceValue, repeatAutomatically, startDate]);
 
-  const canPreviewBackfill = !isEdit
-    && repeatAutomatically
-    && startDate.getTime() < presentedAt
-    && Boolean(name.trim())
-    && Boolean(description.trim())
-    && Boolean(amount.trim())
-    && Number.isFinite(Number(amount))
-    && Number(amount) > 0
-    && getNextOccurrences(recurrenceValue, 1, startDate).length === 1;
+  const canPreviewBackfill =
+    !isEdit &&
+    repeatAutomatically &&
+    startDate.getTime() < presentedAt &&
+    Boolean(name.trim()) &&
+    Boolean(description.trim()) &&
+    Boolean(amount.trim()) &&
+    Number.isFinite(Number(amount)) &&
+    Number(amount) > 0 &&
+    getNextOccurrences(recurrenceValue, 1, startDate).length === 1;
   const visibleBackfillCount = canPreviewBackfill ? backfillCount : 0;
 
   useEffect(() => {
@@ -241,35 +277,51 @@ export default function TemplateEditDrawer() {
     const currentDraft = buildDraft();
     let active = true;
     const preview = async () => {
-      logInfo('preview_backfill');
+      logInfo("preview_backfill");
       try {
         const count = await previewTemplateBackfill(currentDraft);
         if (active) setBackfillCount(count);
       } catch (previewError) {
-        logError('preview_backfill', previewError);
+        logError("preview_backfill", previewError);
         if (active) setBackfillCount(0);
       }
     };
     void preview();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
     // Primitive editor values are the complete preview input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, canPreviewBackfill, category, description, isEdit, name, notes, recurrenceValue, repeatAutomatically, scheduleActive, startDate, transactionType, verified]);
+  }, [
+    amount,
+    canPreviewBackfill,
+    category,
+    description,
+    isEdit,
+    name,
+    notes,
+    recurrenceValue,
+    repeatAutomatically,
+    scheduleActive,
+    startDate,
+    transactionType,
+    verified,
+  ]);
 
   const focusInvalidField = (field: ValidationField) => {
-    if (field === 'name') nameRef.current?.focus();
-    if (field === 'amount') amountRef.current?.focus();
-    if (field === 'description') descriptionRef.current?.focus();
-    if (field === 'recurrenceValue') recurrenceRef.current?.focus();
+    if (field === "name") nameRef.current?.focus();
+    if (field === "amount") amountRef.current?.focus();
+    if (field === "description") descriptionRef.current?.focus();
+    if (field === "recurrenceValue") recurrenceRef.current?.focus();
   };
 
   const applySuggestion = (suggestion: TemplateSuggestion) => {
     setName(suggestion.name);
-    setAmount(suggestion.amount === null ? '' : String(suggestion.amount));
-    setTransactionType(suggestion.transactionType ?? 'expense');
-    setDescription(suggestion.description ?? '');
-    setCategory(suggestion.category ?? '');
-    setNotes(suggestion.notes ?? '');
+    setAmount(suggestion.amount === null ? "" : String(suggestion.amount));
+    setTransactionType(suggestion.transactionType ?? "expense");
+    setDescription(suggestion.description ?? "");
+    setCategory(suggestion.category ?? "");
+    setNotes(suggestion.notes ?? "");
     setVerified(suggestion.verified ?? false);
     setError(null);
     setSuggestedName(null);
@@ -295,11 +347,15 @@ export default function TemplateEditDrawer() {
 
     if (isEdit && initiallyScheduled) {
       Alert.alert(
-        'Stop repeating?',
-        'This will clear the schedule. Past transactions will stay unchanged.',
+        "Stop repeating?",
+        "This will clear the schedule. Past transactions will stay unchanged.",
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Stop Repeating', style: 'destructive', onPress: disableRepeat },
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Stop Repeating",
+            style: "destructive",
+            onPress: disableRepeat,
+          },
         ],
       );
       return;
@@ -308,44 +364,51 @@ export default function TemplateEditDrawer() {
   };
 
   const invalidateSavedQueries = async () => {
-    logInfo('invalidate_queries');
+    logInfo("invalidate_queries");
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['templates'] }),
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ["templates"] }),
+        queryClient.invalidateQueries({ queryKey: ["transactions"] }),
       ]);
     } catch (invalidationError) {
-      logError('invalidate_queries', invalidationError);
+      logError("invalidate_queries", invalidationError);
     }
   };
 
-  const saveDraft = async (draft: TemplateDraft, exactBackfillCount: number, submissionCutoff: number) => {
+  const saveDraft = async (
+    draft: TemplateDraft,
+    exactBackfillCount: number,
+    submissionCutoff: number,
+  ) => {
     setSuggestedName(null);
     try {
       let saved: TransactionTemplate | null;
       if (id) {
-        logInfo('update_template');
+        logInfo("update_template");
         saved = await updateTemplate(id, draft);
       } else {
-        logInfo('create_template');
+        logInfo("create_template");
         saved = await createTemplate(draft);
       }
-      if (!saved) throw new Error(isEdit ? 'Template not found' : 'Template was not created');
+      if (!saved)
+        throw new Error(
+          isEdit ? "Template not found" : "Template was not created",
+        );
 
       if (exactBackfillCount > 0) {
         try {
-          logInfo('backfill_template', saved.id);
+          logInfo("backfill_template", saved.id);
           await backfillTemplate(saved.id, submissionCutoff);
         } catch (backfillError) {
-          logError('backfill_template', backfillError, saved.id);
+          logError("backfill_template", backfillError, saved.id);
           await invalidateSavedQueries();
           warningFeedback();
           router.dismiss();
           Alert.alert(
-            'Template saved, backfill failed',
+            "Template saved, backfill failed",
             saved.scheduleActive === 1
-              ? 'The template was saved. Historical transactions were not added. Launch-time processing will retry automatically.'
-              : 'The template was saved. Historical transactions were not added. Inactive schedules do not retry automatically.',
+              ? "The template was saved. Historical transactions were not added. Launch-time processing will retry automatically."
+              : "The template was saved. Historical transactions were not added. Inactive schedules do not retry automatically.",
           );
           return;
         }
@@ -355,16 +418,17 @@ export default function TemplateEditDrawer() {
       actionFeedback();
       router.dismiss();
     } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : String(saveError);
-      logError(id ? 'update_template' : 'create_template', saveError);
+      const message =
+        saveError instanceof Error ? saveError.message : String(saveError);
+      logError(id ? "update_template" : "create_template", saveError);
       errorFeedback();
-      if (message === 'Template name already exists') {
+      if (message === "Template name already exists") {
         setError(message);
         try {
-          logInfo('suggest_unique_name');
+          logInfo("suggest_unique_name");
           setSuggestedName(await getNextAvailableTemplateName(name, id));
         } catch (suffixError) {
-          logError('suggest_unique_name', suffixError);
+          logError("suggest_unique_name", suffixError);
         }
         nameRef.current?.focus();
       } else {
@@ -391,15 +455,22 @@ export default function TemplateEditDrawer() {
 
       const submissionCutoff = Date.now();
       let exactBackfillCount = 0;
-      if (!isEdit && repeatAutomatically && startDate.getTime() < submissionCutoff) {
+      if (
+        !isEdit &&
+        repeatAutomatically &&
+        startDate.getTime() < submissionCutoff
+      ) {
         try {
-          logInfo('confirm_backfill_preview');
-          exactBackfillCount = await previewTemplateBackfill(draft, submissionCutoff);
+          logInfo("confirm_backfill_preview");
+          exactBackfillCount = await previewTemplateBackfill(
+            draft,
+            submissionCutoff,
+          );
           setBackfillCount(exactBackfillCount);
         } catch (previewError) {
-          logError('confirm_backfill_preview', previewError);
+          logError("confirm_backfill_preview", previewError);
           errorFeedback();
-          setError('Could not calculate past transactions');
+          setError("Could not calculate past transactions");
           return;
         }
       }

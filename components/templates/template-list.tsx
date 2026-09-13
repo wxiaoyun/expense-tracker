@@ -1,10 +1,10 @@
-import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import React from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 
-import type { TransactionTemplate } from '@/db/schema';
-import { useThemeColors } from '@/hooks/useThemeColor';
-import { TemplateRow } from './template-row';
+import type { TransactionTemplate } from "@/db/schema";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { TemplateRow } from "./template-row";
 
 type TemplateListProps = {
   templates: TransactionTemplate[];
@@ -43,14 +43,24 @@ export function TemplateList({
         onDelete={onDelete}
       />
     ),
-    [quickAddPendingIds, onUse, onQuickAdd, onEdit, onPause, onResume, onDelete],
+    [
+      quickAddPendingIds,
+      onUse,
+      onQuickAdd,
+      onEdit,
+      onPause,
+      onResume,
+      onDelete,
+    ],
   );
 
   if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.secondaryText }]}>Loading templates…</Text>
+        <Text style={[styles.loadingText, { color: colors.secondaryText }]}>
+          Loading templates…
+        </Text>
       </View>
     );
   }
@@ -58,8 +68,12 @@ export function TemplateList({
   if (templates.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Templates Yet</Text>
-        <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>Tap the + button to add your first template</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>
+          No Templates Yet
+        </Text>
+        <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>
+          Tap the + button to add your first template
+        </Text>
       </View>
     );
   }
@@ -82,8 +96,8 @@ const styles = StyleSheet.create({
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   loadingText: {
@@ -92,11 +106,11 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   emptySubtitle: {
     fontSize: 15,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
   },
 });

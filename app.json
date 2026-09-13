@@ -10,17 +10,13 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "userInterfaceStyle": "automatic",
       "bundleIdentifier": "com.wxiaoyun.vibetracker",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "processing"
-        ],
+        "UIBackgroundModes": ["processing"],
         "UISupportsDocumentBrowser": true,
         "UIFileSharingEnabled": true,
         "ITSAppUsesNonExemptEncryption": false

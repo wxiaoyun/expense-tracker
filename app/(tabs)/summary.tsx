@@ -1,22 +1,47 @@
-import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ExpenseFilterBar } from '@/components/transactions/expense-filter-bar';
-import { CashFlowTrend } from '@/components/summary/CashFlowTrend';
-import { computeDateRange, endOfDay, useDateRange, type DateRangePreset } from '@/hooks/useFilter';
-import { useTransactionSummary } from '@/hooks/useTransactionsQuery';
-import { formatCurrency } from '@/libs/intl';
-import { useThemeColors } from '@/hooks/useThemeColor';
-import { customCategoryColor } from '@/libs/category-color';
+import React, { useCallback, useMemo } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { ExpenseFilterBar } from "@/components/transactions/expense-filter-bar";
+import { CashFlowTrend } from "@/components/summary/CashFlowTrend";
+import {
+  computeDateRange,
+  endOfDay,
+  useDateRange,
+  type DateRangePreset,
+} from "@/hooks/useFilter";
+import { useTransactionSummary } from "@/hooks/useTransactionsQuery";
+import { formatCurrency } from "@/libs/intl";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { customCategoryColor } from "@/libs/category-color";
 
 type CategorySlice = { value: number; text: string; color: string };
 
-const getTrendGranularity = (preset: DateRangePreset, start: Date, end: Date) => {
-  if (preset === 'weekly' || preset === 'monthly') return 'day' as const;
-  const rangeDays = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
-  return rangeDays <= 90 ? 'day' as const : 'month' as const;
+const getTrendGranularity = (
+  preset: DateRangePreset,
+  start: Date,
+  end: Date,
+) => {
+  if (preset === "weekly" || preset === "monthly") return "day" as const;
+  const rangeDays = Math.ceil(
+    (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  return rangeDays <= 90 ? ("day" as const) : ("month" as const);
 };
 
-function OverviewCard({ income, spending, net }: { income: number; spending: number; net: number }) {
+function OverviewCard({
+  income,
+  spending,
+  net,
+}: {
+  income: number;
+  spending: number;
+  net: number;
+}) {
   const colors = useThemeColors();
   return (
     <View style={[styles.overviewCard, { backgroundColor: colors.primary }]}>
@@ -65,7 +90,9 @@ function EmptyCard({ message }: { message: string }) {
   const colors = useThemeColors();
   return (
     <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-      <Text style={[styles.emptyText, { color: colors.secondaryText }]}>{message}</Text>
+      <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+        {message}
+      </Text>
     </View>
   );
 }
@@ -91,8 +118,15 @@ function CategoryBreakdown({
           <View key={item.text} style={styles.categoryRow}>
             <View style={styles.categoryHeader}>
               <View style={styles.categoryNameGroup}>
-                <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                <Text numberOfLines={1} style={[styles.categoryName, { color: colors.text }]}>{item.text}</Text>
+                <View
+                  style={[styles.categoryDot, { backgroundColor: item.color }]}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={[styles.categoryName, { color: colors.text }]}
+                >
+                  {item.text}
+                </Text>
               </View>
               <View style={styles.categoryValueGroup}>
                 <Text
@@ -104,13 +138,28 @@ function CategoryBreakdown({
                 >
                   {formatCurrency(item.value)}
                 </Text>
-                <Text style={[styles.categoryPercent, { color: colors.secondaryText }]}>
+                <Text
+                  style={[
+                    styles.categoryPercent,
+                    { color: colors.secondaryText },
+                  ]}
+                >
                   {percentage.toFixed(1)}%
                 </Text>
               </View>
             </View>
-            <View style={[styles.progressTrack, { backgroundColor: colors.chartTrack }]}>
-              <View style={[styles.progressFill, { backgroundColor: item.color, width: `${percentage}%` }]} />
+            <View
+              style={[
+                styles.progressTrack,
+                { backgroundColor: colors.chartTrack },
+              ]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: item.color, width: `${percentage}%` },
+                ]}
+              />
             </View>
           </View>
         );
@@ -132,54 +181,63 @@ export default function SummaryScreen() {
     granularity,
   });
 
-  const handlePresetChange = useCallback((preset: DateRangePreset) => {
-    if (preset === 'custom') {
+  const handlePresetChange = useCallback(
+    (preset: DateRangePreset) => {
+      if (preset === "custom") {
+        setDateRange((previous) => {
+          const customStart = previous.customStart ?? new Date();
+          const customEnd = previous.customEnd ?? new Date();
+          return {
+            ...previous,
+            preset: "custom",
+            customStart,
+            customEnd,
+            start: customStart,
+            end: endOfDay(customEnd),
+          };
+        });
+        return;
+      }
+
+      const range = computeDateRange(preset, new Date());
+      setDateRange({ preset, ...range });
+    },
+    [setDateRange],
+  );
+
+  const handleCustomStartChange = useCallback(
+    (date: Date) => {
       setDateRange((previous) => {
-        const customStart = previous.customStart ?? new Date();
         const customEnd = previous.customEnd ?? new Date();
         return {
           ...previous,
-          preset: 'custom',
-          customStart,
+          preset: "custom",
+          customStart: date,
           customEnd,
-          start: customStart,
+          start: date,
           end: endOfDay(customEnd),
         };
       });
-      return;
-    }
+    },
+    [setDateRange],
+  );
 
-    const range = computeDateRange(preset, new Date());
-    setDateRange({ preset, ...range });
-  }, [setDateRange]);
-
-  const handleCustomStartChange = useCallback((date: Date) => {
-    setDateRange((previous) => {
-      const customEnd = previous.customEnd ?? new Date();
-      return {
-        ...previous,
-        preset: 'custom',
-        customStart: date,
-        customEnd,
-        start: date,
-        end: endOfDay(customEnd),
-      };
-    });
-  }, [setDateRange]);
-
-  const handleCustomEndChange = useCallback((date: Date) => {
-    setDateRange((previous) => {
-      const customStart = previous.customStart ?? new Date(0);
-      return {
-        ...previous,
-        preset: 'custom',
-        customStart,
-        customEnd: date,
-        start: customStart,
-        end: endOfDay(date),
-      };
-    });
-  }, [setDateRange]);
+  const handleCustomEndChange = useCallback(
+    (date: Date) => {
+      setDateRange((previous) => {
+        const customStart = previous.customStart ?? new Date(0);
+        return {
+          ...previous,
+          preset: "custom",
+          customStart,
+          customEnd: date,
+          start: customStart,
+          end: endOfDay(date),
+        };
+      });
+    },
+    [setDateRange],
+  );
 
   const spendingCategories = useMemo(() => {
     return (data?.byCategory ?? [])
@@ -198,7 +256,9 @@ export default function SummaryScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.groupedBackground }]}>
+      <View
+        style={[styles.centered, { backgroundColor: colors.groupedBackground }]}
+      >
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
@@ -206,8 +266,12 @@ export default function SummaryScreen() {
 
   if (error) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.groupedBackground }]}>
-        <Text style={[styles.errorText, { color: colors.destructive }]}>Error loading summary</Text>
+      <View
+        style={[styles.centered, { backgroundColor: colors.groupedBackground }]}
+      >
+        <Text style={[styles.errorText, { color: colors.destructive }]}>
+          Error loading summary
+        </Text>
       </View>
     );
   }
@@ -242,19 +306,28 @@ export default function SummaryScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Top spending</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Top spending
+          </Text>
           {spendingCategories.length > 5 ? (
-            <Text style={[styles.sectionCaption, { color: colors.secondaryText }]}>
+            <Text
+              style={[styles.sectionCaption, { color: colors.secondaryText }]}
+            >
               5 of {spendingCategories.length} categories
             </Text>
           ) : null}
         </View>
-        <CategoryBreakdown data={spendingCategories.slice(0, 5)} total={spendingTotal} />
+        <CategoryBreakdown
+          data={spendingCategories.slice(0, 5)}
+          total={spendingTotal}
+        />
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Cash flow</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Cash flow
+          </Text>
         </View>
         <CashFlowTrend data={data?.byPeriod ?? []} granularity={granularity} />
       </View>
@@ -270,9 +343,9 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   centered: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   errorText: {
     fontSize: 16,
@@ -283,7 +356,7 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontSize: 34,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   overviewSection: {
@@ -292,31 +365,31 @@ const styles = StyleSheet.create({
     marginBottom: 26,
   },
   overviewCard: {
-    borderCurve: 'continuous',
+    borderCurve: "continuous",
     borderRadius: 24,
-    boxShadow: '0 8px 24px rgba(0, 98, 204, 0.2)',
+    boxShadow: "0 8px 24px rgba(0, 98, 204, 0.2)",
     padding: 20,
   },
   overviewLabel: {
-    color: 'rgba(255,255,255,0.72)',
+    color: "rgba(255,255,255,0.72)",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   overviewValue: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 36,
-    fontVariant: ['tabular-nums'],
-    fontWeight: '700',
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
     letterSpacing: -1,
     marginTop: 4,
   },
   overviewDivider: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: "rgba(255,255,255,0.22)",
     height: StyleSheet.hairlineWidth,
     marginVertical: 18,
   },
   overviewDetails: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 24,
   },
   overviewDetail: {
@@ -324,15 +397,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   overviewDetailLabel: {
-    color: 'rgba(255,255,255,0.72)',
+    color: "rgba(255,255,255,0.72)",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   overviewDetailValue: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontVariant: ['tabular-nums'],
-    fontWeight: '700',
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
     marginTop: 3,
   },
   section: {
@@ -341,20 +414,20 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   sectionHeader: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "baseline",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   sectionCaption: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   breakdownCard: {
-    borderCurve: 'continuous',
+    borderCurve: "continuous",
     borderRadius: 18,
     gap: 18,
     padding: 16,
@@ -363,14 +436,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   categoryNameGroup: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     marginRight: 16,
   },
   categoryDot: {
@@ -382,39 +455,39 @@ const styles = StyleSheet.create({
   categoryName: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   categoryAmount: {
     fontSize: 15,
-    fontVariant: ['tabular-nums'],
-    fontWeight: '700',
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
     maxWidth: 132,
   },
   categoryValueGroup: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   categoryPercent: {
     fontSize: 11,
-    fontVariant: ['tabular-nums'],
+    fontVariant: ["tabular-nums"],
     marginTop: 1,
   },
   progressTrack: {
     borderRadius: 2,
     height: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
     opacity: 0.85,
   },
   progressFill: {
     borderRadius: 3,
-    height: '100%',
+    height: "100%",
   },
   emptyCard: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 18,
     padding: 28,
   },
   emptyText: {
     fontSize: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

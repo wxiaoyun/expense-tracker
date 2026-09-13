@@ -1,7 +1,7 @@
-import React from 'react';
-import { Pressable, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import React from "react";
+import { Pressable, Text } from "react-native";
+import { useRouter } from "expo-router";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 export function AddExpenseButton() {
   const router = useRouter();
@@ -11,22 +11,31 @@ export function AddExpenseButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Add expense"
-      onPress={() => router.push('/(drawer)/transaction')}
+      onPress={() => router.push("/(drawer)/transaction")}
       style={({ pressed }) => ({
-        position: 'absolute',
+        position: "absolute",
         right: 24,
         bottom: 104,
         width: 56,
         height: 56,
         borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: primary,
-        boxShadow: '0 8px 24px rgba(0, 122, 255, 0.32)',
+        boxShadow: "0 8px 24px rgba(0, 122, 255, 0.32)",
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Text style={{ color: onPrimary, fontSize: 34, fontWeight: '300', lineHeight: 38 }}>+</Text>
+      <Text
+        style={{
+          color: onPrimary,
+          fontSize: 34,
+          fontWeight: "300",
+          lineHeight: 38,
+        }}
+      >
+        +
+      </Text>
     </Pressable>
   );
 }

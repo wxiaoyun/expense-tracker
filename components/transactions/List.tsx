@@ -1,9 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { Transaction } from '@/db/schema';
-import { TransactionRow } from './Row';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import { Transaction } from "@/db/schema";
+import { TransactionRow } from "./Row";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type TransactionListProps = {
   transactions: Transaction[];
@@ -47,7 +53,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     ({ item }: { item: Transaction }) => (
       <TransactionRow
         transaction={item}
-        hasActiveTemplate={Boolean(item.templateId && activeTemplateIds.has(item.templateId))}
+        hasActiveTemplate={Boolean(
+          item.templateId && activeTemplateIds.has(item.templateId),
+        )}
         onEdit={onEdit}
         onSaveAsTemplate={onSaveAsTemplate}
         onViewTemplate={onViewTemplate}
@@ -55,13 +63,24 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         onToggleVerified={onToggleVerified}
       />
     ),
-    [activeTemplateIds, onEdit, onSaveAsTemplate, onViewTemplate, onDelete, onToggleVerified]
+    [
+      activeTemplateIds,
+      onEdit,
+      onSaveAsTemplate,
+      onViewTemplate,
+      onDelete,
+      onToggleVerified,
+    ],
   );
 
   if (transactions.length === 0) {
     return (
-      <View style={[styles.emptyContainer, { backgroundColor: groupedBackground }]}>
-        <Text style={[styles.emptyTitle, { color: text }]}>No Expenses Yet</Text>
+      <View
+        style={[styles.emptyContainer, { backgroundColor: groupedBackground }]}
+      >
+        <Text style={[styles.emptyTitle, { color: text }]}>
+          No Expenses Yet
+        </Text>
         <Text style={[styles.emptySubtitle, { color: secondaryText }]}>
           Tap the + button to add your first expense
         </Text>
@@ -97,21 +116,21 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadingFooter: {
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
 });

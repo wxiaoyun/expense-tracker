@@ -1,46 +1,52 @@
 /** @jest-environment node */
 
-jest.mock('expo-sqlite', () => {
-  const { DatabaseSync } = require('node:sqlite')
-  const database = new DatabaseSync(':memory:')
-  const normalizeParams = (params?: unknown[]) => params ?? []
+jest.mock("expo-sqlite", () => {
+  const { DatabaseSync } = require("node:sqlite");
+  const database = new DatabaseSync(":memory:");
+  const normalizeParams = (params?: unknown[]) => params ?? [];
 
   return {
     openDatabaseSync: () => ({
       execSync: (sql: string) => database.exec(sql),
-      getFirstSync: (sql: string, ...params: unknown[]) => database.prepare(sql).get(...params) ?? null,
-      getAllSync: (sql: string, ...params: unknown[]) => database.prepare(sql).all(...params),
-      runSync: (sql: string, ...params: unknown[]) => database.prepare(sql).run(...params),
+      getFirstSync: (sql: string, ...params: unknown[]) =>
+        database.prepare(sql).get(...params) ?? null,
+      getAllSync: (sql: string, ...params: unknown[]) =>
+        database.prepare(sql).all(...params),
+      runSync: (sql: string, ...params: unknown[]) =>
+        database.prepare(sql).run(...params),
       prepareSync: (sql: string) => {
-        const statement = database.prepare(sql)
+        const statement = database.prepare(sql);
         return {
           executeSync: (params?: unknown[]) => {
-            const normalized = normalizeParams(params)
-            const result = statement.run(...normalized)
+            const normalized = normalizeParams(params);
+            const result = statement.run(...normalized);
             return {
               changes: result.changes,
               lastInsertRowId: Number(result.lastInsertRowid),
               getAllSync: () => statement.all(...normalized),
               getFirstSync: () => statement.get(...normalized) ?? null,
-            }
+            };
           },
           executeForRawResultSync: (params?: unknown[]) => {
-            const normalized = normalizeParams(params)
+            const normalized = normalizeParams(params);
             return {
-              getAllSync: () => statement.all(...normalized).map((row: Record<string, unknown>) => Object.values(row)),
-            }
+              getAllSync: () =>
+                statement
+                  .all(...normalized)
+                  .map((row: Record<string, unknown>) => Object.values(row)),
+            };
           },
-        }
+        };
       },
       withTransactionSync: (task: () => void) => task(),
     }),
-  }
-})
+  };
+});
 
-import { getDefaultStore } from 'jotai'
-import { Appearance } from 'react-native'
+import { getDefaultStore } from "jotai";
+import { Appearance } from "react-native";
 
-import { db, settings } from '@/db'
+import { db, settings } from "@/db";
 import {
   currencyAtom,
   loadPreferences,
@@ -53,175 +59,214 @@ import {
   suggestionLookbackAtom,
   themeAtom,
   weekStartAtom,
-} from '../preferences'
+} from "../preferences";
 
-describe('template suggestion lookback preference', () => {
-  let mockSetColorScheme: jest.SpyInstance
+describe("template suggestion lookback preference", () => {
+  let mockSetColorScheme: jest.SpyInstance;
 
   beforeEach(async () => {
-    mockSetColorScheme = jest.spyOn(Appearance, 'setColorScheme').mockImplementation(() => undefined)
-    await db.delete(settings).run()
-    resetPreferencesToDefaults(getDefaultStore())
-    mockSetColorScheme.mockClear()
-  })
-
-  afterEach(() => {
-    jest.restoreAllMocks()
-  })
-
-  it('defaults to three months', () => {
-    loadPreferences()
-    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
-  })
-
-  it.each([
-    ['system', 'unspecified'],
-    ['light', 'light'],
-    ['dark', 'dark'],
-  ] as const)('applies %s appearance preference', (preference, expected) => {
-    applyThemePreference(preference)
-
-    expect(mockSetColorScheme).toHaveBeenCalledWith(expected)
-  })
-
-  it('applies loaded and reset theme preferences', async () => {
-    await db.insert(settings).values({ key: PREFERENCE_KEYS.theme, value: 'dark' }).run()
-
-    loadPreferences()
-    expect(mockSetColorScheme).toHaveBeenLastCalledWith('dark')
-
-    resetPreferencesToDefaults()
-    expect(mockSetColorScheme).toHaveBeenLastCalledWith('unspecified')
-  })
-
-  it('uses System for an invalid stored theme', async () => {
-    await db.insert(settings).values({ key: PREFERENCE_KEYS.theme, value: 'sepia' }).run()
-
-    loadPreferences()
-
-    expect(getDefaultStore().get(themeAtom)).toBe('system')
-    expect(mockSetColorScheme).toHaveBeenLastCalledWith('unspecified')
-  })
-
-  it('resets and reloads every preference after database replacement', async () => {
-    const store = getDefaultStore();
-    store.set(currencyAtom, 'STALE');
-    store.set(themeAtom, 'dark');
-    store.set(weekStartAtom, 'monday');
-    store.set(suggestionLookbackAtom, '12m');
-
-    resetPreferencesToDefaults();
-    expect(store.get(currencyAtom)).toBe('USD');
-    expect(store.get(themeAtom)).toBe('system');
-    expect(store.get(weekStartAtom)).toBe('sunday');
-    expect(store.get(suggestionLookbackAtom)).toBe('3m');
-
-    await db.insert(settings).values([
-      { key: PREFERENCE_KEYS.currency, value: 'EUR' },
-      { key: PREFERENCE_KEYS.theme, value: 'light' },
-      { key: PREFERENCE_KEYS.weekStart, value: 'monday' },
-      { key: PREFERENCE_KEYS.suggestionLookback, value: '6m' },
-    ]).run();
-    loadPreferences();
-
-    expect(store.get(currencyAtom)).toBe('EUR');
-    expect(store.get(themeAtom)).toBe('light');
-    expect(store.get(weekStartAtom)).toBe('monday');
-    expect(store.get(suggestionLookbackAtom)).toBe('6m');
+    mockSetColorScheme = jest
+      .spyOn(Appearance, "setColorScheme")
+      .mockImplementation(() => undefined);
+    await db.delete(settings).run();
+    resetPreferencesToDefaults(getDefaultStore());
+    mockSetColorScheme.mockClear();
   });
 
-  it('exposes the exact Settings labels and values', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("defaults to three months", () => {
+    loadPreferences();
+    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe("3m");
+  });
+
+  it.each([
+    ["system", "unspecified"],
+    ["light", "light"],
+    ["dark", "dark"],
+  ] as const)("applies %s appearance preference", (preference, expected) => {
+    applyThemePreference(preference);
+
+    expect(mockSetColorScheme).toHaveBeenCalledWith(expected);
+  });
+
+  it("applies loaded and reset theme preferences", async () => {
+    await db
+      .insert(settings)
+      .values({ key: PREFERENCE_KEYS.theme, value: "dark" })
+      .run();
+
+    loadPreferences();
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith("dark");
+
+    resetPreferencesToDefaults();
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith("unspecified");
+  });
+
+  it("uses System for an invalid stored theme", async () => {
+    await db
+      .insert(settings)
+      .values({ key: PREFERENCE_KEYS.theme, value: "sepia" })
+      .run();
+
+    loadPreferences();
+
+    expect(getDefaultStore().get(themeAtom)).toBe("system");
+    expect(mockSetColorScheme).toHaveBeenLastCalledWith("unspecified");
+  });
+
+  it("resets and reloads every preference after database replacement", async () => {
+    const store = getDefaultStore();
+    store.set(currencyAtom, "STALE");
+    store.set(themeAtom, "dark");
+    store.set(weekStartAtom, "monday");
+    store.set(suggestionLookbackAtom, "12m");
+
+    resetPreferencesToDefaults();
+    expect(store.get(currencyAtom)).toBe("USD");
+    expect(store.get(themeAtom)).toBe("system");
+    expect(store.get(weekStartAtom)).toBe("sunday");
+    expect(store.get(suggestionLookbackAtom)).toBe("3m");
+
+    await db
+      .insert(settings)
+      .values([
+        { key: PREFERENCE_KEYS.currency, value: "EUR" },
+        { key: PREFERENCE_KEYS.theme, value: "light" },
+        { key: PREFERENCE_KEYS.weekStart, value: "monday" },
+        { key: PREFERENCE_KEYS.suggestionLookback, value: "6m" },
+      ])
+      .run();
+    loadPreferences();
+
+    expect(store.get(currencyAtom)).toBe("EUR");
+    expect(store.get(themeAtom)).toBe("light");
+    expect(store.get(weekStartAtom)).toBe("monday");
+    expect(store.get(suggestionLookbackAtom)).toBe("6m");
+  });
+
+  it("exposes the exact Settings labels and values", () => {
     expect(SUGGESTION_LOOKBACK_OPTIONS).toEqual([
-      { value: '1m', label: '1 month' },
-      { value: '3m', label: '3 months' },
-      { value: '6m', label: '6 months' },
-      { value: '12m', label: '12 months' },
-      { value: 'all', label: 'All time' },
-    ])
-  })
+      { value: "1m", label: "1 month" },
+      { value: "3m", label: "3 months" },
+      { value: "6m", label: "6 months" },
+      { value: "12m", label: "12 months" },
+      { value: "all", label: "All time" },
+    ]);
+  });
 
-  it.each(['1m', '3m', '6m', '12m', 'all'] as const)('saves and loads the allowed value %s', async (value) => {
-    await savePreference(PREFERENCE_KEYS.suggestionLookback, value)
-    loadPreferences()
-    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe(value)
-  })
+  it.each(["1m", "3m", "6m", "12m", "all"] as const)(
+    "saves and loads the allowed value %s",
+    async (value) => {
+      await savePreference(PREFERENCE_KEYS.suggestionLookback, value);
+      loadPreferences();
+      expect(getDefaultStore().get(suggestionLookbackAtom)).toBe(value);
+    },
+  );
 
-  it('falls back after failed reads and logs keys without values', () => {
-    getDefaultStore().set(suggestionLookbackAtom, '12m')
-    const info = jest.spyOn(console, 'info').mockImplementation(() => undefined)
-    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined)
-    const select = jest.spyOn(db, 'select').mockImplementation((() => {
-      throw new Error('forced preference read failure')
-    }) as typeof db.select)
+  it("falls back after failed reads and logs keys without values", () => {
+    getDefaultStore().set(suggestionLookbackAtom, "12m");
+    const info = jest
+      .spyOn(console, "info")
+      .mockImplementation(() => undefined);
+    const error = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const select = jest.spyOn(db, "select").mockImplementation((() => {
+      throw new Error("forced preference read failure");
+    }) as typeof db.select);
 
-    loadPreferences()
+    loadPreferences();
 
-    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
+    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe("3m");
     expect(info).toHaveBeenCalledWith(
-      '[preferences.read][stage=query] reading setting',
+      "[preferences.read][stage=query] reading setting",
       { key: PREFERENCE_KEYS.suggestionLookback },
-    )
+    );
     expect(error).toHaveBeenCalledWith(
-      '[preferences.read][stage=query] setting read failed',
-      { key: PREFERENCE_KEYS.suggestionLookback, error: 'Error: forced preference read failure' },
-    )
-    expect(JSON.stringify([...info.mock.calls, ...error.mock.calls])).not.toContain('12m')
+      "[preferences.read][stage=query] setting read failed",
+      {
+        key: PREFERENCE_KEYS.suggestionLookback,
+        error: "Error: forced preference read failure",
+      },
+    );
+    expect(
+      JSON.stringify([...info.mock.calls, ...error.mock.calls]),
+    ).not.toContain("12m");
 
-    select.mockRestore()
-    info.mockRestore()
-    error.mockRestore()
-  })
+    select.mockRestore();
+    info.mockRestore();
+    error.mockRestore();
+  });
 
-  it('rejects failed saves and logs the key without the value', async () => {
-    const info = jest.spyOn(console, 'info').mockImplementation(() => undefined)
-    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined)
-    const insert = jest.spyOn(db, 'insert').mockImplementation((() => {
-      throw new Error('forced preference save failure')
-    }) as typeof db.insert)
+  it("rejects failed saves and logs the key without the value", async () => {
+    const info = jest
+      .spyOn(console, "info")
+      .mockImplementation(() => undefined);
+    const error = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const insert = jest.spyOn(db, "insert").mockImplementation((() => {
+      throw new Error("forced preference save failure");
+    }) as typeof db.insert);
 
-    const apply = jest.fn()
-    await expect(savePreferenceAndApply(
-      PREFERENCE_KEYS.suggestionLookback,
-      'secret-value',
-      apply,
-    )).rejects.toThrow('forced preference save failure')
-    expect(apply).not.toHaveBeenCalled()
+    const apply = jest.fn();
+    await expect(
+      savePreferenceAndApply(
+        PREFERENCE_KEYS.suggestionLookback,
+        "secret-value",
+        apply,
+      ),
+    ).rejects.toThrow("forced preference save failure");
+    expect(apply).not.toHaveBeenCalled();
     expect(info).toHaveBeenCalledWith(
-      '[preferences.save][stage=upsert] saving setting',
+      "[preferences.save][stage=upsert] saving setting",
       { key: PREFERENCE_KEYS.suggestionLookback },
-    )
+    );
     expect(error).toHaveBeenCalledWith(
-      '[preferences.save][stage=upsert] setting save failed',
-      { key: PREFERENCE_KEYS.suggestionLookback, error: 'Error: forced preference save failure' },
-    )
-    expect(JSON.stringify([...info.mock.calls, ...error.mock.calls])).not.toContain('secret-value')
+      "[preferences.save][stage=upsert] setting save failed",
+      {
+        key: PREFERENCE_KEYS.suggestionLookback,
+        error: "Error: forced preference save failure",
+      },
+    );
+    expect(
+      JSON.stringify([...info.mock.calls, ...error.mock.calls]),
+    ).not.toContain("secret-value");
 
-    insert.mockRestore()
-    info.mockRestore()
-    error.mockRestore()
-  })
+    insert.mockRestore();
+    info.mockRestore();
+    error.mockRestore();
+  });
 
-  it('keeps the previous appearance when saving a theme fails', async () => {
-    const store = getDefaultStore()
-    store.set(themeAtom, 'dark')
-    const insert = jest.spyOn(db, 'insert').mockImplementation((() => {
-      throw new Error('forced theme save failure')
-    }) as typeof db.insert)
+  it("keeps the previous appearance when saving a theme fails", async () => {
+    const store = getDefaultStore();
+    store.set(themeAtom, "dark");
+    const insert = jest.spyOn(db, "insert").mockImplementation((() => {
+      throw new Error("forced theme save failure");
+    }) as typeof db.insert);
 
-    await expect(savePreferenceAndApply(PREFERENCE_KEYS.theme, 'light', () => {
-      store.set(themeAtom, 'light')
-      applyThemePreference('light')
-    })).rejects.toThrow('forced theme save failure')
+    await expect(
+      savePreferenceAndApply(PREFERENCE_KEYS.theme, "light", () => {
+        store.set(themeAtom, "light");
+        applyThemePreference("light");
+      }),
+    ).rejects.toThrow("forced theme save failure");
 
-    expect(store.get(themeAtom)).toBe('dark')
-    expect(mockSetColorScheme).not.toHaveBeenCalled()
-    insert.mockRestore()
-  })
+    expect(store.get(themeAtom)).toBe("dark");
+    expect(mockSetColorScheme).not.toHaveBeenCalled();
+    insert.mockRestore();
+  });
 
-  it('falls back to three months for an invalid persisted value', async () => {
-    getDefaultStore().set(suggestionLookbackAtom, '12m')
-    await db.insert(settings).values({ key: PREFERENCE_KEYS.suggestionLookback, value: '2y' }).run()
-    loadPreferences()
-    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe('3m')
-  })
-})
+  it("falls back to three months for an invalid persisted value", async () => {
+    getDefaultStore().set(suggestionLookbackAtom, "12m");
+    await db
+      .insert(settings)
+      .values({ key: PREFERENCE_KEYS.suggestionLookback, value: "2y" })
+      .run();
+    loadPreferences();
+    expect(getDefaultStore().get(suggestionLookbackAtom)).toBe("3m");
+  });
+});

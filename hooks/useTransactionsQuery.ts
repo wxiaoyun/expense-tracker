@@ -1,16 +1,22 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   listTransactions,
   summarizeByCategory,
   summarizeCashFlowByPeriod,
   summarizeTransactions,
   type SummaryPeriodGranularity,
-} from '@/db/transaction';
-import type { TemplateListFilter } from '@/db/template';
-import type { SuggestionLookback } from '@/db/template-core';
+} from "@/db/transaction";
+import type { TemplateListFilter } from "@/db/template";
+import type { SuggestionLookback } from "@/db/template-core";
 
-export type TransactionOrderKey = 'transactionDate' | 'amount' | 'category' | 'description' | 'createdAt' | 'updatedAt';
-export type TransactionOrderDirection = 'ASC' | 'DESC';
+export type TransactionOrderKey =
+  | "transactionDate"
+  | "amount"
+  | "category"
+  | "description"
+  | "createdAt"
+  | "updatedAt";
+export type TransactionOrderDirection = "ASC" | "DESC";
 
 export type TransactionListFilter = {
   start?: Date;
@@ -23,29 +29,38 @@ export type TransactionListFilter = {
   search?: string;
 };
 
-export type TransactionSummaryFilter = Pick<TransactionListFilter, 'start' | 'end' | 'categories' | 'verified'> & {
+export type TransactionSummaryFilter = Pick<
+  TransactionListFilter,
+  "start" | "end" | "categories" | "verified"
+> & {
   granularity: SummaryPeriodGranularity;
 };
 
 export const queryKeys = {
   transactions: {
-    all: () => ['transactions'] as const,
-    list: (filter: TransactionListFilter) => ['transactions', 'list', filter] as const,
-    summary: (filter: TransactionSummaryFilter) => ['transactions', 'summary', filter] as const,
+    all: () => ["transactions"] as const,
+    list: (filter: TransactionListFilter) =>
+      ["transactions", "list", filter] as const,
+    summary: (filter: TransactionSummaryFilter) =>
+      ["transactions", "summary", filter] as const,
   },
   templates: {
-    all: () => ['templates'] as const,
-    list: (filter: TemplateListFilter = {}) => ['templates', 'list', filter] as const,
-    detail: (id: string) => ['templates', 'detail', id] as const,
-    suggestions: (lookback: SuggestionLookback) => ['templates', 'suggestions', lookback] as const,
+    all: () => ["templates"] as const,
+    list: (filter: TemplateListFilter = {}) =>
+      ["templates", "list", filter] as const,
+    detail: (id: string) => ["templates", "detail", id] as const,
+    suggestions: (lookback: SuggestionLookback) =>
+      ["templates", "suggestions", lookback] as const,
   },
   categories: {
-    all: () => ['categories'] as const,
-    list: () => ['categories', 'list'] as const,
+    all: () => ["categories"] as const,
+    list: () => ["categories", "list"] as const,
   },
 };
 
-export const useInfiniteTransactionListQuery = (filter: TransactionListFilter) => {
+export const useInfiniteTransactionListQuery = (
+  filter: TransactionListFilter,
+) => {
   return useInfiniteQuery({
     queryKey: queryKeys.transactions.list(filter),
     queryFn: async ({ pageParam = 0 }) => {
@@ -54,7 +69,7 @@ export const useInfiniteTransactionListQuery = (filter: TransactionListFilter) =
         end: filter.end,
         limit: filter.limit ?? 50,
         offset: pageParam,
-        orderBy: filter.orderBy ?? ['transactionDate', 'DESC'],
+        orderBy: filter.orderBy ?? ["transactionDate", "DESC"],
         categories: filter.categories,
         verified: filter.verified,
         search: filter.search,
@@ -71,10 +86,23 @@ export const useTransactionSummary = (filter: TransactionSummaryFilter) => {
     queryKey: queryKeys.transactions.summary(filter),
     queryFn: async () => {
       const [summary, byCategory, byPeriod] = await Promise.all([
-        summarizeTransactions({ start: filter.start, end: filter.end, categories: filter.categories, verified: filter.verified }),
-        summarizeByCategory({ start: filter.start, end: filter.end, categories: filter.categories }),
+        summarizeTransactions({
+          start: filter.start,
+          end: filter.end,
+          categories: filter.categories,
+          verified: filter.verified,
+        }),
+        summarizeByCategory({
+          start: filter.start,
+          end: filter.end,
+          categories: filter.categories,
+        }),
         summarizeCashFlowByPeriod(
-          { start: filter.start, end: filter.end, categories: filter.categories },
+          {
+            start: filter.start,
+            end: filter.end,
+            categories: filter.categories,
+          },
           filter.granularity,
         ),
       ]);

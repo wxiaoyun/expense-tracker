@@ -1,11 +1,11 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from "@tanstack/react-query";
 
-import { processScheduledTemplates } from '@/db/template';
+import { processScheduledTemplates } from "@/db/template";
 import {
   loadPreferences,
   preferenceStore,
   resetPreferencesToDefaults,
-} from '@/libs/preferences';
+} from "@/libs/preferences";
 
 export const appQueryClient = new QueryClient({
   defaultOptions: {
@@ -29,12 +29,17 @@ export async function processLaunchTemplatesOnce(): Promise<void> {
 
   const processing = (async () => {
     try {
-      console.info('[app.init][stage=process_templates] processing scheduled templates');
+      console.info(
+        "[app.init][stage=process_templates] processing scheduled templates",
+      );
       await processScheduledTemplates();
     } catch (error) {
-      console.error('[app.init][stage=process_templates] scheduled template processing failed', {
-        error: String(error),
-      });
+      console.error(
+        "[app.init][stage=process_templates] scheduled template processing failed",
+        {
+          error: String(error),
+        },
+      );
     } finally {
       templateProcessingCompleted = true;
     }
@@ -43,7 +48,8 @@ export async function processLaunchTemplatesOnce(): Promise<void> {
   try {
     await processing;
   } finally {
-    if (templateProcessingPromise === processing) templateProcessingPromise = null;
+    if (templateProcessingPromise === processing)
+      templateProcessingPromise = null;
   }
 }
 

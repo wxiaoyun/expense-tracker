@@ -1,13 +1,17 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { MenuView, type MenuAction, type NativeActionEvent } from '@expo/ui/community/menu';
-import { format } from 'date-fns';
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import {
+  MenuView,
+  type MenuAction,
+  type NativeActionEvent,
+} from "@expo/ui/community/menu";
+import { format } from "date-fns";
 
-import type { TransactionTemplate } from '@/db/schema';
-import { getNextOccurrences, occurrenceToText } from '@/libs/date';
-import { formatCurrency } from '@/libs/intl';
-import { useThemeColors } from '@/hooks/useThemeColor';
+import type { TransactionTemplate } from "@/db/schema";
+import { getNextOccurrences, occurrenceToText } from "@/libs/date";
+import { formatCurrency } from "@/libs/intl";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type TemplateRowProps = {
   template: TransactionTemplate;
@@ -28,7 +32,7 @@ const isQuickAddComplete = (template: TransactionTemplate) =>
 
 const signedAmount = (template: TransactionTemplate) => {
   if (template.amount === null) return null;
-  return template.transactionType === 'income'
+  return template.transactionType === "income"
     ? Math.abs(template.amount)
     : -Math.abs(template.amount);
 };
@@ -47,48 +51,56 @@ export function TemplateRow({
   const scheduled = template.recurrenceValue !== null;
   const paused = scheduled && template.scheduleActive !== 1;
   const amount = signedAmount(template);
-  const summary = [
-    template.description?.trim() || null,
-    template.category?.trim() || null,
-    amount === null ? null : formatCurrency(amount),
-  ].filter(Boolean).join(' • ') || 'Partial template';
-  const nextOccurrence = scheduled && !paused
-    ? getNextOccurrences(
-      template.recurrenceValue!,
-      1,
-      new Date(template.scheduleCursorAt ?? template.startDate ?? template.updatedAt),
-    )[0]
-    : undefined;
+  const summary =
+    [
+      template.description?.trim() || null,
+      template.category?.trim() || null,
+      amount === null ? null : formatCurrency(amount),
+    ]
+      .filter(Boolean)
+      .join(" • ") || "Partial template";
+  const nextOccurrence =
+    scheduled && !paused
+      ? getNextOccurrences(
+          template.recurrenceValue!,
+          1,
+          new Date(
+            template.scheduleCursorAt ??
+              template.startDate ??
+              template.updatedAt,
+          ),
+        )[0]
+      : undefined;
 
   const actions: MenuAction[] = [
-    { id: 'edit', title: 'Edit', image: 'pencil' },
+    { id: "edit", title: "Edit", image: "pencil" },
   ];
   if (scheduled) {
     actions.push({
-      id: paused ? 'resume' : 'pause',
-      title: paused ? 'Resume' : 'Pause',
-      image: paused ? 'play.fill' : 'pause.fill',
+      id: paused ? "resume" : "pause",
+      title: paused ? "Resume" : "Pause",
+      image: paused ? "play.fill" : "pause.fill",
     });
   }
   actions.push({
-    id: 'delete',
-    title: 'Delete',
-    image: 'trash',
+    id: "delete",
+    title: "Delete",
+    image: "trash",
     attributes: { destructive: true },
   });
 
   const handleMenuAction = ({ nativeEvent }: NativeActionEvent) => {
     switch (nativeEvent.event) {
-      case 'edit':
+      case "edit":
         onEdit(template.id);
         break;
-      case 'pause':
+      case "pause":
         onPause(template.id);
         break;
-      case 'resume':
+      case "resume":
         onResume(template.id);
         break;
-      case 'delete':
+      case "delete":
         onDelete(template.id);
         break;
     }
@@ -105,20 +117,55 @@ export function TemplateRow({
         >
           <View
             accessible
-            accessibilityLabel={scheduled ? 'Scheduled template' : 'Manual template'}
-            style={[styles.iconWrap, { backgroundColor: colors.primaryBackground }]}
+            accessibilityLabel={
+              scheduled ? "Scheduled template" : "Manual template"
+            }
+            style={[
+              styles.iconWrap,
+              { backgroundColor: colors.primaryBackground },
+            ]}
           >
-            <Feather name={scheduled ? 'calendar' : 'file-text'} size={18} color={colors.primary} />
+            <Feather
+              name={scheduled ? "calendar" : "file-text"}
+              size={18}
+              color={colors.primary}
+            />
           </View>
           <View style={styles.body}>
-            <Text numberOfLines={1} style={[styles.name, { color: colors.text }]}>{template.name}</Text>
-            <Text numberOfLines={2} style={[styles.summary, { color: colors.secondaryText }]}>{summary}</Text>
+            <Text
+              numberOfLines={1}
+              style={[styles.name, { color: colors.text }]}
+            >
+              {template.name}
+            </Text>
+            <Text
+              numberOfLines={2}
+              style={[styles.summary, { color: colors.secondaryText }]}
+            >
+              {summary}
+            </Text>
             <View style={styles.statusRow}>
-              <Text style={[styles.status, { color: paused ? colors.warning : colors.primary }]}>
-                {scheduled ? paused ? 'Paused' : occurrenceToText(template.recurrenceValue!) : 'Manual'}
+              <Text
+                style={[
+                  styles.status,
+                  { color: paused ? colors.warning : colors.primary },
+                ]}
+              >
+                {scheduled
+                  ? paused
+                    ? "Paused"
+                    : occurrenceToText(template.recurrenceValue!)
+                  : "Manual"}
               </Text>
               {nextOccurrence ? (
-                <Text style={[styles.nextOccurrence, { color: colors.secondaryText }]}>Next {format(nextOccurrence, 'MMM d, yyyy')}</Text>
+                <Text
+                  style={[
+                    styles.nextOccurrence,
+                    { color: colors.secondaryText },
+                  ]}
+                >
+                  Next {format(nextOccurrence, "MMM d, yyyy")}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -128,9 +175,16 @@ export function TemplateRow({
             accessibilityRole="button"
             accessibilityLabel={`More actions for ${template.name}`}
             hitSlop={8}
-            style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.moreButton,
+              pressed && styles.pressed,
+            ]}
           >
-            <Feather name="more-horizontal" size={22} color={colors.secondaryText} />
+            <Feather
+              name="more-horizontal"
+              size={22}
+              color={colors.secondaryText}
+            />
           </Pressable>
         </MenuView>
       </View>
@@ -148,7 +202,9 @@ export function TemplateRow({
           ]}
         >
           <Feather name="plus" size={15} color={colors.primary} />
-          <Text style={[styles.quickAddText, { color: colors.primary }]}>{quickAddPending ? 'Adding…' : 'Quick Add'}</Text>
+          <Text style={[styles.quickAddText, { color: colors.primary }]}>
+            {quickAddPending ? "Adding…" : "Quick Add"}
+          </Text>
         </Pressable>
       ) : null}
     </View>
@@ -163,20 +219,20 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   useArea: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   iconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   body: {
     flex: 1,
@@ -184,21 +240,21 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   summary: {
     fontSize: 13,
     marginTop: 2,
   },
   statusRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 5,
   },
   status: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   nextOccurrence: {
     fontSize: 12,
@@ -206,13 +262,13 @@ const styles = StyleSheet.create({
   moreButton: {
     width: 34,
     height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   quickAdd: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     borderRadius: 8,
     paddingVertical: 7,
@@ -221,7 +277,7 @@ const styles = StyleSheet.create({
   },
   quickAddText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   quickAddDisabled: {
     opacity: 0.5,

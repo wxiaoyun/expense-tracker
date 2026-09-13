@@ -1,5 +1,5 @@
-import { DatePicker, Host } from '@expo/ui/swift-ui';
-import { datePickerStyle } from '@expo/ui/swift-ui/modifiers';
+import { DatePicker, Host } from "@expo/ui/swift-ui";
+import { datePickerStyle } from "@expo/ui/swift-ui/modifiers";
 
 type CompactDatePickerProps = {
   value: Date;
@@ -13,12 +13,16 @@ export function CompactDatePicker({
   testID,
 }: CompactDatePickerProps) {
   return (
-    <Host matchContents={{ horizontal: true, vertical: true }} ignoreSafeArea="all" testID={testID}>
+    <Host
+      matchContents={{ horizontal: true, vertical: true }}
+      ignoreSafeArea="all"
+      testID={testID}
+    >
       <DatePicker
         selection={value}
-        displayedComponents={['date']}
+        displayedComponents={["date"]}
         onDateChange={onValueChange}
-        modifiers={[datePickerStyle('compact')]}
+        modifiers={[datePickerStyle("compact")]}
       />
     </Host>
   );
