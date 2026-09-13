@@ -10,3 +10,7 @@ Prefer [Expo UI](https://docs.expo.dev/versions/latest/sdk/ui/) over React Nativ
 ## Test input
 
 Check `./test/data/*`
+
+## Code Formatting
+
+Run `npm run format`
