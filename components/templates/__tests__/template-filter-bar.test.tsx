@@ -29,6 +29,7 @@ describe("TemplateFilterBar", () => {
     await fireEvent.press(screen.getByRole("button", { name: "All" }));
     await fireEvent.press(screen.getByRole("button", { name: "Filter Food" }));
 
+    expect(screen.queryByLabelText("Filter categories")).toBeNull();
     expect(onSearchChange).toHaveBeenCalledWith("coffee");
     expect(onTypeChange.mock.calls).toEqual([
       ["manual"],

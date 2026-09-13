@@ -98,6 +98,7 @@ export function TemplateFilterBar({
       </ScrollView>
       {onCategoriesChange && (
         <CategoryFilterChips
+          searchable={false}
           categories={categories}
           selected={selectedCategories}
           onChange={onCategoriesChange}
