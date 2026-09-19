@@ -41,6 +41,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-localization",
@@ -53,7 +61,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "ios": {
-            "backgroundColor": "#007AFF"
+            "image": "./assets/splash-mark.png",
+            "imageWidth": 104,
+            "backgroundColor": "#FFFFFF",
+            "dark": {
+              "backgroundColor": "#000000"
+            }
           }
         }
       ],
