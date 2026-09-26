@@ -61,7 +61,7 @@ export default function TemplatesScreen() {
 
   const templateQuery = useTemplateListQuery(filter);
   const categoryQuery = useQuery({
-    queryKey: queryKeys.categories.list(),
+    queryKey: queryKeys.categories.templateList(),
     queryFn: listTemplateCategories,
   });
   const deleteTemplate = useDeleteTemplateMutation();

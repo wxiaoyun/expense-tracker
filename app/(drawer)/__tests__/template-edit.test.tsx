@@ -476,6 +476,24 @@ describe("TemplateEditDrawer", () => {
     );
   });
 
+  it("refreshes template categories without refreshing transaction queries when no backfill runs", async () => {
+    const screen = await render(<TemplateEditDrawer />);
+    await fillRequiredFields(screen);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mockDismiss).toHaveBeenCalledTimes(1));
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["templates"],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["categories", "templates"],
+    });
+    expect(mockInvalidateQueries).not.toHaveBeenCalledWith({
+      queryKey: ["transactions"],
+    });
+  });
+
   it("keeps an active saved template and explains launch retry when backfill fails", async () => {
     mockPreviewTemplateBackfill.mockResolvedValue(2);
     mockBackfillTemplate.mockRejectedValue(new Error("backfill unavailable"));

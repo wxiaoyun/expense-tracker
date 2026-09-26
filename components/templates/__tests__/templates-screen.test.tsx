@@ -30,7 +30,9 @@ jest.mock("@/db/template", () => ({
 }));
 
 jest.mock("@/hooks/useTemplatesQuery", () => ({
-  queryKeys: { categories: { list: () => ["categories", "list"] } },
+  queryKeys: {
+    categories: { templateList: () => ["categories", "templates"] },
+  },
   useTemplateListQuery: (...args: unknown[]) =>
     mockUseTemplateListQuery(...args),
   useDeleteTemplateMutation: () => mockMutation,

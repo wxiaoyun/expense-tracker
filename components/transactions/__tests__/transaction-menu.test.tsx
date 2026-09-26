@@ -30,7 +30,7 @@ jest.mock("@tanstack/react-query", () => ({
 
 jest.mock("@/hooks/useTransactionsQuery", () => ({
   queryKeys: {
-    categories: { list: () => ["categories", "list"] },
+    categories: { transactionList: () => ["categories", "transactions"] },
     templates: { list: () => ["templates", "list", {}] },
     transactions: { all: () => ["transactions"] },
   },

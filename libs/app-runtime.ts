@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 
 import { processScheduledTemplates } from "@/db/template";
+import { queryKeys } from "@/hooks/useTransactionsQuery";
 import {
   loadPreferences,
   preferenceStore,
@@ -28,18 +29,46 @@ export async function processLaunchTemplatesOnce(): Promise<void> {
   if (templateProcessingPromise) return templateProcessingPromise;
 
   const processing = (async () => {
+    let stage = "process_templates";
     try {
       console.info(
         "[app.init][stage=process_templates] processing scheduled templates",
       );
-      await processScheduledTemplates();
+      const processed = await processScheduledTemplates();
+      if (processed.length > 0) {
+        stage = "invalidate_queries";
+        console.info(
+          "[app.init][stage=invalidate_queries] refreshing changed data",
+          {
+            stage,
+            target: "templates",
+            scheduled_count: processed.length,
+          },
+        );
+        const invalidations = [
+          appQueryClient.invalidateQueries({
+            queryKey: queryKeys.templates.all(),
+          }),
+        ];
+        if (
+          processed.some(({ incurred }) => incurred !== null && incurred > 0)
+        ) {
+          invalidations.push(
+            appQueryClient.invalidateQueries({
+              queryKey: queryKeys.transactions.all(),
+            }),
+            appQueryClient.invalidateQueries({
+              queryKey: queryKeys.categories.transactionList(),
+            }),
+          );
+        }
+        await Promise.all(invalidations);
+      }
     } catch (error) {
-      console.error(
-        "[app.init][stage=process_templates] scheduled template processing failed",
-        {
-          error: String(error),
-        },
-      );
+      console.error(`[app.init][stage=${stage}] startup refresh failed`, {
+        stage,
+        error: String(error),
+      });
     } finally {
       templateProcessingCompleted = true;
     }

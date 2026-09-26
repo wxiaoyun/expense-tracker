@@ -29,8 +29,16 @@ const useInvalidateTemplateQueries = () => {
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all() }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.categories.templateList(),
+      }),
     ]);
+};
+
+const useInvalidateTemplateData = () => {
+  const queryClient = useQueryClient();
+  return () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() });
 };
 
 const useInvalidateTransactionAndTemplateQueries = () => {
@@ -38,7 +46,13 @@ const useInvalidateTransactionAndTemplateQueries = () => {
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates.lists() }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.templates.allSuggestions(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.categories.transactionList(),
+      }),
     ]);
 };
 
@@ -109,7 +123,7 @@ export const useDeleteTemplateMutation = () => {
 };
 
 export const usePauseTemplateMutation = () => {
-  const invalidateTemplates = useInvalidateTemplateQueries();
+  const invalidateTemplates = useInvalidateTemplateData();
   return useMutation({
     mutationFn: (id: string) => {
       logMutation("pause_template", id);
@@ -120,7 +134,7 @@ export const usePauseTemplateMutation = () => {
 };
 
 export const useResumeTemplateMutation = () => {
-  const invalidateTemplates = useInvalidateTemplateQueries();
+  const invalidateTemplates = useInvalidateTemplateData();
   return useMutation({
     mutationFn: (id: string) => {
       logMutation("resume_template", id);

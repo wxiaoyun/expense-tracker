@@ -21,7 +21,8 @@ export const useInvalidateTransactionsAndTemplates = () => {
   return async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: queryKeys.transactions.all() }),
-      qc.invalidateQueries({ queryKey: queryKeys.templates.all() }),
+      qc.invalidateQueries({ queryKey: queryKeys.templates.lists() }),
+      qc.invalidateQueries({ queryKey: queryKeys.templates.allSuggestions() }),
       qc.invalidateQueries({ queryKey: queryKeys.categories.all() }),
     ]);
   };

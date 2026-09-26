@@ -46,15 +46,18 @@ export const queryKeys = {
   },
   templates: {
     all: () => ["templates"] as const,
+    lists: () => ["templates", "list"] as const,
     list: (filter: TemplateListFilter = {}) =>
       ["templates", "list", filter] as const,
     detail: (id: string) => ["templates", "detail", id] as const,
+    allSuggestions: () => ["templates", "suggestions"] as const,
     suggestions: (lookback: SuggestionLookback) =>
       ["templates", "suggestions", lookback] as const,
   },
   categories: {
     all: () => ["categories"] as const,
-    list: () => ["categories", "list"] as const,
+    transactionList: () => ["categories", "transactions"] as const,
+    templateList: () => ["categories", "templates"] as const,
   },
 };
 

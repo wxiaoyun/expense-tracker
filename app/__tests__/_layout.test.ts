@@ -75,8 +75,8 @@ describe("application startup", () => {
     let release: (() => void) | undefined;
     mockProcessScheduledTemplates.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          release = resolve;
+        new Promise<[]>((resolve) => {
+          release = () => resolve([]);
         }),
     );
 
@@ -87,6 +87,23 @@ describe("application startup", () => {
     release?.();
     await Promise.all([first, second]);
     expect(mockProcessScheduledTemplates).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes affected queries after scheduled transactions are created", async () => {
+    await resetLaunchTemplateProcessing();
+    const invalidate = jest.spyOn(appQueryClient, "invalidateQueries");
+    mockProcessScheduledTemplates.mockResolvedValueOnce([
+      { id: "scheduled-1", incurred: 1 },
+    ]);
+
+    await processLaunchTemplatesOnce();
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["templates"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["categories", "transactions"],
+    });
+    invalidate.mockRestore();
   });
 
   it("reinitializes reset and imported runtime state in order", async () => {

@@ -321,6 +321,12 @@ describe("Settings database runtime orchestration", () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ["transactions"],
     });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["templates", "suggestions"],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["categories"],
+    });
   });
 
   it("waits, resets, reinitializes defaults and one-shot state, then opens migration", async () => {

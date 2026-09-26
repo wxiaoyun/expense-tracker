@@ -61,6 +61,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { queryKeys } from "@/hooks/useTransactionsQuery";
 
 const CURRENCIES = ["USD", "SGD", "EUR", "GBP", "JPY", "CNY"];
 const THEMES: { value: ThemePreference; label: string }[] = [
@@ -414,9 +415,22 @@ export default function SettingsScreen() {
       if (result.canceled) return;
       const text = await new File(result.assets[0].uri).text();
       const parsed = parseDbsCsv(text);
-      const outcome = await importDbsRows(parsed.rows);
-      await appQueryClient.invalidateQueries({ queryKey: ["transactions"] });
-      await appQueryClient.invalidateQueries({ queryKey: ["categories"] });
+      let outcome;
+      try {
+        outcome = await importDbsRows(parsed.rows);
+      } finally {
+        await Promise.all([
+          appQueryClient.invalidateQueries({
+            queryKey: queryKeys.transactions.all(),
+          }),
+          appQueryClient.invalidateQueries({
+            queryKey: queryKeys.templates.allSuggestions(),
+          }),
+          appQueryClient.invalidateQueries({
+            queryKey: queryKeys.categories.all(),
+          }),
+        ]);
+      }
       successFeedback();
       Alert.alert(
         "Import complete",

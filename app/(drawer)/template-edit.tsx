@@ -25,6 +25,7 @@ import {
 } from "@/db/template-core";
 import { getTransaction, listCategoriesByUsage } from "@/db/transaction";
 import { useTemplateSuggestionsQuery } from "@/hooks/useTemplatesQuery";
+import { queryKeys } from "@/hooks/useTransactionsQuery";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { getNextOccurrences } from "@/libs/date";
 import {
@@ -363,13 +364,26 @@ export default function TemplateEditDrawer() {
     disableRepeat();
   };
 
-  const invalidateSavedQueries = async () => {
+  const invalidateSavedQueries = async (transactionsChanged: boolean) => {
     logInfo("invalidate_queries");
     try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["templates"] }),
-        queryClient.invalidateQueries({ queryKey: ["transactions"] }),
-      ]);
+      const invalidations = [
+        queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.categories.templateList(),
+        }),
+      ];
+      if (transactionsChanged) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.transactions.all(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.categories.transactionList(),
+          }),
+        );
+      }
+      await Promise.all(invalidations);
     } catch (invalidationError) {
       logError("invalidate_queries", invalidationError);
     }
@@ -401,7 +415,7 @@ export default function TemplateEditDrawer() {
           await backfillTemplate(saved.id, submissionCutoff);
         } catch (backfillError) {
           logError("backfill_template", backfillError, saved.id);
-          await invalidateSavedQueries();
+          await invalidateSavedQueries(true);
           warningFeedback();
           router.dismiss();
           Alert.alert(
@@ -414,7 +428,7 @@ export default function TemplateEditDrawer() {
         }
       }
 
-      await invalidateSavedQueries();
+      await invalidateSavedQueries(exactBackfillCount > 0);
       actionFeedback();
       router.dismiss();
     } catch (saveError) {

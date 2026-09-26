@@ -55,7 +55,7 @@ export default function HomeScreen() {
   const [categories, setCategories] = useCategoryFilter();
   const [search, setSearch] = useSearch();
   const { data: availableCategories = [] } = useQuery({
-    queryKey: queryKeys.categories.list(),
+    queryKey: queryKeys.categories.transactionList(),
     queryFn: async () => (await listCategoriesByUsage()).map((row) => row.name),
   });
   const templateQuery = useQuery({
