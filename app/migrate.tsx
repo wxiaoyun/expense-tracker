@@ -8,6 +8,7 @@ import {
   Button,
 } from "react-native";
 import { router } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   runMigrationWithRecovery,
   getLegacyCounts,
@@ -21,6 +22,7 @@ import { actionFeedback, errorFeedback, successFeedback } from "@/libs/haptics";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
 export default function MigrationScreen() {
+  const queryClient = useQueryClient();
   const colors = useThemeColors();
   const [status, setStatus] = useState<
     "checking" | "found" | "migrating" | "success" | "error" | "skip"
@@ -49,6 +51,7 @@ export default function MigrationScreen() {
           );
           await seedPresetCategories(db);
           await markMigrationComplete(db);
+          await queryClient.invalidateQueries();
           router.replace("/(tabs)");
         }
       } catch (checkError) {
@@ -63,7 +66,7 @@ export default function MigrationScreen() {
       }
     };
     void checkLegacy();
-  }, []);
+  }, [queryClient]);
 
   const handleMigrate = async () => {
     actionFeedback();
@@ -77,6 +80,7 @@ export default function MigrationScreen() {
       );
       const result = await runMigrationWithRecovery(db, sqlite);
       if (result.success) {
+        await queryClient.invalidateQueries();
         setProgress("Migration complete!");
         setStatus("success");
         successFeedback();
@@ -118,6 +122,7 @@ export default function MigrationScreen() {
             try {
               await seedPresetCategories(db);
               await markMigrationComplete(db);
+              await queryClient.invalidateQueries();
               console.info(
                 "[migration][stage=skip][reason=user_selected] migration skipped",
               );

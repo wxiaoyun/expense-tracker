@@ -1,6 +1,6 @@
 import { atom, getDefaultStore, useAtom } from "jotai";
 import { debounce } from "lodash";
-import { useMemo } from "react";
+import { AppState } from "react-native";
 
 export type DateRangePreset =
   "7d" | "30d" | "365d" | "monthly" | "weekly" | "all" | "custom";
@@ -40,6 +40,36 @@ export const dateRangeAtom = atom<DateRange>({
   start: new Date(0),
   end: endOfDay(now),
 });
+
+dateRangeAtom.onMount = (setDateRange) => {
+  let midnightTimer: ReturnType<typeof setTimeout>;
+  const refresh = () => {
+    const today = new Date();
+    setDateRange((current) => {
+      if (
+        current.preset === "custom" ||
+        current.end.getTime() === endOfDay(today).getTime()
+      ) {
+        return current;
+      }
+      return { ...current, ...computeDateRange(current.preset, today) };
+    });
+    clearTimeout(midnightTimer);
+    midnightTimer = setTimeout(
+      refresh,
+      endOfDay(today).getTime() - today.getTime() + 1,
+    );
+  };
+
+  refresh();
+  const subscription = AppState.addEventListener("change", (state) => {
+    if (state === "active") refresh();
+  });
+  return () => {
+    clearTimeout(midnightTimer);
+    subscription.remove();
+  };
+};
 
 export const useDateRange = () => {
   return useAtom(dateRangeAtom);

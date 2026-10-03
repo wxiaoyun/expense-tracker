@@ -58,7 +58,7 @@ export async function processLaunchTemplatesOnce(): Promise<void> {
               queryKey: queryKeys.transactions.all(),
             }),
             appQueryClient.invalidateQueries({
-              queryKey: queryKeys.categories.transactionList(),
+              queryKey: queryKeys.categories.all(),
             }),
           );
         }
@@ -99,8 +99,14 @@ export async function reinitializeAppRuntime({
   processImportedSchedules = false,
 }: { processImportedSchedules?: boolean } = {}): Promise<void> {
   await resetLaunchTemplateProcessing();
-  appQueryClient.clear();
+  appQueryClient.getMutationCache().clear();
   resetPreferencesToDefaults(preferenceStore);
   loadPreferences(preferenceStore);
   if (processImportedSchedules) await processLaunchTemplatesOnce();
+  console.info("[app.runtime][stage=reset_queries] refreshing replaced data", {
+    method: "resetQueries",
+    target: "query_cache",
+    stage: "reset_queries",
+  });
+  await appQueryClient.resetQueries();
 }

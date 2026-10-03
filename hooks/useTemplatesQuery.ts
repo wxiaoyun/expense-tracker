@@ -16,6 +16,7 @@ import {
 import type { SuggestionLookback, TemplateDraft } from "@/db/template-core";
 import { softDeleteTransaction } from "@/db/transaction";
 import { suggestionLookbackAtom } from "@/libs/preferences";
+import { useInvalidateTransactionsAndTemplates } from "./useQueryClient";
 import { queryKeys } from "./useTransactionsQuery";
 
 export { queryKeys } from "./useTransactionsQuery";
@@ -39,21 +40,6 @@ const useInvalidateTemplateData = () => {
   const queryClient = useQueryClient();
   return () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.templates.all() });
-};
-
-const useInvalidateTransactionAndTemplateQueries = () => {
-  const queryClient = useQueryClient();
-  return () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.templates.lists() }),
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.templates.allSuggestions(),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.categories.transactionList(),
-      }),
-    ]);
 };
 
 export const useTemplateListQuery = (filter: TemplateListFilter = {}) =>
@@ -146,7 +132,7 @@ export const useResumeTemplateMutation = () => {
 
 export const useQuickAddTemplateMutation = () => {
   const invalidateTransactionsAndTemplates =
-    useInvalidateTransactionAndTemplateQueries();
+    useInvalidateTransactionsAndTemplates();
   return useMutation({
     mutationFn: (id: string) => {
       logMutation("quick_add", id);
@@ -158,7 +144,7 @@ export const useQuickAddTemplateMutation = () => {
 
 export const useUndoQuickAddMutation = () => {
   const invalidateTransactionsAndTemplates =
-    useInvalidateTransactionAndTemplateQueries();
+    useInvalidateTransactionsAndTemplates();
   return useMutation({
     mutationFn: ({
       transactionId,

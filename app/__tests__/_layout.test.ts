@@ -101,18 +101,18 @@ describe("application startup", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["templates"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["categories", "transactions"],
+      queryKey: ["categories"],
     });
     invalidate.mockRestore();
   });
 
   it("reinitializes reset and imported runtime state in order", async () => {
     await resetLaunchTemplateProcessing();
-    const clear = jest.spyOn(appQueryClient, "clear");
+    const resetQueries = jest.spyOn(appQueryClient, "resetQueries");
     mockProcessScheduledTemplates.mockResolvedValue([]);
 
     await reinitializeAppRuntime();
-    expect(clear).toHaveBeenCalledTimes(1);
+    expect(resetQueries).toHaveBeenCalledTimes(1);
     expect(mockResetPreferencesToDefaults).toHaveBeenCalledTimes(1);
     expect(mockLoadPreferences).toHaveBeenCalledTimes(1);
     expect(mockResetPreferencesToDefaults.mock.calls[0][0]).toBe(
@@ -122,7 +122,7 @@ describe("application startup", () => {
 
     jest.clearAllMocks();
     await reinitializeAppRuntime({ processImportedSchedules: true });
-    expect(clear).toHaveBeenCalledTimes(1);
+    expect(resetQueries).toHaveBeenCalledTimes(1);
     expect(mockResetPreferencesToDefaults).toHaveBeenCalledTimes(1);
     expect(mockLoadPreferences).toHaveBeenCalledTimes(1);
     expect(mockResetPreferencesToDefaults.mock.calls[0][0]).toBe(
@@ -130,6 +130,6 @@ describe("application startup", () => {
     );
     expect(mockProcessScheduledTemplates).toHaveBeenCalledTimes(1);
 
-    clear.mockRestore();
+    resetQueries.mockRestore();
   });
 });
