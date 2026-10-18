@@ -10,7 +10,10 @@ trap 'rm -rf "$payload_dir"' EXIT
 
 cd "$root_dir"
 echo "[build][stage=prebuild][target=ios][status=started] Generating native configuration"
-CI=1 npx expo prebuild --platform ios
+# Expo's prebuilt module XCFrameworks are built with an older Swift than the
+# local Xcode, which Release archives cannot import, so build modules from source.
+# ponytail: drop once Expo ships prebuilt modules matching the local Swift toolchain.
+CI=1 EXPO_USE_PRECOMPILED_MODULES=0 npx expo prebuild --platform ios
 
 echo "[build][stage=archive][target=$archive_path][status=started] Building Release archive"
 xcodebuild \
