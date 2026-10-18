@@ -119,7 +119,6 @@ import {
   pauseTemplate,
   previewTemplateBackfill,
   processScheduledTemplates,
-  quickAddTemplate,
   resumeTemplate,
   softDeleteTemplate,
   updateTemplate,
@@ -365,39 +364,6 @@ describe("template repository", () => {
     ]);
   });
 
-  it("uses defaults and source linkage for Quick Add without moving a scheduled cursor", async () => {
-    const template = await createTemplate(
-      scheduledDraft({
-        category: null,
-        notes: "  monthly  ",
-        verified: true,
-      }),
-    );
-    const cursor = template.scheduleCursorAt;
-
-    await expect(quickAddTemplate(template.id, 123)).resolves.toEqual(
-      expect.objectContaining({
-        amount: -1000,
-        transactionDate: 123,
-        description: "Rent",
-        category: "Other",
-        notes: "monthly",
-        verified: 1,
-        templateId: template.id,
-      }),
-    );
-    expect((await getTemplate(template.id))?.scheduleCursorAt).toBe(cursor);
-  });
-
-  it("rejects Quick Add when a manual template is incomplete", async () => {
-    const partial = await createTemplate(
-      validDraft({ amount: null, description: null, category: "Food" }),
-    );
-    await expect(quickAddTemplate(partial.id, 123)).rejects.toThrow(
-      "Quick Add requires a positive amount and description",
-    );
-  });
-
   it("rejects resuming a manual template without mutating it", async () => {
     const template = await createTemplate(validDraft());
     const before = await db
@@ -530,15 +496,12 @@ describe("template repository", () => {
     );
   });
 
-  it("keeps paused schedules available manually, resumes from now, and converts to manual", async () => {
+  it("skips paused schedules, resumes from now, and converts to manual", async () => {
     const template = await createTemplate(scheduledDraft());
     await pauseTemplate(template.id, 50);
     await expect(
       processScheduledTemplates(new Date("2026-04-15T00:00:00.000Z")),
     ).resolves.toEqual([]);
-    await expect(quickAddTemplate(template.id, 60)).resolves.toEqual(
-      expect.objectContaining({ templateId: template.id }),
-    );
 
     await resumeTemplate(template.id, 70);
     expect(await getTemplate(template.id)).toEqual(

@@ -6,17 +6,12 @@ import {
   QueryObserver,
 } from "@tanstack/react-query";
 
-import { quickAddTemplate } from "@/db/template";
-import { softDeleteTransaction } from "@/db/transaction";
 import { appQueryClient, reinitializeAppRuntime } from "@/libs/app-runtime";
-import {
-  queryKeys,
-  useQuickAddTemplateMutation,
-  useUndoQuickAddMutation,
-} from "../useTemplatesQuery";
+import { useInvalidateTransactionsAndTemplates } from "../useQueryClient";
+import { queryKeys } from "../useTransactionsQuery";
 
-jest.mock("@/db/template", () => ({ quickAddTemplate: jest.fn() }));
-jest.mock("@/db/transaction", () => ({ softDeleteTransaction: jest.fn() }));
+jest.mock("@/db/template", () => ({}));
+jest.mock("@/db/transaction", () => ({}));
 jest.mock("@/libs/preferences", () => ({
   suggestionLookbackAtom: jest.requireActual("jotai").atom("3m"),
   loadPreferences: jest.fn(),
@@ -49,25 +44,10 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={client}>{children}</QueryClientProvider>
 );
 
-it.each([
-  ["quick add", false],
-  ["undo", false],
-  ["quick add", true],
-  ["undo", true],
-])(
-  "%s refetches active transaction and dependent caches before resolving (after restore/reset: %s)",
-  async (action, afterRestore) => {
-    let transactionIds = action === "undo" ? ["transaction-1"] : [];
-    jest.mocked(quickAddTemplate).mockImplementation(async () => {
-      transactionIds = ["transaction-1"];
-      return { id: "transaction-1" } as Awaited<
-        ReturnType<typeof quickAddTemplate>
-      >;
-    });
-    jest.mocked(softDeleteTransaction).mockImplementation(async () => {
-      transactionIds = [];
-      return true;
-    });
+it.each([false, true])(
+  "refetches active transaction and dependent caches before resolving (after restore/reset: %s)",
+  async (afterRestore) => {
+    let transactionIds: string[] = [];
 
     const keys = [
       queryKeys.transactions.list({}),
@@ -93,22 +73,12 @@ it.each([
     });
     if (afterRestore) await reinitializeAppRuntime();
 
-    const { result } = await renderHook(
-      () => ({
-        quickAdd: useQuickAddTemplateMutation(),
-        undo: useUndoQuickAddMutation(),
-      }),
-      { wrapper },
-    );
+    const { result } = await renderHook(useInvalidateTransactionsAndTemplates, {
+      wrapper,
+    });
+    transactionIds = ["transaction-1"];
     await act(async () => {
-      if (action === "quick add") {
-        await result.current.quickAdd.mutateAsync("template-1");
-      } else {
-        await result.current.undo.mutateAsync({
-          templateId: "template-1",
-          transactionId: "transaction-1",
-        });
-      }
+      await result.current();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -127,19 +97,3 @@ it.each([
     ).toEqual(transactionIds);
   },
 );
-
-it("does not invalidate caches when Quick Add fails", async () => {
-  const queryKey = queryKeys.transactions.list({});
-  await client.fetchQuery({ queryKey, queryFn: async () => [] });
-  jest.mocked(quickAddTemplate).mockRejectedValue(new Error("Write failed"));
-  const { result } = await renderHook(useQuickAddTemplateMutation, { wrapper });
-
-  await act(async () => {
-    await expect(result.current.mutateAsync("template-1")).rejects.toThrow(
-      "Write failed",
-    );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-
-  expect(client.getQueryState(queryKey)?.isInvalidated).toBe(false);
-});

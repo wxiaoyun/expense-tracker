@@ -13,10 +13,8 @@ import {
   queryKeys,
   useDeleteTemplateMutation,
   usePauseTemplateMutation,
-  useQuickAddTemplateMutation,
   useResumeTemplateMutation,
   useTemplateListQuery,
-  useUndoQuickAddMutation,
 } from "@/hooks/useTemplatesQuery";
 import { showConfirmDialog } from "@/libs/dialog";
 import {
@@ -47,7 +45,6 @@ export default function TemplatesScreen() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState<TemplateType>("all");
   const [categories, setCategories] = useState<string[]>([]);
-  const [pendingQuickAddIds, setPendingQuickAddIds] = useState<string[]>([]);
   const [operationError, setOperationError] = useState<string | null>(null);
 
   const filter = useMemo<TemplateListFilter>(
@@ -67,8 +64,6 @@ export default function TemplatesScreen() {
   const deleteTemplate = useDeleteTemplateMutation();
   const pauseTemplate = usePauseTemplateMutation();
   const resumeTemplate = useResumeTemplateMutation();
-  const quickAddTemplate = useQuickAddTemplateMutation();
-  const undoQuickAdd = useUndoQuickAddMutation();
 
   useEffect(() => {
     if (templateQuery.error) {
@@ -98,45 +93,23 @@ export default function TemplatesScreen() {
   );
 
   const handleQuickAdd = useCallback(
-    async (id: string) => {
+    (id: string) => {
       setOperationError(null);
-      setPendingQuickAddIds((current) =>
-        current.includes(id) ? current : [...current, id],
-      );
+      console.info("[templates.ui][stage=navigate_quick_add]", {
+        template_id: id,
+      });
       try {
-        const created = await quickAddTemplate.mutateAsync(id);
-        actionFeedback();
-        toast.success("Transaction added", {
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              try {
-                await undoQuickAdd.mutateAsync({
-                  transactionId: created.id,
-                  templateId: id,
-                });
-                selectionFeedback();
-              } catch (error) {
-                logFailure(id, "undo_quick_add", error);
-                errorFeedback();
-                setOperationError("Could not undo the added transaction");
-                toast.error("Could not undo transaction");
-              }
-            },
-          },
+        router.push({
+          pathname: "/(drawer)/transaction",
+          params: { templateId: id },
         });
       } catch (error) {
-        logFailure(id, "quick_add", error);
-        errorFeedback();
-        setOperationError("Could not add the transaction");
-        toast.error("Could not add transaction");
-      } finally {
-        setPendingQuickAddIds((current) =>
-          current.filter((templateId) => templateId !== id),
-        );
+        logFailure(id, "navigate_quick_add", error);
+        setOperationError("Could not open the transaction form");
+        toast.error("Could not open transaction form");
       }
     },
-    [quickAddTemplate, undoQuickAdd],
+    [router],
   );
 
   const handlePause = useCallback(
@@ -262,7 +235,6 @@ export default function TemplatesScreen() {
         <TemplateList
           templates={templateQuery.data ?? []}
           isLoading={templateQuery.isLoading}
-          quickAddPendingIds={pendingQuickAddIds}
           onQuickAdd={handleQuickAdd}
           onEdit={handleEdit}
           onPause={handlePause}

@@ -7,16 +7,13 @@ import {
   listHistoricalTemplateSuggestions,
   listTemplates,
   pauseTemplate,
-  quickAddTemplate,
   resumeTemplate,
   softDeleteTemplate,
   updateTemplate,
   type TemplateListFilter,
 } from "@/db/template";
 import type { SuggestionLookback, TemplateDraft } from "@/db/template-core";
-import { softDeleteTransaction } from "@/db/transaction";
 import { suggestionLookbackAtom } from "@/libs/preferences";
-import { useInvalidateTransactionsAndTemplates } from "./useQueryClient";
 import { queryKeys } from "./useTransactionsQuery";
 
 export { queryKeys } from "./useTransactionsQuery";
@@ -127,35 +124,5 @@ export const useResumeTemplateMutation = () => {
       return resumeTemplate(id);
     },
     onSuccess: invalidateTemplates,
-  });
-};
-
-export const useQuickAddTemplateMutation = () => {
-  const invalidateTransactionsAndTemplates =
-    useInvalidateTransactionsAndTemplates();
-  return useMutation({
-    mutationFn: (id: string) => {
-      logMutation("quick_add", id);
-      return quickAddTemplate(id);
-    },
-    onSuccess: invalidateTransactionsAndTemplates,
-  });
-};
-
-export const useUndoQuickAddMutation = () => {
-  const invalidateTransactionsAndTemplates =
-    useInvalidateTransactionsAndTemplates();
-  return useMutation({
-    mutationFn: ({
-      transactionId,
-      templateId,
-    }: {
-      transactionId: string;
-      templateId: string;
-    }) => {
-      logMutation("undo_quick_add", templateId);
-      return softDeleteTransaction(transactionId);
-    },
-    onSuccess: invalidateTransactionsAndTemplates,
   });
 };

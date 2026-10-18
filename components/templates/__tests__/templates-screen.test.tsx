@@ -37,9 +37,7 @@ jest.mock("@/hooks/useTemplatesQuery", () => ({
     mockUseTemplateListQuery(...args),
   useDeleteTemplateMutation: () => mockMutation,
   usePauseTemplateMutation: () => mockMutation,
-  useQuickAddTemplateMutation: () => mockMutation,
   useResumeTemplateMutation: () => mockMutation,
-  useUndoQuickAddMutation: () => mockMutation,
 }));
 
 jest.mock("@shopify/flash-list", () => {

@@ -9,7 +9,6 @@ import { TemplateRow } from "./template-row";
 type TemplateListProps = {
   templates: TransactionTemplate[];
   isLoading?: boolean;
-  quickAddPendingIds?: readonly string[];
   onQuickAdd: (id: string) => void;
   onEdit: (id: string) => void;
   onPause: (id: string) => void;
@@ -20,7 +19,6 @@ type TemplateListProps = {
 export function TemplateList({
   templates,
   isLoading = false,
-  quickAddPendingIds = [],
   onQuickAdd,
   onEdit,
   onPause,
@@ -32,7 +30,6 @@ export function TemplateList({
     ({ item }: { item: TransactionTemplate }) => (
       <TemplateRow
         template={item}
-        quickAddPending={quickAddPendingIds.includes(item.id)}
         onQuickAdd={onQuickAdd}
         onEdit={onEdit}
         onPause={onPause}
@@ -40,14 +37,7 @@ export function TemplateList({
         onDelete={onDelete}
       />
     ),
-    [
-      quickAddPendingIds,
-      onQuickAdd,
-      onEdit,
-      onPause,
-      onResume,
-      onDelete,
-    ],
+    [onQuickAdd, onEdit, onPause, onResume, onDelete],
   );
 
   if (isLoading) {

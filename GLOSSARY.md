@@ -62,6 +62,18 @@ _Avoid_: Category chips, category selector
 Saved default values for creating a transaction. Has a unique name among non-deleted templates.
 _Avoid_: Preset, recurring (when meaning a template with no schedule)
 
+**Complete Template**:
+A template with a positive amount and a description, enough to create a transaction without further input.
+_Avoid_: Prefilled template, full template
+
+**Partial Template**:
+A template missing a positive amount or a description.
+_Avoid_: Incomplete template, draft
+
+**Quick Add**:
+Starting a new transaction prefilled from any template, which the user reviews and saves. The date defaults to today and is unrelated to any schedule's start date.
+_Avoid_: Use template, instant add, template transaction
+
 **Suggestion**:
 A template draft the app proposes from repeated past transactions with the same description and category.
 _Avoid_: Recommendation, autofill

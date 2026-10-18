@@ -20,14 +20,7 @@ type TemplateRowProps = {
   onPause: (id: string) => void;
   onResume: (id: string) => void;
   onDelete: (id: string) => void;
-  quickAddPending?: boolean;
 };
-
-const isQuickAddComplete = (template: TransactionTemplate) =>
-  template.amount !== null &&
-  Number.isFinite(template.amount) &&
-  template.amount > 0 &&
-  Boolean(template.description?.trim());
 
 const signedAmount = (template: TransactionTemplate) => {
   if (template.amount === null) return null;
@@ -43,7 +36,6 @@ export function TemplateRow({
   onPause,
   onResume,
   onDelete,
-  quickAddPending = false,
 }: TemplateRowProps) {
   const colors = useThemeColors();
   const scheduled = template.recurrenceValue !== null;
@@ -186,25 +178,21 @@ export function TemplateRow({
           </Pressable>
         </MenuView>
       </View>
-      {isQuickAddComplete(template) ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Quick add ${template.name}`}
-          accessibilityState={{ disabled: quickAddPending }}
-          disabled={quickAddPending}
-          onPress={() => onQuickAdd(template.id)}
-          style={({ pressed }) => [
-            styles.quickAdd,
-            { backgroundColor: colors.fill },
-            (pressed || quickAddPending) && styles.quickAddDisabled,
-          ]}
-        >
-          <Feather name="plus" size={15} color={colors.primary} />
-          <Text style={[styles.quickAddText, { color: colors.primary }]}>
-            {quickAddPending ? "Adding…" : "Quick Add"}
-          </Text>
-        </Pressable>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Quick add ${template.name}`}
+        onPress={() => onQuickAdd(template.id)}
+        style={({ pressed }) => [
+          styles.quickAdd,
+          { backgroundColor: colors.fill },
+          pressed && styles.pressed,
+        ]}
+      >
+        <Feather name="plus" size={15} color={colors.primary} />
+        <Text style={[styles.quickAddText, { color: colors.primary }]}>
+          Quick Add
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -276,9 +264,6 @@ const styles = StyleSheet.create({
   quickAddText: {
     fontSize: 14,
     fontWeight: "500",
-  },
-  quickAddDisabled: {
-    opacity: 0.5,
   },
   pressed: {
     opacity: 0.6,

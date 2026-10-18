@@ -20,11 +20,7 @@ import {
   type SuggestionLookback,
   type TemplateDraft,
 } from "./template-core";
-import {
-  createTransaction,
-  listTemplateSuggestionRows,
-  type Transaction,
-} from "./transaction";
+import { listTemplateSuggestionRows } from "./transaction";
 
 export type TemplateListFilter = {
   search?: string;
@@ -180,17 +176,6 @@ const assertResumableTemplate = (template: TransactionTemplate): void => {
     !validateTemplateDraft(normalizedDraft).ok
   ) {
     throw new Error("Only complete scheduled templates can be resumed");
-  }
-};
-
-const assertQuickAddComplete = (draft: TemplateDraft): void => {
-  if (
-    draft.amount === null ||
-    !Number.isFinite(draft.amount) ||
-    draft.amount <= 0 ||
-    !draft.description?.trim()
-  ) {
-    throw new Error("Quick Add requires a positive amount and description");
   }
 };
 
@@ -883,36 +868,6 @@ export async function convertTemplateToManual(
     return result.changes === 1 ? { ...existing, ...set } : null;
   } catch (error) {
     failure("convert_to_manual", "update", error, { id });
-    throw error;
-  }
-}
-
-export async function quickAddTemplate(
-  id: string,
-  now = Date.now(),
-): Promise<Transaction> {
-  info("quick_add", "insert_transaction", { id });
-  try {
-    const template = await db
-      .select()
-      .from(transactionTemplates)
-      .where(
-        and(
-          eq(transactionTemplates.id, id),
-          isNull(transactionTemplates.deletedAt),
-        ),
-      )
-      .get();
-    if (!template) throw new Error("Template not found");
-    const draft = asDraft(template);
-    assertQuickAddComplete(draft);
-    const transaction = await createTransaction(
-      mapTemplateToTransaction(draft, now, id),
-    );
-    if (!transaction) throw new Error("Quick Add transaction was not created");
-    return transaction;
-  } catch (error) {
-    failure("quick_add", "insert_transaction", error, { id });
     throw error;
   }
 }
